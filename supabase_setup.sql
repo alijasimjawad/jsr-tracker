@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS users (
 -- Add full_name column (idempotent)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name TEXT;
 
+-- Add permissions column (idempotent)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions jsonb DEFAULT '{}'::jsonb;
+
 -- Default admin account
 INSERT INTO users (username, password, role, full_name)
 VALUES ('admin', '1234', 'admin', 'Admin')

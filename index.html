@@ -126,6 +126,9 @@
         body.role-user .tree-sec-menu-btn { display: none !important; }
         body.role-user .admin-only        { display: none !important; }
         body.role-admin .admin-only       { display: block !important; }
+        /* Permission overrides: granted items visible even inside admin-only */
+        body.role-user .perm-section-show { display: block !important; }
+        body.role-user .perm-show         { display: flex  !important; }
 
         /* ── Activity Log ────────────────────── */
         .al-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
@@ -197,6 +200,70 @@
         .um-act-del:hover { background:#fca5a5; }
         .um-empty { text-align:center; padding:60px 20px; color:var(--slate-400); font-size:14px; }
         .um-self-row td { background:#fffbeb !important; }
+        .um-role-engineer { background:#d1fae5; color:#065f46; }
+        .um-role-tech     { background:#fef3c7; color:#92400e; }
+
+        /* ── Toggle Switch ───────────────────── */
+        .tog-wrap { display:flex; align-items:center; justify-content:space-between; padding:5px 0; gap:8px; }
+        .tog-label { font-size:13px; color:var(--text-primary); flex:1; min-width:0; }
+        .tog-sw { position:relative; display:inline-block; width:36px; height:20px; flex-shrink:0; }
+        .tog-sw input { opacity:0; width:0; height:0; position:absolute; }
+        .tog-sl {
+            position:absolute; cursor:pointer; inset:0;
+            background:#d1d5db; border-radius:20px; transition:.2s;
+        }
+        .tog-sl::before {
+            content:''; position:absolute; width:15px; height:15px;
+            left:2.5px; bottom:2.5px; background:#fff; border-radius:50%;
+            transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+        }
+        .tog-sw input:checked + .tog-sl { background:var(--accent); }
+        .tog-sw input:checked + .tog-sl::before { transform:translateX(16px); }
+
+        /* ── Edit User Modal ─────────────────── */
+        .um-edit-modal-card {
+            background:var(--bg-panel); border-radius:var(--radius);
+            width:640px; max-width:95vw; max-height:90vh;
+            display:flex; flex-direction:column;
+            box-shadow:0 20px 60px rgba(0,0,0,.35);
+        }
+        .um-edit-head {
+            padding:20px 24px 16px; border-bottom:1px solid var(--border); flex-shrink:0;
+        }
+        .um-edit-body {
+            padding:20px 24px; overflow-y:auto; flex:1;
+        }
+        .um-edit-foot {
+            padding:14px 24px; border-top:1px solid var(--border);
+            display:flex; gap:10px; justify-content:flex-end; flex-shrink:0;
+        }
+        .um-fields-row { display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; margin-bottom:18px; }
+        .um-fields-row .span2 { grid-column:span 2; }
+        .um-perm-section {
+            border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;
+        }
+        .um-perm-head {
+            background:var(--slate-50); padding:10px 14px;
+            font-size:11px; font-weight:700; color:var(--slate-600);
+            text-transform:uppercase; letter-spacing:.6px;
+            border-bottom:1px solid var(--border);
+            display:flex; align-items:center; justify-content:space-between;
+        }
+        .um-perm-cols { display:grid; grid-template-columns:1fr 1fr; }
+        .um-perm-col  { padding:10px 14px; }
+        .um-perm-col:first-child { border-right:1px solid var(--border); }
+        .um-perm-col-head {
+            font-size:11px; font-weight:700; color:var(--slate-500);
+            text-transform:uppercase; letter-spacing:.5px;
+            margin-bottom:6px; padding-bottom:6px;
+            border-bottom:1px solid var(--slate-100);
+        }
+        .um-perm-note { font-size:11px; color:var(--slate-400); font-style:italic; }
+        .um-tog-all-btn {
+            font-size:11px; color:var(--accent); background:none; border:none;
+            cursor:pointer; font-family:inherit; padding:0; font-weight:600;
+        }
+        .um-tog-all-btn:hover { text-decoration:underline; }
 
         /* ── Finance System ──────────────────── */
         .fin-page { padding:24px 28px; }
@@ -1686,7 +1753,7 @@
                 </div>
 
                 <!-- FINANCE section (admin only) -->
-                <div class="admin-only">
+                <div class="admin-only" id="sidebar-fin-section">
                     <div class="tree-divider"></div>
                     <div class="tree-section-label" style="display:flex;align-items:center;gap:6px">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -1744,7 +1811,7 @@
                 </div>
 
                 <!-- ADMIN section (admin only) -->
-                <div class="admin-only">
+                <div class="admin-only" id="sidebar-admin-section">
                     <div class="tree-divider"></div>
                     <div class="tree-section-label">Admin</div>
                     <div class="tree-child" id="nav-activity-log" onclick="showActivityLog()">
@@ -2166,6 +2233,8 @@
             <label>Role</label>
             <select id="um-inp-role" style="width:100%;padding:8px 12px;border:1.5px solid var(--slate-200);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg-panel);color:var(--text-primary);outline:none;">
                 <option value="user">User</option>
+                <option value="engineer">Engineer</option>
+                <option value="technician">Technician</option>
                 <option value="admin">Admin</option>
             </select>
         </div>
@@ -2173,6 +2242,95 @@
         <div class="modal-actions">
             <button class="btn btn-ghost" onclick="closeUmAddModal()">Cancel</button>
             <button class="btn btn-accent" onclick="saveNewUser()">Create User</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="um-edit-modal" onclick="closeEditUserModal(event)">
+    <div class="um-edit-modal-card">
+        <div class="um-edit-head">
+            <div class="modal-title" style="margin:0 0 2px">Edit User</div>
+            <div class="modal-sub" style="margin:0" id="um-edit-subtitle">Edit user details and permissions</div>
+        </div>
+        <div class="um-edit-body">
+            <!-- Top: user fields -->
+            <div class="um-fields-row">
+                <div class="cp-field" style="margin:0">
+                    <label>Full Name</label>
+                    <input type="text" id="ume-fullname" placeholder="Full name">
+                </div>
+                <div class="cp-field" style="margin:0">
+                    <label>Username</label>
+                    <input type="text" id="ume-username" placeholder="username" autocomplete="off">
+                </div>
+                <div class="cp-field" style="margin:0">
+                    <label>Password <span style="color:var(--slate-400);font-weight:400;font-size:11px">(leave blank to keep)</span></label>
+                    <input type="password" id="ume-password" placeholder="New password" autocomplete="new-password">
+                </div>
+                <div class="cp-field" style="margin:0">
+                    <label>Role</label>
+                    <select id="ume-role" style="width:100%;padding:8px 12px;border:1.5px solid var(--slate-200);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg-panel);color:var(--text-primary);outline:none;">
+                        <option value="user">User</option>
+                        <option value="engineer">Engineer</option>
+                        <option value="technician">Technician</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Bottom: permissions -->
+            <div class="um-perm-section">
+                <div class="um-perm-head">
+                    <span>Permissions</span>
+                    <span class="um-perm-note">Ignored for Admin role — admins always have full access</span>
+                </div>
+                <div class="um-perm-cols">
+                    <!-- VIEW column -->
+                    <div class="um-perm-col">
+                        <div class="um-perm-col-head" style="display:flex;align-items:center;justify-content:space-between">
+                            View
+                            <button class="um-tog-all-btn" onclick="umTogAll('view',true)">All on</button>
+                        </div>
+                        <div class="tog-wrap"><span class="tog-label">Dashboard</span><label class="tog-sw"><input type="checkbox" id="ump-view_dashboard"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Zain Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_zain"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Nokia Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_nokia"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Huawei Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_huawei"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">MRC Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_mrc"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Metco Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_metco"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">MFC Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_mfc"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">TAC Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_tac"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">IPT Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_ipt"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">TASC Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_tasc"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Finance Dashboard</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_dashboard"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Team Members</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_team"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Work Log</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_worklog"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Revenue</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_revenue"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">General Expenses</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_genexp"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Project Expenses</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_projexp"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Monthly Report</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_report"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Activity Log</span><label class="tog-sw"><input type="checkbox" id="ump-view_activity_log"><span class="tog-sl"></span></label></div>
+                    </div>
+                    <!-- ACTIONS column -->
+                    <div class="um-perm-col">
+                        <div class="um-perm-col-head" style="display:flex;align-items:center;justify-content:space-between">
+                            Actions
+                            <button class="um-tog-all-btn" onclick="umTogAll('actions',true)">All on</button>
+                        </div>
+                        <div class="tog-wrap"><span class="tog-label">Add Rows</span><label class="tog-sw"><input type="checkbox" id="ump-add_rows"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Edit Rows</span><label class="tog-sw"><input type="checkbox" id="ump-edit_rows"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Delete Rows</span><label class="tog-sw"><input type="checkbox" id="ump-delete_rows"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Add Columns</span><label class="tog-sw"><input type="checkbox" id="ump-add_columns"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Export to Excel</span><label class="tog-sw"><input type="checkbox" id="ump-export_excel"><span class="tog-sl"></span></label></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="error-msg" id="um-edit-error" style="margin-top:12px"></div>
+        </div>
+        <div class="um-edit-foot">
+            <button class="btn btn-ghost" onclick="closeEditUserModal()">Cancel</button>
+            <button class="btn btn-accent" onclick="saveEditUser()">Save Changes</button>
         </div>
     </div>
 </div>
@@ -2822,7 +2980,7 @@ async function login() {
     try {
         const { data, error } = await _sb
             .from('users')
-            .select('id,role,full_name,username')
+            .select('id,role,full_name,username,permissions')
             .eq('username', u)
             .eq('password', p)
             .single();
@@ -2832,7 +2990,7 @@ async function login() {
             e.style.display     = 'block';
             document.getElementById('p').value = '';
         } else {
-            currentUser = { id: data.id, username: data.username, role: data.role, full_name: data.full_name || data.username };
+            currentUser = { id: data.id, username: data.username, role: data.role, full_name: data.full_name || data.username, permissions: data.permissions || {} };
             localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
             show('app-page');
             applyUserRole();
@@ -2881,18 +3039,83 @@ function applyUserRole() {
     if (!currentUser) return;
     const isAdmin = currentUser.role === 'admin';
 
-    // Body class drives CSS-based visibility
     document.body.classList.toggle('role-admin', isAdmin);
     document.body.classList.toggle('role-user',  !isAdmin);
 
-    // Sidebar user panel
     const displayName = currentUser.full_name || currentUser.username || '';
     const avatar = document.getElementById('sb-user-avatar');
     const name   = document.getElementById('sb-user-name');
-    const role   = document.getElementById('sb-user-role');
+    const roleEl = document.getElementById('sb-user-role');
     if (avatar) avatar.textContent = displayName[0]?.toUpperCase() || 'U';
     if (name)   name.textContent   = displayName;
-    if (role)   role.textContent   = isAdmin ? 'Administrator' : 'Team Member';
+    const roleLabels = { admin: 'Administrator', engineer: 'Engineer', technician: 'Technician' };
+    if (roleEl) roleEl.textContent = roleLabels[currentUser.role] || 'Team Member';
+
+    if (!isAdmin) applyPermissions();
+}
+
+function hasPerm(key) {
+    if (currentUser?.role === 'admin') return true;
+    return currentUser?.permissions?.[key] === true;
+}
+
+function applyPermissions() {
+    const p = currentUser?.permissions || {};
+
+    // Helper: set visibility of a sidebar element
+    const sv = (id, granted, flex) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (granted) el.classList.add(flex ? 'perm-show' : 'perm-section-show');
+        else         el.classList.remove('perm-show', 'perm-section-show');
+    };
+
+    // Dashboard nav
+    sv('dash-nav', p.view_dashboard, true);
+
+    // Project tree groups
+    sv('tg-zain',   p.view_zain,   false);
+    sv('tg-nokia',  p.view_nokia,  false);
+    sv('tg-huawei', p.view_huawei, false);
+    sv('tg-mrc',    p.view_mrc,    false);
+    sv('tg-metco',  p.view_metco,  false);
+    sv('tg-mfc',    p.view_mfc,    false);
+    sv('tg-tac',    p.view_tac,    false);
+    sv('tg-ipt',    p.view_ipt,    false);
+    sv('tg-tasc',   p.view_tasc,   false);
+
+    // Finance items — show wrapper section if any fin perm is granted
+    const anyFin = p.view_fin_dashboard || p.view_fin_team || p.view_fin_worklog ||
+                   p.view_fin_revenue   || p.view_fin_genexp || p.view_fin_projexp ||
+                   p.view_fin_report;
+    sv('sidebar-fin-section', anyFin,                false);
+    sv('nav-fin-dashboard',   p.view_fin_dashboard,  true);
+    sv('nav-fin-team',        p.view_fin_team,        true);
+    sv('nav-fin-worklog',     p.view_fin_worklog,     true);
+    sv('nav-fin-revenue',     p.view_fin_revenue,     true);
+    sv('nav-fin-genexp',      p.view_fin_genexp,      true);
+    sv('nav-fin-projexp',     p.view_fin_projexp,     true);
+    sv('nav-fin-report',      p.view_fin_report,      true);
+
+    // Admin — activity log only (user mgmt is always admin-only)
+    if (p.view_activity_log) {
+        sv('sidebar-admin-section', true, false);
+        sv('nav-activity-log',      true, true);
+    }
+
+    // Action buttons — only after renderMain populates them
+    _applyActionPerms();
+}
+
+function _applyActionPerms() {
+    const show = (id, granted) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = granted ? '' : 'none';
+    };
+    show('topbar-add-site',    hasPerm('add_rows'));
+    show('topbar-import-excel', hasPerm('add_rows'));
+    show('btn-export-excel',   hasPerm('export_excel'));
+    show('btn-add-col',        hasPerm('add_columns'));
 }
 
 // ── Change Password ───────────────────────────────
@@ -3424,11 +3647,11 @@ function _renderTableContent(el) {
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     Clear
                 </button>
-                <button class="btn btn-green" onclick="exportExcel()">
+                <button class="btn btn-green" id="btn-export-excel" onclick="exportExcel()">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Export
                 </button>
-                <button class="btn btn-ghost" onclick="openAddColModal()">
+                <button class="btn btn-ghost" id="btn-add-col" onclick="openAddColModal()">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     + Add Column
                 </button>
@@ -3471,6 +3694,7 @@ function _renderTableContent(el) {
 
     el.classList.add('table-mode');
     applyDropFilters();
+    if (currentUser?.role !== 'admin') _applyActionPerms();
 }
 
 // ── Dropdown filters ─────────────────────────────
@@ -4162,6 +4386,8 @@ function openDetail(ri) {
     const DATE_KEYWORDS   = ['date', 'rfti', 'delivery', 'installation', 'imp date', 'imp_date'];
     const SUBCON_OPTIONS  = ['', 'ATC', 'IPT', 'KCT', 'MFC', 'MRC', 'Metco', 'Oraxel', 'SPTECH', 'Shabakat', 'TAC', 'horizon'];
 
+    const canEdit = isNew ? hasPerm('add_rows') : hasPerm('edit_rows');
+    const rdonly  = canEdit ? '' : ' disabled style="opacity:.65;pointer-events:none;cursor:default"';
     const fields = headers.map((h, ci) => {
         const v        = String(row[ci] ?? '');
         const fid      = `df-${ci}`;
@@ -4170,18 +4396,18 @@ function openDetail(ri) {
         const isDate   = DATE_KEYWORDS.some(kw => h.toLowerCase().includes(kw));
         const dateVal  = isDate ? parseToDateInput(v) : '';
         const input = isStatus
-            ? `<select class="detail-select" id="${fid}">
+            ? `<select class="detail-select" id="${fid}"${rdonly}>
                 ${STATUS_OPTIONS.map(o => `<option value="${esc(o)}"${o === v ? ' selected' : ''}>${o || '— Select status —'}</option>`).join('')}
                 ${!STATUS_OPTIONS.includes(v) && v ? `<option value="${esc(v)}" selected>${esc(v)}</option>` : ''}
                </select>`
             : isSubcon
-                ? `<select class="detail-select" id="${fid}">
+                ? `<select class="detail-select" id="${fid}"${rdonly}>
                     ${SUBCON_OPTIONS.map(o => `<option value="${esc(o)}"${o === v ? ' selected' : ''}>${o || '— Select subcon —'}</option>`).join('')}
                     ${!SUBCON_OPTIONS.includes(v) && v ? `<option value="${esc(v)}" selected>${esc(v)}</option>` : ''}
                    </select>`
             : isDate
-                ? `<div class="date-field-wrap"><input class="detail-input" id="${fid}" type="date" value="${dateVal}"><button type="button" class="date-clear-btn" onclick="document.getElementById('${fid}').value=''" title="Clear date">✕</button></div>`
-                : `<input class="detail-input" id="${fid}" type="text" value="${esc(v)}" placeholder="${esc(h)}">`;
+                ? `<div class="date-field-wrap"><input class="detail-input" id="${fid}" type="date" value="${dateVal}"${rdonly}><button type="button" class="date-clear-btn" onclick="document.getElementById('${fid}').value=''" title="Clear date"${rdonly}>✕</button></div>`
+                : `<input class="detail-input" id="${fid}" type="text" value="${esc(v)}" placeholder="${esc(h)}"${rdonly}>`;
         return `<div class="detail-field">
             <div class="detail-label">${esc(h)}</div>
             ${input}
@@ -4208,12 +4434,13 @@ function openDetail(ri) {
         </div>
 
         <div class="detail-actions">
+            ${(isNew ? hasPerm('add_rows') : hasPerm('edit_rows')) ? `
             <button class="btn btn-green" onclick="saveDetail()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
                 ${isNew ? 'Add Site' : 'Save Changes'}
-            </button>
+            </button>` : ''}
             <button class="btn btn-ghost" onclick="backToTable()">Cancel</button>
-            ${!isNew ? `<div class="spacer"></div>
+            ${!isNew && hasPerm('delete_rows') ? `<div class="spacer"></div>
             <button class="btn btn-danger" onclick="deleteDetailRow()">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                 Delete
@@ -5128,11 +5355,14 @@ function _renderUserTable() {
     const main = document.getElementById('panel-content');
     const rows = _umUsers.map(u => {
         const isSelf = u.id === currentUser?.id;
-        const roleBadge = u.role === 'admin'
-            ? `<span class="um-role-badge um-role-admin">Admin</span>`
-            : `<span class="um-role-badge um-role-user">User</span>`;
+        const roleBadgeMap = {
+            admin: 'um-role-admin', engineer: 'um-role-engineer',
+            technician: 'um-role-tech', user: 'um-role-user'
+        };
+        const roleLabelMap = { admin: 'Admin', engineer: 'Engineer', technician: 'Technician', user: 'User' };
+        const roleBadge = `<span class="um-role-badge ${roleBadgeMap[u.role] || 'um-role-user'}">${roleLabelMap[u.role] || 'User'}</span>`;
         const actions = `
-            <button class="um-act-btn um-act-reset" onclick="resetUserPassword('${esc(u.id)}','${esc(u.username)}')">Reset Password</button>
+            <button class="um-act-btn um-act-reset" onclick="openEditUserModal('${esc(u.id)}')">Edit</button>
             ${isSelf ? '' : `<button class="um-act-btn um-act-del" onclick="deleteUser('${esc(u.id)}','${esc(u.username)}')">Delete</button>`}
         `;
         return `<tr${isSelf ? ' class="um-self-row"' : ''}>
@@ -5198,12 +5428,86 @@ async function saveNewUser() {
     logActivity('Add User', `Created user: ${fullName} (${username}), role: ${role}`);
 }
 
-async function resetUserPassword(id, username) {
-    if (!confirm(`Reset password for "${username}" to "1234"?`)) return;
-    const { error } = await _sb.from('users').update({ password: '1234' }).eq('id', id);
-    if (error) { toast('Reset failed: ' + error.message, 'err'); return; }
-    toast(`Password reset for "${username}"`, 'ok');
-    logActivity('Reset Password', `Reset password for user: ${username}`);
+// ── Edit User Modal ────────────────────────────
+const _UM_VIEW_KEYS = [
+    'view_dashboard','view_zain','view_nokia','view_huawei','view_mrc','view_metco',
+    'view_mfc','view_tac','view_ipt','view_tasc','view_fin_dashboard','view_fin_team',
+    'view_fin_worklog','view_fin_revenue','view_fin_genexp','view_fin_projexp',
+    'view_fin_report','view_activity_log'
+];
+const _UM_ACT_KEYS = ['add_rows','edit_rows','delete_rows','add_columns','export_excel'];
+let _umEditId = null;
+
+function openEditUserModal(uid) {
+    const u = _umUsers.find(x => x.id === uid);
+    if (!u) return;
+    _umEditId = uid;
+    document.getElementById('ume-fullname').value  = u.full_name  || '';
+    document.getElementById('ume-username').value  = u.username   || '';
+    document.getElementById('ume-password').value  = '';
+    document.getElementById('ume-role').value      = u.role       || 'user';
+    document.getElementById('um-edit-subtitle').textContent = u.full_name || u.username;
+    document.getElementById('um-edit-error').textContent = '';
+    const perms = u.permissions || {};
+    [..._UM_VIEW_KEYS, ..._UM_ACT_KEYS].forEach(k => {
+        const el = document.getElementById('ump-' + k);
+        if (el) el.checked = perms[k] === true;
+    });
+    document.getElementById('um-edit-modal').classList.add('open');
+}
+
+function closeEditUserModal(e) {
+    if (e && e.target !== document.getElementById('um-edit-modal')) return;
+    document.getElementById('um-edit-modal').classList.remove('open');
+}
+
+function umTogAll(group, val) {
+    const keys = group === 'view' ? _UM_VIEW_KEYS : _UM_ACT_KEYS;
+    keys.forEach(k => {
+        const el = document.getElementById('ump-' + k);
+        if (el) el.checked = val;
+    });
+}
+
+async function saveEditUser() {
+    const fullName = document.getElementById('ume-fullname').value.trim();
+    const username = document.getElementById('ume-username').value.trim();
+    const password = document.getElementById('ume-password').value;
+    const role     = document.getElementById('ume-role').value;
+    const errEl    = document.getElementById('um-edit-error');
+    errEl.textContent = '';
+    if (!fullName) { errEl.textContent = 'Full name is required.'; return; }
+    if (!username) { errEl.textContent = 'Username is required.'; return; }
+    const conflict = _umUsers.find(u => u.username === username && u.id !== _umEditId);
+    if (conflict)  { errEl.textContent = 'Username already taken by another user.'; return; }
+
+    const permissions = {};
+    [..._UM_VIEW_KEYS, ..._UM_ACT_KEYS].forEach(k => {
+        const el = document.getElementById('ump-' + k);
+        if (el) permissions[k] = el.checked;
+    });
+
+    const update = { full_name: fullName, username, role, permissions };
+    if (password) update.password = password;
+
+    const { data, error } = await _sb.from('users').update(update).eq('id', _umEditId).select().single();
+    if (error) { errEl.textContent = 'Save failed: ' + error.message; return; }
+
+    document.getElementById('um-edit-modal').classList.remove('open');
+    toast(`User "${username}" updated`, 'ok');
+
+    const idx = _umUsers.findIndex(u => u.id === _umEditId);
+    if (idx >= 0) _umUsers[idx] = data;
+
+    // Update currentUser in session if editing self
+    if (_umEditId === currentUser?.id) {
+        currentUser = { ...currentUser, full_name: fullName, username, role, permissions };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+        applyUserRole();
+    }
+
+    _renderUserTable();
+    logActivity('Edit User', `Updated user: ${fullName} (${username}), role: ${role}`);
 }
 
 async function deleteUser(id, username) {
