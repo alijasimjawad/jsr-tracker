@@ -124,6 +124,9 @@
         /* ── Role-based visibility ───────────── */
         body.role-user .tree-add-sec-btn  { display: none !important; }
         body.role-user .tree-sec-menu-btn { display: none !important; }
+        /* Permission overrides for section controls */
+        body.role-user .perm-add-sec  .tree-add-sec-btn  { display: flex !important; }
+        body.role-user .perm-sec-menu .tree-sec-menu-btn { display: flex !important; }
         body.role-user .admin-only        { display: none !important; }
         body.role-admin .admin-only       { display: block !important; }
         /* Permission overrides: granted items visible even inside admin-only */
@@ -2322,6 +2325,9 @@
                         <div class="tog-wrap"><span class="tog-label">Delete Rows</span><label class="tog-sw"><input type="checkbox" id="ump-delete_rows"><span class="tog-sl"></span></label></div>
                         <div class="tog-wrap"><span class="tog-label">Add Columns</span><label class="tog-sw"><input type="checkbox" id="ump-add_columns"><span class="tog-sl"></span></label></div>
                         <div class="tog-wrap"><span class="tog-label">Export to Excel</span><label class="tog-sw"><input type="checkbox" id="ump-export_excel"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Add Section</span><label class="tog-sw"><input type="checkbox" id="ump-add_section"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Rename Section</span><label class="tog-sw"><input type="checkbox" id="ump-rename_section"><span class="tog-sl"></span></label></div>
+                        <div class="tog-wrap"><span class="tog-label">Delete Section</span><label class="tog-sw"><input type="checkbox" id="ump-delete_section"><span class="tog-sl"></span></label></div>
                     </div>
                 </div>
             </div>
@@ -2772,7 +2778,7 @@ async function confirmAddSection() {
 function openSecMenu(btn, event) {
     event.stopPropagation();
     document.getElementById('sec-menu-dd')?.remove();
-    if (currentUser?.role !== 'admin') return;
+    if (!hasPerm('rename_section') && !hasPerm('delete_section')) return;
 
     const child = btn.closest('.tree-child');
     const id    = child?.id || '';          // "tc-proj-seckey"
@@ -2781,7 +2787,7 @@ function openSecMenu(btn, event) {
     const sec   = parts.slice(2).join('-'); // handles keys with hyphens
 
     const totalSecs = Object.keys(db[proj] || {}).length;
-    const canDelete = totalSecs > 1;
+    const canDelete = totalSecs > 1 && hasPerm('delete_section');
 
     const rect = btn.getBoundingClientRect();
     const dd   = document.createElement('div');
@@ -2790,15 +2796,17 @@ function openSecMenu(btn, event) {
     dd.style.top  = (rect.bottom + 4) + 'px';
     dd.style.left = Math.min(rect.left, window.innerWidth - 175) + 'px';
     dd.innerHTML = `
+        ${hasPerm('rename_section') ? `
         <div class="tree-sec-dropdown-item" onclick="closeSecMenu();openRenameSectionModal('${proj}','${sec}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Rename Section
-        </div>
+        </div>` : ''}
+        ${hasPerm('delete_section') ? `
         <div class="tree-sec-dropdown-item danger${canDelete ? '' : ' disabled'}"
              onclick="${canDelete ? `closeSecMenu();openDeleteSectionModal('${proj}','${sec}')` : ''}">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             Delete Section${canDelete ? '' : ' <span style="font-size:10px;opacity:.7">(last section)</span>'}
-        </div>`;
+        </div>` : ''}`;
     document.body.appendChild(dd);
 }
 
@@ -3112,10 +3120,21 @@ function _applyActionPerms() {
         const el = document.getElementById(id);
         if (el) el.style.display = granted ? '' : 'none';
     };
-    show('topbar-add-site',    hasPerm('add_rows'));
+    show('topbar-add-site',     hasPerm('add_rows'));
     show('topbar-import-excel', hasPerm('add_rows'));
-    show('btn-export-excel',   hasPerm('export_excel'));
-    show('btn-add-col',        hasPerm('add_columns'));
+    show('btn-export-excel',    hasPerm('export_excel'));
+    show('btn-add-col',         hasPerm('add_columns'));
+
+    // Section controls: toggle CSS helper classes on each tree-group
+    const canAddSec    = hasPerm('add_section');
+    const canSecMenu   = hasPerm('rename_section') || hasPerm('delete_section');
+    ['tg-zain','tg-nokia','tg-huawei','tg-mrc','tg-metco',
+     'tg-mfc','tg-tac','tg-ipt','tg-tasc'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.toggle('perm-add-sec',  canAddSec);
+        el.classList.toggle('perm-sec-menu', canSecMenu);
+    });
 }
 
 // ── Change Password ───────────────────────────────
@@ -5435,7 +5454,7 @@ const _UM_VIEW_KEYS = [
     'view_fin_worklog','view_fin_revenue','view_fin_genexp','view_fin_projexp',
     'view_fin_report','view_activity_log'
 ];
-const _UM_ACT_KEYS = ['add_rows','edit_rows','delete_rows','add_columns','export_excel'];
+const _UM_ACT_KEYS = ['add_rows','edit_rows','delete_rows','add_columns','export_excel','add_section','rename_section','delete_section'];
 let _umEditId = null;
 
 function openEditUserModal(uid) {
