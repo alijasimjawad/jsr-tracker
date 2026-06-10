@@ -5104,19 +5104,28 @@ let _umUsers = [];
 
 async function showUserManagement() {
     if (currentUser?.role !== 'admin') { toast('Admin only', 'err'); return; }
+    selProj = null; selSec = null;
+    dropFilters = {}; searchQuery = ''; chipFilters = new Set(); ddClose();
+    closeSidebar();
+
     document.querySelectorAll('.tree-child').forEach(el => el.classList.remove('active'));
-    document.getElementById('nav-user-mgmt')?.classList.add('active');
+    document.getElementById('dash-nav').classList.remove('active');
+    document.getElementById('nav-user-mgmt').classList.add('active');
+
     setTopbar('<span class="bc-cur">User Management</span>');
-    const main = document.getElementById('main');
-    main.innerHTML = '<div class="um-page"><div class="al-empty">Loading users…</div></div>';
+
+    const pc = document.getElementById('panel-content');
+    pc.classList.remove('table-mode');
+    pc.innerHTML = '<div class="um-page"><div class="al-empty">Loading users…</div></div>';
+
     const { data, error } = await _sb.from('users').select('*').order('created_at', { ascending: true });
-    if (error) { main.innerHTML = '<div class="um-page"><div class="al-empty">Failed to load users: ' + esc(error.message) + '</div></div>'; return; }
+    if (error) { pc.innerHTML = '<div class="um-page"><div class="al-empty">Failed to load users: ' + esc(error.message) + '</div></div>'; return; }
     _umUsers = data || [];
     _renderUserTable();
 }
 
 function _renderUserTable() {
-    const main = document.getElementById('main');
+    const main = document.getElementById('panel-content');
     const rows = _umUsers.map(u => {
         const isSelf = u.id === currentUser?.id;
         const roleBadge = u.role === 'admin'
