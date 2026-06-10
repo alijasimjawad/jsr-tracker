@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)",
+      "Bash(python3 -c ' *)",
+      "Read(//tmp/**)",
+      "Bash(node *)",
+      "Bash(awk '/^    <\\\\/style>/{found=1} !found' /Users/alijasim/Desktop/JSR/index.html)",
+      "Bash(grep -c '#[0-9a-fA-F]\\\\{3,6\\\\}')",
+      "Bash(grep '#[0-9a-fA-F]\\\\{3,6\\\\}')",
+      "Bash(awk NR>=956 && NR<=975 {printf \"%d\\\\t%s\\\\n\", NR, \\(length\\($0\\)>120 ? substr\\($0,1,120\\)\"...\" : $0\\)} *)",
+      "Bash(awk NR>=954 && NR<=975 {printf \"%d\\\\t%s\\\\n\", NR, \\(length\\($0\\)>150 ? substr\\($0,1,150\\)\"...\" : $0\\)} *)",
+      "Bash(awk NR>=954 && NR<=972 {printf \"%d\\\\t%s\\\\n\", NR, \\(length\\($0\\)>150 ? substr\\($0,1,150\\)\"...\" : $0\\)} *)",
+      "Bash(awk NR>=253 && NR<=265 {printf \"%d\\\\t%s\\\\n\", NR, $0} *)",
+      "Bash(awk 'NR>=253 && NR<=263 {printf \"%d\\\\t%s\\\\n\", NR, $0}' /Users/alijasim/Desktop/JSR/index.html)",
+      "Bash(awk 'NR>=952 && NR<=974 {printf \"%d\\\\t%s\\\\n\", NR, $0}' /Users/alijasim/Desktop/JSR/index.html)",
+      "Bash(awk NR>=956 && NR<=972 {printf \"%d\\\\t%s\\\\n\", NR, \\(length\\($0\\)>120 ? substr\\($0,1,120\\)\"...\" : $0\\)} *)",
+      "Bash(awk 'NR>=253 && NR<=265 {printf \"%d\\\\t%s\\\\n\", NR, $0}' /Users/alijasim/Desktop/JSR/index.html)",
+      "Bash(awk 'NR>=956 && NR<=966 {printf \"%d\\\\t%s\\\\n\", NR, \\(length\\($0\\)>100 ? substr\\($0,1,100\\)\"...\" : $0\\)}' /Users/alijasim/Desktop/JSR/index.html)",
+      "Bash(awk 'NR>=253 && NR<=270 {printf \"%d\\\\t%s\\\\n\", NR, $0}' /Users/alijasim/Desktop/JSR/index.html)",
+      "Bash(awk 'NR>=956 && NR<=967 {printf \"%d\\\\t%s\\\\n\", NR, \\(length\\($0\\)>100 ? substr\\($0,1,100\\)\"...\" : $0\\)}' /Users/alijasim/Desktop/JSR/index.html)",
+      "Bash(awk NR>=253 && NR<=268 {printf \"%d\\\\t%s\\\\n\", NR, $0} *)",
+      "Bash(grep -n \"sidebar-body\\\\|</div>$\" /Users/alijasim/Desktop/JSR/index.html)"
+    ]
+  }
+}
