@@ -167,6 +167,37 @@
         .al-badge-section{ background:#f3e8ff; color:#6b21a8; }
         .al-empty { text-align:center; padding:60px 20px; color:var(--slate-400); font-size:14px; }
 
+        /* ── User Management ─────────────────── */
+        .um-page { padding:24px 28px; max-width:900px; }
+        .um-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+        .um-spacer { flex:1; }
+        .um-table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
+        .um-table { width:100%; border-collapse:collapse; font-size:13px; min-width:500px; }
+        .um-table th {
+            background:var(--slate-50); color:var(--slate-600); font-weight:700;
+            padding:10px 14px; text-align:left; border-bottom:1.5px solid var(--border);
+            white-space:nowrap; font-size:12px; text-transform:uppercase; letter-spacing:.5px;
+        }
+        .um-table td { padding:10px 14px; border-bottom:1px solid var(--slate-100); color:var(--text-primary); vertical-align:middle; }
+        .um-table tr:last-child td { border-bottom:none; }
+        .um-table tr:hover td { background:var(--slate-50); }
+        .um-role-badge {
+            display:inline-block; padding:2px 9px; border-radius:20px;
+            font-size:11px; font-weight:700; letter-spacing:.3px;
+        }
+        .um-role-admin { background:#dbeafe; color:#1e40af; }
+        .um-role-user  { background:#f3f4f6; color:#374151; }
+        .um-act-btn {
+            padding:5px 12px; font-size:12px; font-family:inherit; font-weight:600;
+            border-radius:var(--radius-sm); cursor:pointer; border:none; transition:var(--transition-fast);
+        }
+        .um-act-reset { background:#fef9c3; color:#854d0e; margin-right:6px; }
+        .um-act-reset:hover { background:#fde68a; }
+        .um-act-del   { background:#fee2e2; color:#991b1b; }
+        .um-act-del:hover { background:#fca5a5; }
+        .um-empty { text-align:center; padding:60px 20px; color:var(--slate-400); font-size:14px; }
+        .um-self-row td { background:#fffbeb !important; }
+
         /* ── Finance System ──────────────────── */
         .fin-page { padding:24px 28px; }
         .fin-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
@@ -1723,6 +1754,13 @@
                         </span>
                         <span class="tree-child-arr">›</span>
                     </div>
+                    <div class="tree-child" id="nav-user-mgmt" onclick="showUserManagement()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <span class="tree-child-label">User Management</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
                 </div>
 
             </div>
@@ -2103,6 +2141,38 @@
         <div class="modal-actions">
             <button class="btn btn-ghost" onclick="closeChangePwdModal()">Cancel</button>
             <button class="btn btn-accent" id="cp-btn" onclick="submitChangePassword()">Update Password</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="um-add-modal" onclick="closeUmAddModal(event)">
+    <div class="modal-card" style="width:420px">
+        <div class="modal-title">Add User</div>
+        <div class="modal-sub">Create a new account</div>
+        <div class="cp-field">
+            <label>Full Name</label>
+            <input type="text" id="um-inp-fullname" placeholder="e.g. Ahmed Hassan">
+        </div>
+        <div class="cp-field">
+            <label>Username</label>
+            <input type="text" id="um-inp-username" placeholder="e.g. ahmed.hassan" autocomplete="off">
+        </div>
+        <div class="cp-field">
+            <label>Password</label>
+            <input type="password" id="um-inp-password" placeholder="Enter password" autocomplete="new-password">
+        </div>
+        <div class="cp-field">
+            <label>Role</label>
+            <select id="um-inp-role" style="width:100%;padding:8px 12px;border:1.5px solid var(--slate-200);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg-panel);color:var(--text-primary);outline:none;">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <div class="error-msg" id="um-add-error"></div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeUmAddModal()">Cancel</button>
+            <button class="btn btn-accent" onclick="saveNewUser()">Create User</button>
         </div>
     </div>
 </div>
@@ -5029,6 +5099,115 @@ async function clearActivityLog() {
     renderActivityLog();
     toast('Activity log cleared', 'ok');
 }
+// ── User Management ───────────────────────────
+let _umUsers = [];
+
+async function showUserManagement() {
+    if (currentUser?.role !== 'admin') { toast('Admin only', 'err'); return; }
+    document.querySelectorAll('.tree-child').forEach(el => el.classList.remove('active'));
+    document.getElementById('nav-user-mgmt')?.classList.add('active');
+    setTopbar('<span class="bc-cur">User Management</span>');
+    const main = document.getElementById('main');
+    main.innerHTML = '<div class="um-page"><div class="al-empty">Loading users…</div></div>';
+    const { data, error } = await _sb.from('users').select('*').order('created_at', { ascending: true });
+    if (error) { main.innerHTML = '<div class="um-page"><div class="al-empty">Failed to load users: ' + esc(error.message) + '</div></div>'; return; }
+    _umUsers = data || [];
+    _renderUserTable();
+}
+
+function _renderUserTable() {
+    const main = document.getElementById('main');
+    const rows = _umUsers.map(u => {
+        const isSelf = u.id === currentUser?.id;
+        const roleBadge = u.role === 'admin'
+            ? `<span class="um-role-badge um-role-admin">Admin</span>`
+            : `<span class="um-role-badge um-role-user">User</span>`;
+        const actions = `
+            <button class="um-act-btn um-act-reset" onclick="resetUserPassword('${esc(u.id)}','${esc(u.username)}')">Reset Password</button>
+            ${isSelf ? '' : `<button class="um-act-btn um-act-del" onclick="deleteUser('${esc(u.id)}','${esc(u.username)}')">Delete</button>`}
+        `;
+        return `<tr${isSelf ? ' class="um-self-row"' : ''}>
+            <td>${esc(u.full_name || '—')}</td>
+            <td style="font-family:monospace">${esc(u.username)}</td>
+            <td>${roleBadge}</td>
+            <td>${actions}</td>
+        </tr>`;
+    }).join('');
+
+    main.innerHTML = `
+    <div class="um-page">
+        <div class="um-toolbar">
+            <span style="font-size:18px;font-weight:700;color:var(--text-primary)">Users (${_umUsers.length})</span>
+            <div class="um-spacer"></div>
+            <button class="btn btn-accent" onclick="openUmAddModal()">+ Add User</button>
+        </div>
+        <div class="um-table-wrap">
+            <table class="um-table">
+                <thead><tr>
+                    <th>Full Name</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr></thead>
+                <tbody>${rows || '<tr><td colspan="4" class="um-empty">No users found.</td></tr>'}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+function openUmAddModal() {
+    ['um-inp-fullname','um-inp-username','um-inp-password'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const role = document.getElementById('um-inp-role'); if (role) role.value = 'user';
+    const err = document.getElementById('um-add-error'); if (err) err.textContent = '';
+    document.getElementById('um-add-modal').classList.add('open');
+}
+
+function closeUmAddModal(e) {
+    if (e && e.target !== document.getElementById('um-add-modal')) return;
+    document.getElementById('um-add-modal').classList.remove('open');
+}
+
+async function saveNewUser() {
+    const fullName = document.getElementById('um-inp-fullname').value.trim();
+    const username = document.getElementById('um-inp-username').value.trim();
+    const password = document.getElementById('um-inp-password').value;
+    const role     = document.getElementById('um-inp-role').value;
+    const errEl    = document.getElementById('um-add-error');
+    errEl.textContent = '';
+    if (!fullName) { errEl.textContent = 'Full name is required.'; return; }
+    if (!username) { errEl.textContent = 'Username is required.'; return; }
+    if (!password) { errEl.textContent = 'Password is required.'; return; }
+    if (_umUsers.some(u => u.username === username)) { errEl.textContent = 'Username already exists.'; return; }
+    const { data, error } = await _sb.from('users').insert({ full_name: fullName, username, password, role }).select().single();
+    if (error) { errEl.textContent = 'Create failed: ' + error.message; return; }
+    document.getElementById('um-add-modal').classList.remove('open');
+    toast('User "' + username + '" created', 'ok');
+    _umUsers.push(data);
+    _renderUserTable();
+    logActivity('Add User', `Created user: ${fullName} (${username}), role: ${role}`);
+}
+
+async function resetUserPassword(id, username) {
+    if (!confirm(`Reset password for "${username}" to "1234"?`)) return;
+    const { error } = await _sb.from('users').update({ password: '1234' }).eq('id', id);
+    if (error) { toast('Reset failed: ' + error.message, 'err'); return; }
+    toast(`Password reset for "${username}"`, 'ok');
+    logActivity('Reset Password', `Reset password for user: ${username}`);
+}
+
+async function deleteUser(id, username) {
+    if (id === currentUser?.id) { toast('Cannot delete your own account', 'err'); return; }
+    if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+    const { error } = await _sb.from('users').delete().eq('id', id);
+    if (error) { toast('Delete failed: ' + error.message, 'err'); return; }
+    toast(`User "${username}" deleted`, 'ok');
+    _umUsers = _umUsers.filter(u => u.id !== id);
+    _renderUserTable();
+    logActivity('Delete User', `Deleted user: ${username}`);
+}
+
 // ══════════════════════════════════════════════
 // FINANCE MANAGEMENT SYSTEM
 // ══════════════════════════════════════════════
