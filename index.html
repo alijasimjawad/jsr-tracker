@@ -174,37 +174,98 @@
         .al-empty { text-align:center; padding:60px 20px; color:var(--slate-400); font-size:14px; }
 
         /* ── User Management ─────────────────── */
-        .um-page { padding:24px 28px; max-width:900px; }
-        .um-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
-        .um-spacer { flex:1; }
-        .um-table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
-        .um-table { width:100%; border-collapse:collapse; font-size:13px; min-width:500px; }
-        .um-table th {
-            background:var(--slate-50); color:var(--slate-600); font-weight:700;
-            padding:10px 14px; text-align:left; border-bottom:1.5px solid var(--border);
-            white-space:nowrap; font-size:12px; text-transform:uppercase; letter-spacing:.5px;
+        .um-page { padding:28px 32px; }
+        /* Header */
+        .um-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:24px; flex-wrap:wrap; }
+        .um-header-text h2 { margin:0 0 4px; font-size:22px; font-weight:800; color:var(--text-primary); }
+        .um-header-text p  { margin:0; font-size:13px; color:var(--slate-400); }
+        .um-add-btn {
+            padding:9px 20px; font-size:13px; font-family:inherit; font-weight:700;
+            background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff;
+            border:none; border-radius:10px; cursor:pointer;
+            box-shadow:0 2px 8px rgba(37,99,235,.35);
+            display:flex; align-items:center; gap:7px; white-space:nowrap;
+            transition:opacity .15s, transform .15s;
         }
-        .um-table td { padding:10px 14px; border-bottom:1px solid var(--slate-100); color:var(--text-primary); vertical-align:middle; }
-        .um-table tr:last-child td { border-bottom:none; }
-        .um-table tr:hover td { background:var(--slate-50); }
-        .um-role-badge {
-            display:inline-block; padding:2px 9px; border-radius:20px;
-            font-size:11px; font-weight:700; letter-spacing:.3px;
+        .um-add-btn:hover { opacity:.92; transform:translateY(-1px); }
+        /* Stats bar */
+        .um-stats { display:flex; gap:14px; margin-bottom:22px; flex-wrap:wrap; }
+        .um-stat {
+            flex:1; min-width:120px; background:#fff; border:1px solid var(--border);
+            border-radius:12px; padding:14px 18px; display:flex; flex-direction:column; gap:3px;
         }
-        .um-role-admin { background:#dbeafe; color:#1e40af; }
-        .um-role-user  { background:#f3f4f6; color:#374151; }
-        .um-act-btn {
-            padding:5px 12px; font-size:12px; font-family:inherit; font-weight:600;
-            border-radius:var(--radius-sm); cursor:pointer; border:none; transition:var(--transition-fast);
+        .um-stat-val { font-size:24px; font-weight:800; line-height:1; }
+        .um-stat-lbl { font-size:11px; color:var(--slate-400); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+        .um-stat-total { border-left:4px solid #6366f1; }
+        .um-stat-total .um-stat-val  { color:#6366f1; }
+        .um-stat-admin { border-left:4px solid #2563eb; }
+        .um-stat-admin .um-stat-val  { color:#2563eb; }
+        .um-stat-eng   { border-left:4px solid #059669; }
+        .um-stat-eng   .um-stat-val  { color:#059669; }
+        .um-stat-tech  { border-left:4px solid #d97706; }
+        .um-stat-tech  .um-stat-val  { color:#d97706; }
+        /* Search */
+        .um-search-wrap { position:relative; margin-bottom:20px; }
+        .um-search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--slate-400); pointer-events:none; }
+        .um-search-inp {
+            width:100%; box-sizing:border-box; padding:10px 12px 10px 36px;
+            border:1.5px solid var(--border); border-radius:10px;
+            font-size:13px; font-family:inherit; color:var(--text-primary);
+            background:#fff; outline:none; transition:border-color .15s;
         }
-        .um-act-reset { background:#fef9c3; color:#854d0e; margin-right:6px; }
-        .um-act-reset:hover { background:#fde68a; }
-        .um-act-del   { background:#fee2e2; color:#991b1b; }
-        .um-act-del:hover { background:#fca5a5; }
-        .um-empty { text-align:center; padding:60px 20px; color:var(--slate-400); font-size:14px; }
-        .um-self-row td { background:#fffbeb !important; }
-        .um-role-engineer { background:#d1fae5; color:#065f46; }
-        .um-role-tech     { background:#fef3c7; color:#92400e; }
+        .um-search-inp:focus { border-color:var(--accent); }
+        /* Cards grid */
+        .um-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:14px; }
+        .um-card {
+            background:#fff; border:1.5px solid var(--border); border-radius:14px;
+            padding:18px 20px; display:flex; align-items:center; gap:16px;
+            transition:box-shadow .15s, border-color .15s;
+        }
+        .um-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); border-color:var(--slate-300); }
+        .um-card-self { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+        .um-card-self:hover { border-color:#f59e0b; }
+        /* Avatar */
+        .um-avatar {
+            width:46px; height:46px; border-radius:50%; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            font-size:17px; font-weight:800; color:#fff; letter-spacing:-.5px;
+        }
+        .um-av-admin { background:linear-gradient(135deg,#2563eb,#1d4ed8); }
+        .um-av-engineer { background:linear-gradient(135deg,#059669,#047857); }
+        .um-av-technician { background:linear-gradient(135deg,#d97706,#b45309); }
+        .um-av-user { background:linear-gradient(135deg,#64748b,#475569); }
+        /* Card info */
+        .um-card-info { flex:1; min-width:0; }
+        .um-card-nameline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:3px; }
+        .um-card-name { font-size:14px; font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .um-you-badge { font-size:10px; font-weight:700; background:#fef3c7; color:#92400e; padding:1px 7px; border-radius:20px; border:1px solid #fde68a; white-space:nowrap; }
+        .um-card-uname { font-size:12px; color:var(--slate-400); font-family:monospace; margin-bottom:7px; }
+        /* Role badge */
+        .um-role-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.3px; }
+        .um-role-admin     { background:#dbeafe; color:#1e40af; }
+        .um-role-user      { background:#f3f4f6; color:#374151; }
+        .um-role-engineer  { background:#d1fae5; color:#065f46; }
+        .um-role-tech      { background:#fef3c7; color:#92400e; }
+        /* Card actions */
+        .um-card-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+        .um-edit-btn {
+            padding:6px 14px; font-size:12px; font-family:inherit; font-weight:700;
+            background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff;
+            border:none; border-radius:8px; cursor:pointer;
+            box-shadow:0 1px 4px rgba(37,99,235,.3); transition:opacity .15s;
+        }
+        .um-edit-btn:hover { opacity:.88; }
+        .um-del-btn {
+            width:32px; height:32px; border:1.5px solid #fee2e2; background:#fff;
+            color:#ef4444; border-radius:8px; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            transition:background .15s, border-color .15s;
+        }
+        .um-del-btn:hover { background:#fee2e2; border-color:#fca5a5; }
+        /* Empty state */
+        .um-empty-state { text-align:center; padding:60px 20px; color:var(--slate-400); font-size:14px; }
+        /* hidden search result */
+        .um-card[data-hidden="1"] { display:none; }
 
         /* ── Toggle Switch ───────────────────── */
         .tog-wrap { display:flex; align-items:center; justify-content:space-between; padding:5px 0; gap:8px; }
@@ -5372,45 +5433,91 @@ async function showUserManagement() {
 
 function _renderUserTable() {
     const main = document.getElementById('panel-content');
-    const rows = _umUsers.map(u => {
-        const isSelf = u.id === currentUser?.id;
-        const roleBadgeMap = {
-            admin: 'um-role-admin', engineer: 'um-role-engineer',
-            technician: 'um-role-tech', user: 'um-role-user'
-        };
-        const roleLabelMap = { admin: 'Admin', engineer: 'Engineer', technician: 'Technician', user: 'User' };
-        const roleBadge = `<span class="um-role-badge ${roleBadgeMap[u.role] || 'um-role-user'}">${roleLabelMap[u.role] || 'User'}</span>`;
-        const actions = `
-            <button class="um-act-btn um-act-reset" onclick="openEditUserModal('${esc(u.id)}')">Edit</button>
-            ${isSelf ? '' : `<button class="um-act-btn um-act-del" onclick="deleteUser('${esc(u.id)}','${esc(u.username)}')">Delete</button>`}
-        `;
-        return `<tr${isSelf ? ' class="um-self-row"' : ''}>
-            <td>${esc(u.full_name || '—')}</td>
-            <td style="font-family:monospace">${esc(u.username)}</td>
-            <td>${roleBadge}</td>
-            <td>${actions}</td>
-        </tr>`;
+
+    // Stats
+    const counts = { admin:0, engineer:0, technician:0, user:0 };
+    _umUsers.forEach(u => { counts[u.role] = (counts[u.role] || 0) + 1; });
+    const nonAdminCount = _umUsers.length - (counts.admin || 0);
+
+    const avClass   = { admin:'um-av-admin', engineer:'um-av-engineer', technician:'um-av-technician', user:'um-av-user' };
+    const badgeCls  = { admin:'um-role-admin', engineer:'um-role-engineer', technician:'um-role-tech', user:'um-role-user' };
+    const badgeLbl  = { admin:'Admin', engineer:'Engineer', technician:'Technician', user:'User' };
+
+    const cards = _umUsers.map(u => {
+        const isSelf   = u.id === currentUser?.id;
+        const initials = (u.full_name || u.username || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        const role     = u.role || 'user';
+        const delBtn   = isSelf ? '' : `
+            <button class="um-del-btn" onclick="deleteUser('${esc(u.id)}','${esc(u.username)}')" title="Delete user">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>`;
+        return `
+        <div class="um-card${isSelf ? ' um-card-self' : ''}" data-search="${esc((u.full_name||'').toLowerCase())} ${esc((u.username||'').toLowerCase())}">
+            <div class="um-avatar ${avClass[role] || 'um-av-user'}">${initials}</div>
+            <div class="um-card-info">
+                <div class="um-card-nameline">
+                    <span class="um-card-name">${esc(u.full_name || u.username)}</span>
+                    ${isSelf ? '<span class="um-you-badge">You</span>' : ''}
+                </div>
+                <div class="um-card-uname">@${esc(u.username)}</div>
+                <span class="um-role-badge ${badgeCls[role] || 'um-role-user'}">${badgeLbl[role] || 'User'}</span>
+            </div>
+            <div class="um-card-actions">
+                <button class="um-edit-btn" onclick="openEditUserModal('${esc(u.id)}')">Edit</button>
+                ${delBtn}
+            </div>
+        </div>`;
     }).join('');
 
     main.innerHTML = `
     <div class="um-page">
-        <div class="um-toolbar">
-            <span style="font-size:18px;font-weight:700;color:var(--text-primary)">Users (${_umUsers.length})</span>
-            <div class="um-spacer"></div>
-            <button class="btn btn-accent" onclick="openUmAddModal()">+ Add User</button>
+        <div class="um-header">
+            <div class="um-header-text">
+                <h2>User Management</h2>
+                <p>Manage users and their permissions</p>
+            </div>
+            <button class="um-add-btn" onclick="openUmAddModal()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add User
+            </button>
         </div>
-        <div class="um-table-wrap">
-            <table class="um-table">
-                <thead><tr>
-                    <th>Full Name</th>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>Actions</th>
-                </tr></thead>
-                <tbody>${rows || '<tr><td colspan="4" class="um-empty">No users found.</td></tr>'}</tbody>
-            </table>
+
+        <div class="um-stats">
+            <div class="um-stat um-stat-total">
+                <div class="um-stat-val">${_umUsers.length}</div>
+                <div class="um-stat-lbl">Total Users</div>
+            </div>
+            <div class="um-stat um-stat-admin">
+                <div class="um-stat-val">${counts.admin || 0}</div>
+                <div class="um-stat-lbl">Admins</div>
+            </div>
+            <div class="um-stat um-stat-eng">
+                <div class="um-stat-val">${counts.engineer || 0}</div>
+                <div class="um-stat-lbl">Engineers</div>
+            </div>
+            <div class="um-stat um-stat-tech">
+                <div class="um-stat-val">${(counts.technician || 0) + (counts.user || 0)}</div>
+                <div class="um-stat-lbl">Technicians / Users</div>
+            </div>
+        </div>
+
+        <div class="um-search-wrap">
+            <span class="um-search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+            <input class="um-search-inp" type="search" placeholder="Search by name or username…" oninput="umSearchFilter(this.value)">
+        </div>
+
+        <div class="um-cards" id="um-cards-grid">
+            ${cards || '<div class="um-empty-state">No users found.</div>'}
         </div>
     </div>`;
+}
+
+function umSearchFilter(q) {
+    q = q.toLowerCase().trim();
+    document.querySelectorAll('#um-cards-grid .um-card').forEach(card => {
+        const hay = card.dataset.search || '';
+        card.dataset.hidden = (!q || hay.includes(q)) ? '0' : '1';
+    });
 }
 
 function openUmAddModal() {
