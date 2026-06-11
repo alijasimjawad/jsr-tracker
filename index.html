@@ -4503,11 +4503,10 @@ function openDetail(ri) {
     const DATE_KEYWORDS   = ['date', 'rfti', 'delivery', 'installation', 'imp date', 'imp_date'];
     const SUBCON_OPTIONS  = ['', 'ATC', 'IPT', 'KCT', 'MFC', 'MRC', 'Metco', 'Oraxel', 'SPTECH', 'Shabakat', 'TAC', 'horizon'];
 
-    // Ensure the 3 required add-site columns exist in headers when adding a new site
-    if (isNew) {
-        ['Site ID', 'Governate', 'Imp. Date'].forEach(col => {
-            if (!headers.includes(col)) headers.push(col);
-        });
+    // Only inject the 3 required columns if the section has NO columns yet (brand-new empty section).
+    // For sections that already have data, keep the existing column set as-is to avoid duplicates.
+    if (isNew && headers.length === 0) {
+        ['Site ID', 'Governate', 'Imp. Date'].forEach(col => headers.push(col));
     }
 
     const canEdit = isNew ? hasPerm('add_rows') : hasPerm('edit_rows');
