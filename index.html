@@ -4635,6 +4635,9 @@ function backToTable() {
 
 function deleteDetailRow() {
     if (detailRi === null || !db[selProj]?.[selSec]) return;
+    // Reset button state so it's always clickable when the modal opens
+    const btn = document.getElementById('delete-site-confirm-btn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
     document.getElementById('delete-site-modal').classList.add('open');
 }
 
@@ -4652,8 +4655,10 @@ async function confirmDeleteSite() {
     if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
 
     try {
-        await syncDeleteRow(selProj, selSec, detailRi);
+        // Splice from memory FIRST so the syncSection fallback syncs the correct state
         db[selProj][selSec].splice(detailRi, 1);
+        await syncDeleteRow(selProj, selSec, detailRi);
+
         document.getElementById('delete-site-modal').classList.remove('open');
         logActivity('Deleted Row', `Site ID: ${_delRow?.[0] || '(empty)'} deleted from ${_delSecN}`);
         refreshStatusDots();
