@@ -4480,7 +4480,13 @@ function openDetail(ri) {
 
     const canEdit = isNew ? hasPerm('add_rows') : hasPerm('edit_rows');
     const rdonly  = canEdit ? '' : ' disabled style="opacity:.65;pointer-events:none;cursor:default"';
+    // For new sites, only show the 3 entry fields
+    const _showField = (h) => !isNew
+        || /site.?id/i.test(h)
+        || /governorate/i.test(h)
+        || /imp.{0,5}date/i.test(h);
     const fields = headers.map((h, ci) => {
+        if (!_showField(h)) return '';
         const v        = String(row[ci] ?? '');
         const fid      = `df-${ci}`;
         const isStatus = h === 'Status of Integration';
