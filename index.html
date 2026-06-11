@@ -3661,7 +3661,20 @@ function renderTable(el) {
     setTimeout(() => _renderTableContent(el), 60);
 }
 function _renderTableContent(el) {
-    const data    = db[selProj][selSec];
+    const data = db[selProj][selSec];
+    // Strip legacy default columns in-place (catches seed data that bypassed sbLoadAll)
+    if (data && data[0]) {
+        const customColSet = customColumns[selProj]?.[selSec] || new Set();
+        const keepIdxs = data[0]
+            .map((h, i) => ({ h, i }))
+            .filter(({ h }) => !LEGACY_DEFAULT_COLS.has(h) || customColSet.has(h))
+            .map(({ i }) => i);
+        if (keepIdxs.length < data[0].length) {
+            for (let r = 0; r < data.length; r++) {
+                data[r] = keepIdxs.map(i => data[r][i] ?? '');
+            }
+        }
+    }
     const headers = data[0] || [];
     const rows    = data.slice(1);
     const statusColIdx = headers.indexOf('Status of Integration');
@@ -4487,6 +4500,13 @@ function openDetail(ri) {
     const STATUS_OPTIONS  = ['', 'Integrated', 'Reachable', 'Not Integrated', 'Pending'];
     const DATE_KEYWORDS   = ['date', 'rfti', 'delivery', 'installation', 'imp date', 'imp_date'];
     const SUBCON_OPTIONS  = ['', 'ATC', 'IPT', 'KCT', 'MFC', 'MRC', 'Metco', 'Oraxel', 'SPTECH', 'Shabakat', 'TAC', 'horizon'];
+
+    // Ensure the 3 required add-site columns exist in headers when adding a new site
+    if (isNew) {
+        ['Site ID', 'Governate', 'Imp. Date'].forEach(col => {
+            if (!headers.includes(col)) headers.push(col);
+        });
+    }
 
     const canEdit = isNew ? hasPerm('add_rows') : hasPerm('edit_rows');
     const rdonly  = canEdit ? '' : ' disabled style="opacity:.65;pointer-events:none;cursor:default"';
