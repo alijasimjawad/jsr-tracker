@@ -2429,7 +2429,13 @@ let detailRi     = null;
 let pageSize     = 50;
 let currentPage  = 1;
 
-const DEFAULT_HEADERS = ['Site ID','Governorate','Imp. Date'];
+const DEFAULT_HEADERS = ['Site ID','Governate','Imp. Date'];
+// Legacy columns from the old default set — stripped from sections on load
+const LEGACY_DEFAULT_COLS = new Set([
+    'RFTI','Delivery','Installation',
+    'Status of Integration','Integration date','Integration Date',
+    'TDD','Subcon'
+]);
 const db = {
     zain:   { ftk: null, tdd: null, addsector: null },
     nokia:  { ftk: null, tdd: null, addsector: null },
@@ -2668,12 +2674,16 @@ async function sbLoadAll() {
             if (db[proj] && db[proj][secName] === undefined) db[proj][secName] = null;
         }
 
-        const columns = sec.columns || [];
-        const secRows = rowMap[sec.id] || [];
+        const rawColumns = sec.columns || [];
+        const secRows    = rowMap[sec.id] || [];
 
         // Load which columns are user-added
         if (!customColumns[proj]) customColumns[proj] = {};
-        customColumns[proj][secName] = new Set(sec.custom_columns || []);
+        const customColSet = new Set(sec.custom_columns || []);
+        customColumns[proj][secName] = customColSet;
+
+        // Strip legacy default columns that should no longer appear
+        const columns = rawColumns.filter(c => !LEGACY_DEFAULT_COLS.has(c) || customColSet.has(c));
 
         if (!db[proj]) db[proj] = {};
 
@@ -4483,7 +4493,7 @@ function openDetail(ri) {
     // For new sites, only show the 3 entry fields
     const _showField = (h) => !isNew
         || /site.?id/i.test(h)
-        || /governorate/i.test(h)
+        || /governat/i.test(h)
         || /imp.{0,5}date/i.test(h);
     const fields = headers.map((h, ci) => {
         if (!_showField(h)) return '';
