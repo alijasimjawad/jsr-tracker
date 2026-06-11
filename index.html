@@ -2556,11 +2556,12 @@ async function syncNewRow(proj, sec) {
     const ri      = data.length - 1;  // index of the newly pushed row
     const row     = data[ri];
     const secId   = await _ensureSection(proj, sec);
-    const { data: ins } = await _sb.from('rows').insert({
+    const { data: ins, error: insErr } = await _sb.from('rows').insert({
         section_id: secId,
         data: Object.fromEntries(columns.map((col, ci) => [col, String(row[ci] ?? '')])),
         row_order: ri - 1
     }).select('id').single();
+    if (insErr) throw new Error('Row insert failed: ' + insErr.message);
     if (!_rowIds[key]) _rowIds[key] = [];
     _rowIds[key][ri - 1] = ins?.id;
 }
@@ -2574,10 +2575,11 @@ async function syncUpdateRow(proj, sec, ri) {
     if (!rowUid) { return syncSection(proj, sec); }
     const columns = data[0];
     const row     = data[ri];
-    await _sb.from('rows').update({
+    const { error: updErr } = await _sb.from('rows').update({
         data: Object.fromEntries(columns.map((col, ci) => [col, String(row[ci] ?? '')])),
         updated_at: new Date().toISOString()
     }).eq('id', rowUid);
+    if (updErr) throw new Error('Row update failed: ' + updErr.message);
 }
 
 // Delete a single row by index ri (1-based) — call BEFORE splicing db
@@ -4478,7 +4480,7 @@ function parseToDateInput(v) {
 
 function openDetail(ri) {
     detailRi = ri;
-    const data    = db[selProj][selSec] || (db[selProj][selSec] = [DEFAULT_HEADERS]);
+    const data    = db[selProj][selSec] || (db[selProj][selSec] = [[...DEFAULT_HEADERS]]);
     const headers = data[0];
     const isNew   = ri === null;
     const row     = isNew ? new Array(headers.length).fill('') : data[ri];
@@ -4658,6 +4660,7 @@ async function confirmDeleteSite() {
         // Splice from memory FIRST so the syncSection fallback syncs the correct state
         db[selProj][selSec].splice(detailRi, 1);
         await syncDeleteRow(selProj, selSec, detailRi);
+        detailRi = null;
 
         document.getElementById('delete-site-modal').classList.remove('open');
         logActivity('Deleted Row', `Site ID: ${_delRow?.[0] || '(empty)'} deleted from ${_delSecN}`);
@@ -4971,6 +4974,7 @@ async function confirmAddCol() {
         await syncSection(selProj, selSec);
         document.getElementById('add-col-modal').classList.remove('open');
         renderMain();
+        logActivity('Added Column', `Added Column: "${name}"`);
         toast(`Column "${name}" added`, 'ok');
     } catch (err) {
         // Rollback
@@ -5025,7 +5029,7 @@ async function confirmRenameCol() {
         document.getElementById('rename-col-modal').classList.remove('open');
         _renameColIdx = null;
         renderMain();
-        logActivity('Renamed Column', `Renamed Column: "${oldName}" → "${newName}"`, selProj, selSec);
+        logActivity('Renamed Column', `Renamed Column: "${oldName}" → "${newName}"`);
         toast(`Column renamed to "${newName}"`, 'ok');
     } catch (err) {
         // Rollback
@@ -5077,7 +5081,7 @@ async function confirmDeleteCol() {
         document.getElementById('delete-col-modal').classList.remove('open');
         _deleteColIdx = null;
         renderMain();
-        logActivity('Deleted Column', `Deleted Column: "${colName}"`, selProj, selSec);
+        logActivity('Deleted Column', `Deleted Column: "${colName}"`);
         toast(`Column "${colName}" deleted`, 'ok');
     } catch (err) {
         // Rollback: re-insert the column at its original position
@@ -5331,7 +5335,7 @@ initApp();
 
 // ── Activity Log ──────────────────────────────
 async function showActivityLog() {
-    if (currentUser?.role !== 'admin') return;
+    if (!hasPerm('view_activity_log')) { toast('Access denied', 'err'); return; }
 
     selProj = null; selSec = null;
     dropFilters = {}; searchQuery = ''; chipFilters = new Set(); ddClose();
@@ -5793,6 +5797,7 @@ async function _loadFinAll() {
 // ══════════════════════════════════════════════
 async function showFinDashboard() {
     _finNavActive('nav-fin-dashboard');
+    setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Dashboard</span>');
     const pc = _finSpinner();
     await _loadFinAll();
     _renderFinDashboard(pc);
