@@ -4502,6 +4502,7 @@ function openDetail(ri) {
     const STATUS_OPTIONS  = ['', 'Integrated', 'Reachable', 'Not Integrated', 'Pending'];
     const DATE_KEYWORDS   = ['date', 'rfti', 'delivery', 'installation', 'imp date', 'imp_date'];
     const SUBCON_OPTIONS  = ['', 'ATC', 'IPT', 'KCT', 'MFC', 'MRC', 'Metco', 'Oraxel', 'SPTECH', 'Shabakat', 'TAC', 'horizon'];
+    const ATP_OPTIONS     = ['Pending', 'Accepted', 'Rejected'];
 
     // Only inject the 3 required columns if the section has NO columns yet (brand-new empty section).
     // For sections that already have data, keep the existing column set as-is to avoid duplicates.
@@ -4519,8 +4520,10 @@ function openDetail(ri) {
         const fid      = `df-${ci}`;
         const isStatus = h === 'Status of Integration';
         const isSubcon = h === 'Subcon';
+        const isAtp    = /^atp.{0,8}status$/i.test(h);
         const isDate   = DATE_KEYWORDS.some(kw => h.toLowerCase().includes(kw));
         const dateVal  = isDate ? parseToDateInput(v) : '';
+        const atpVal   = isAtp ? (ATP_OPTIONS.includes(v) ? v : 'Pending') : '';
         const input = isStatus
             ? `<select class="detail-select" id="${fid}"${rdonly}>
                 ${STATUS_OPTIONS.map(o => `<option value="${esc(o)}"${o === v ? ' selected' : ''}>${o || '— Select status —'}</option>`).join('')}
@@ -4530,6 +4533,10 @@ function openDetail(ri) {
                 ? `<select class="detail-select" id="${fid}"${rdonly}>
                     ${SUBCON_OPTIONS.map(o => `<option value="${esc(o)}"${o === v ? ' selected' : ''}>${o || '— Select subcon —'}</option>`).join('')}
                     ${!SUBCON_OPTIONS.includes(v) && v ? `<option value="${esc(v)}" selected>${esc(v)}</option>` : ''}
+                   </select>`
+            : isAtp
+                ? `<select class="detail-select" id="${fid}"${rdonly}>
+                    ${ATP_OPTIONS.map(o => `<option value="${esc(o)}"${o === atpVal ? ' selected' : ''}>${esc(o)}</option>`).join('')}
                    </select>`
             : isDate
                 ? `<div class="date-field-wrap"><input class="detail-input" id="${fid}" type="date" value="${dateVal}"${rdonly}><button type="button" class="date-clear-btn" onclick="document.getElementById('${fid}').value=''" title="Clear date"${rdonly}>✕</button></div>`
