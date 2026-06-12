@@ -4666,6 +4666,11 @@ async function confirmDeleteSite() {
     if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
 
     try {
+        const headers  = db[selProj][selSec][0];
+        const siteIdx  = headers.findIndex(h => /^site.{0,3}id$/i.test(h));
+        const siteId   = siteIdx >= 0 ? String(_delRow[siteIdx] || '').trim() : '';
+        const projName = PROJ_NAMES[selProj] || selProj;
+
         // Splice from memory FIRST so the syncSection fallback syncs the correct state
         db[selProj][selSec].splice(detailRi, 1);
         await syncDeleteRow(selProj, selSec, detailRi);
@@ -4682,6 +4687,13 @@ async function confirmDeleteSite() {
             <span class="bc-cur">${secLabel(selSec)}</span>`, true);
         renderMain();
         toast('Site deleted', 'ok');
+
+        if (siteId) {
+            _sb.from('revenue').delete().eq('project_name', projName).eq('site_id', siteId)
+                .then(({ error }) => {
+                    if (!error) _finRevenue = _finRevenue.filter(r => !(r.project_name === projName && r.site_id === siteId));
+                }).catch(() => {});
+        }
     } catch (err) {
         if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
         toast('Delete failed: ' + err.message, 'err');
