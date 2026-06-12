@@ -2429,7 +2429,7 @@ let detailRi     = null;
 let pageSize     = 50;
 let currentPage  = 1;
 
-const DEFAULT_HEADERS = ['Site ID','Governate','Imp. Date'];
+const DEFAULT_HEADERS = ['Site ID','Governate','Imp. Date','ATP Status','Comment'];
 // Legacy columns from the old default set — stripped from sections on load
 const LEGACY_DEFAULT_COLS = new Set([
     'RFTI','Delivery','Installation',
@@ -4511,11 +4511,13 @@ function openDetail(ri) {
 
     const canEdit = isNew ? hasPerm('add_rows') : hasPerm('edit_rows');
     const rdonly  = canEdit ? '' : ' disabled style="opacity:.65;pointer-events:none;cursor:default"';
-    // For new sites, only show the 3 entry fields
+    // For new sites, only show the 5 entry fields
     const _showField = (h) => !isNew
         || /site.?id/i.test(h)
         || /governat/i.test(h)
-        || /imp.{0,5}date/i.test(h);
+        || /imp.{0,5}date/i.test(h)
+        || /^atp.{0,8}status$/i.test(h)
+        || /^comment$/i.test(h);
     const fields = headers.map((h, ci) => {
         if (!_showField(h)) return '';
         const v        = String(row[ci] ?? '');
