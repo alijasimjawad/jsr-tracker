@@ -1954,6 +1954,7 @@
                         Import Excel
                     </button>
                     <input type="file" id="import-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportFile(this)">
+                    <input type="file" id="team-bulk-input" accept=".xlsx,.xls" style="display:none" onchange="handleTeamBulkUpload(this)">
                     <button class="btn btn-green" id="topbar-add-site" onclick="openDetail(null)">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Add Site
@@ -6075,6 +6076,9 @@ function _renderFinTeam(pc) {
             <button class="btn btn-ghost" onclick="showFinTeam()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
             </button>
+            <button class="btn btn-ghost" onclick="document.getElementById('team-bulk-input').value='';document.getElementById('team-bulk-input').click()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="15"/></svg> Bulk Upload
+            </button>
             <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
         </div>
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
@@ -6094,7 +6098,7 @@ function _renderFinTeam(pc) {
                     <button class="fin-act-btn" onclick="toggleFinTeamActive('${m.id}',${!m.is_active})" title="${m.is_active?'Deactivate':'Activate'}">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
                     </button>
-                    <button class="fin-act-btn del" onclick="finDelConfirm('Delete team member \\"${esc(m.full_name)}\\"?',()=>deleteFinTeam('${m.id}','${esc(m.full_name)}'))" title="Delete">
+                    <button class="fin-act-btn del" onclick="finDelConfirm('Delete team member?',()=>deleteFinTeam('${m.id}'))" title="Delete">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                     </button>
                 </td>
@@ -6150,13 +6154,61 @@ async function toggleFinTeamActive(id, val) {
     toast(val ? 'Member activated' : 'Member deactivated', 'ok');
 }
 
-async function deleteFinTeam(id, name) {
+async function deleteFinTeam(id) {
+    const m = _finTeam.find(x => x.id === id);
     const { error } = await _sb.from('team_members').delete().eq('id', id);
     if (error) { toast(error.message, 'err'); return; }
     closeFinModal('fin-del-modal');
-    logActivity('Deleted Team Member', `Deleted Team Member: ${name}`);
+    logActivity('Deleted Team Member', `Deleted Team Member: ${m?.full_name || id}`);
     toast('Member deleted', 'ok');
     showFinTeam();
+}
+
+async function handleTeamBulkUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const wb  = XLSX.read(e.target.result, { type: 'array' });
+            const ws  = wb.Sheets[wb.SheetNames[0]];
+            const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+            if (!raw || raw.length < 2) { toast('File is empty or missing data rows', 'err'); return; }
+
+            const hdrs = raw[0].map(h => String(h).trim().toLowerCase());
+            const nameIdx   = hdrs.findIndex(h => h === 'full name');
+            const salIdx    = hdrs.findIndex(h => h === 'monthly salary');
+            const roleIdx   = hdrs.findIndex(h => h === 'role');
+            const statusIdx = hdrs.findIndex(h => h === 'status');
+            if (nameIdx < 0) { toast('Column "Full Name" not found in row 1', 'err'); return; }
+
+            const existingNames = new Set(_finTeam.map(m => m.full_name.toLowerCase()));
+            const toInsert = [];
+            for (let i = 1; i < raw.length; i++) {
+                const r    = raw[i];
+                const name = String(r[nameIdx] || '').trim();
+                if (!name) continue;
+                if (existingNames.has(name.toLowerCase())) continue;
+                existingNames.add(name.toLowerCase());
+                const salary    = salIdx    >= 0 ? (+String(r[salIdx]).replace(/[^0-9.]/g,'') || 0) : 0;
+                const role      = roleIdx   >= 0 ? String(r[roleIdx]   || '').trim() : null;
+                const statusRaw = statusIdx >= 0 ? String(r[statusIdx] || '').trim().toLowerCase() : 'active';
+                toInsert.push({ full_name: name, monthly_salary: salary, role: role || null, is_active: statusRaw !== 'inactive' });
+            }
+
+            if (toInsert.length === 0) { toast('No new members to add (all already exist)', 'ok'); return; }
+
+            const { data, error } = await _sb.from('team_members').insert(toInsert).select('id,full_name,monthly_salary,role,is_active');
+            if (error) { toast('Upload failed: ' + error.message, 'err'); return; }
+            (data || []).forEach(m => _finTeam.push(m));
+            logActivity('Bulk Uploaded Team Members', `Added ${toInsert.length} member${toInsert.length !== 1 ? 's' : ''} via bulk upload`);
+            toast(`Added ${toInsert.length} member${toInsert.length !== 1 ? 's' : ''}`, 'ok');
+            showFinTeam();
+        } catch (err) {
+            toast('Failed to read file: ' + err.message, 'err');
+        }
+    };
+    reader.readAsArrayBuffer(file);
 }
 
 // ══════════════════════════════════════════════
