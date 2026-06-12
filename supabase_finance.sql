@@ -33,14 +33,17 @@ CREATE TABLE IF NOT EXISTS revenue (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   project_name text NOT NULL,
   site_id text,
-  amount numeric(15,0) NOT NULL,
+  amount numeric(15,0) NOT NULL DEFAULT 0,
   invoice_date date,
   month integer,
   year integer,
+  status text DEFAULT 'Implemented - Pending ATP',
   notes text,
   added_by text,
   created_at timestamptz DEFAULT now()
 );
+-- Add status column to existing table (idempotent)
+ALTER TABLE revenue ADD COLUMN IF NOT EXISTS status text DEFAULT 'Implemented - Pending ATP';
 ALTER TABLE revenue ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all on revenue" ON revenue FOR ALL TO anon USING (true) WITH CHECK (true);
 
