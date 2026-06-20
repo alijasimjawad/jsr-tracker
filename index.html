@@ -392,6 +392,13 @@
         .team-stat-label { font-size:10px; color:var(--slate-500); text-transform:uppercase; letter-spacing:.6px; font-weight:700; margin-bottom:6px; }
         .team-stat-value { font-size:22px; font-weight:800; }
         .fin-table th .th-inner { display:flex; align-items:center; gap:4px; justify-content:space-between; }
+        .tm-search-wrap { position:relative; margin:14px 0 4px; }
+        .tm-search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--slate-400); pointer-events:none; }
+        .tm-search-inp { width:100%; box-sizing:border-box; padding:9px 36px 9px 36px; border:1.5px solid var(--slate-200); border-radius:var(--radius); font-size:13px; font-family:inherit; color:var(--text-primary); background:var(--bg-panel); outline:none; transition:border-color .15s,box-shadow .15s; }
+        .tm-search-inp:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+        .tm-search-inp::placeholder { color:var(--text-muted); }
+        .tm-search-clear { position:absolute; right:10px; top:50%; transform:translateY(-50%); width:20px; height:20px; border:none; border-radius:50%; background:var(--slate-200); color:var(--slate-500); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; line-height:1; padding:0; transition:background .12s,color .12s; }
+        .tm-search-clear:hover { background:var(--slate-300); color:var(--slate-700); }
         .fin-charts-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px; }
         .fin-chart-panel { background:var(--bg-panel); border-radius:10px; border:1px solid var(--slate-200); padding:16px 18px; }
         .fin-chart-title { font-size:13px; font-weight:700; color:var(--slate-700); margin-bottom:14px; }
@@ -6333,6 +6340,15 @@ function applyTmFilters() {
     Object.entries(_tmDropFilters).forEach(([col, allowed]) => {
         rows = rows.filter(m => allowed.has(_tmColVal(m, col)));
     });
+    if (_tmSearch) {
+        const q = _tmSearch.toLowerCase();
+        rows = rows.filter(m =>
+            (m.full_name || '').toLowerCase().includes(q) ||
+            (m.role || '').toLowerCase().includes(q) ||
+            (m.phone || '').toLowerCase().includes(q) ||
+            (m.notes || '').toLowerCase().includes(q)
+        );
+    }
     tbody.innerHTML = rows.length === 0
         ? `<tr><td colspan="7" class="al-empty">No members match this filter.</td></tr>`
         : rows.map(_teamMemberRow).join('');
@@ -6368,6 +6384,11 @@ function _renderFinTeam(pc) {
             ${card('Team Leader',   _finTeam.filter(m=>(m.role||'').trim().toLowerCase()==='team leader').length,             '#0d9488', 'teamleader')}
             ${card('Other Roles',   _finTeam.filter(m=>{const r=(m.role||'').toLowerCase();return r&&!r.includes('engineer')&&!r.includes('technician')&&r!=='team leader';}).length, '#64748b', 'other')}
             ${clearBtn}
+        </div>
+        <div class="tm-search-wrap">
+            <span class="tm-search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+            <input class="tm-search-inp" id="tm-search-inp" type="text" placeholder="Search by name, role, phone…" value="${esc(_tmSearch)}" oninput="tmSearchInput(this)">
+            <button class="tm-search-clear" id="tm-search-clear" onclick="tmSearchClear()" title="Clear search" style="${_tmSearch ? '' : 'display:none'}">×</button>
         </div>
         <div class="fin-toolbar">
             <div class="fin-spacer"></div>
@@ -6539,6 +6560,22 @@ function syncTmDdBtn(col) {
     document.querySelector(`.tm-dd-btn[data-col="${col}"]`)?.classList.toggle('on', !!_tmDropFilters[col]);
 }
 
+function tmSearchInput(el) {
+    _tmSearch = el.value;
+    const clr = document.getElementById('tm-search-clear');
+    if (clr) clr.style.display = _tmSearch ? 'flex' : 'none';
+    applyTmFilters();
+}
+
+function tmSearchClear() {
+    _tmSearch = '';
+    const inp = document.getElementById('tm-search-inp');
+    if (inp) { inp.value = ''; inp.focus(); }
+    const clr = document.getElementById('tm-search-clear');
+    if (clr) clr.style.display = 'none';
+    applyTmFilters();
+}
+
 function exportTeamMembers() {
     if (!_finTeam.length) { toast('No data to export', 'err'); return; }
     const headers = ['Full Name', 'Monthly Salary', 'Role', 'Phone', 'Notes', 'Status'];
@@ -6623,6 +6660,7 @@ async function deleteFinTeam(id) {
 let _teamDelId     = null;
 let _tmDropFilters = {};
 let _tmDdOpenCol   = null;
+let _tmSearch      = '';
 
 function openTeamDelModal(id) {
     const m = _finTeam.find(x => x.id === id);
