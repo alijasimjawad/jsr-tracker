@@ -399,6 +399,49 @@
         .tm-search-inp::placeholder { color:var(--text-muted); }
         .tm-search-clear { position:absolute; right:10px; top:50%; transform:translateY(-50%); width:20px; height:20px; border:none; border-radius:50%; background:var(--slate-200); color:var(--slate-500); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; line-height:1; padding:0; transition:background .12s,color .12s; }
         .tm-search-clear:hover { background:var(--slate-300); color:var(--slate-700); }
+
+        /* ── HR Employee Profiles ────────────── */
+        .hr-page { padding:24px 28px; }
+        .hr-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
+        .hr-header-title { font-size:22px; font-weight:800; color:var(--text-primary); }
+        .hr-header-sub { font-size:13px; color:var(--text-muted); margin-top:3px; }
+        .hr-search-wrap { position:relative; margin-bottom:20px; }
+        .hr-search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--slate-400); pointer-events:none; }
+        .hr-search-inp { width:100%; box-sizing:border-box; padding:10px 36px; border:1.5px solid var(--slate-200); border-radius:var(--radius); font-size:13px; font-family:inherit; color:var(--text-primary); background:var(--bg-panel); outline:none; transition:border-color .15s,box-shadow .15s; }
+        .hr-search-inp:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+        .hr-search-inp::placeholder { color:var(--text-muted); }
+        .hr-search-clear { position:absolute; right:10px; top:50%; transform:translateY(-50%); width:20px; height:20px; border:none; border-radius:50%; background:var(--slate-200); color:var(--slate-500); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; padding:0; transition:background .12s; }
+        .hr-search-clear:hover { background:var(--slate-300); }
+        .hr-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+        .hr-card { background:var(--bg-panel); border:1.5px solid var(--border); border-radius:14px; padding:22px 18px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; transition:box-shadow .15s,border-color .15s; }
+        .hr-card:hover { box-shadow:0 4px 18px rgba(0,0,0,.09); border-color:var(--slate-300); }
+        .hr-avatar { width:62px; height:62px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:21px; font-weight:800; color:#fff; letter-spacing:-.5px; flex-shrink:0; }
+        .hr-card-name { font-size:15px; font-weight:700; color:var(--text-primary); margin-top:2px; }
+        .hr-role-badge { display:inline-block; padding:3px 12px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.3px; }
+        .hr-card-phone { font-size:12px; color:var(--slate-500); }
+        .hr-status-active   { color:#16a34a; font-size:12px; font-weight:600; }
+        .hr-status-inactive { color:#94a3b8; font-size:12px; font-weight:600; }
+        .hr-view-btn { margin-top:6px; padding:7px 22px; font-size:12px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:8px; cursor:pointer; transition:opacity .15s; width:100%; }
+        .hr-view-btn:hover { opacity:.88; }
+        .hr-empty { grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--slate-400); font-size:14px; }
+        /* Profile detail */
+        .hr-profile { padding:24px 28px; max-width:820px; }
+        .hr-profile-back { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--slate-500); background:none; border:none; cursor:pointer; padding:0; margin-bottom:22px; transition:color .15s; }
+        .hr-profile-back:hover { color:var(--accent); }
+        .hr-profile-hero { display:flex; align-items:center; gap:20px; padding:20px 22px; background:var(--bg-panel); border:1.5px solid var(--border); border-radius:12px; margin-bottom:16px; }
+        .hr-profile-avatar { width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:800; color:#fff; flex-shrink:0; }
+        .hr-profile-name { font-size:20px; font-weight:800; color:var(--text-primary); }
+        .hr-profile-meta { display:flex; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap; }
+        .hr-section { background:var(--bg-panel); border:1.5px solid var(--border); border-radius:12px; padding:20px 22px; margin-bottom:16px; }
+        .hr-section-title { font-size:11px; font-weight:800; color:var(--slate-500); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; }
+        .hr-fields { display:grid; grid-template-columns:1fr 1fr; gap:16px 28px; }
+        .hr-field-label { font-size:11px; font-weight:700; color:var(--slate-500); text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+        .hr-field-value { font-size:14px; color:var(--text-primary); font-weight:500; word-break:break-word; }
+        .hr-field-empty { font-size:13px; color:var(--slate-400); }
+        .hr-edit-btn { padding:8px 22px; font-size:13px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:8px; cursor:pointer; transition:opacity .15s; margin-left:auto; flex-shrink:0; }
+        .hr-edit-btn:hover { opacity:.88; }
+        @media (max-width:1100px) { .hr-cards { grid-template-columns:repeat(2,1fr); } }
+        @media (max-width:700px)  { .hr-cards { grid-template-columns:1fr; } .hr-fields { grid-template-columns:1fr; } }
         .fin-charts-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px; }
         .fin-chart-panel { background:var(--bg-panel); border-radius:10px; border:1px solid var(--slate-200); padding:16px 18px; }
         .fin-chart-title { font-size:13px; font-weight:700; color:var(--slate-700); margin-bottom:14px; }
@@ -1924,6 +1967,22 @@
                     </div>
                 </div>
 
+                <!-- HR section (admin only) -->
+                <div class="admin-only" id="sidebar-hr-section">
+                    <div class="tree-divider"></div>
+                    <div class="tree-section-label" style="display:flex;align-items:center;gap:6px">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        HR
+                    </div>
+                    <div class="tree-child" id="nav-hr-profiles" onclick="showHrProfiles()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><rect x="2" y="3" width="20" height="18" rx="3"/><circle cx="9" cy="10" r="2.5"/><path d="M5 18a4 4 0 0 1 8 0"/><line x1="15" y1="9" x2="20" y2="9"/><line x1="15" y1="13" x2="20" y2="13"/><line x1="15" y1="17" x2="18" y2="17"/></svg>
+                            <span class="tree-child-label">Employee Profiles</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
+                </div>
+
                 <!-- ADMIN section (admin only) -->
                 <div class="admin-only" id="sidebar-admin-section">
                     <div class="tree-divider"></div>
@@ -2037,6 +2096,32 @@
     <div class="modal-actions" style="margin-top:18px">
       <button class="btn btn-ghost" onclick="closeFinModal('fin-team-modal')">Cancel</button>
       <button class="btn btn-accent" onclick="saveFinTeamMember()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- HR Profile Edit Modal -->
+<div class="modal-overlay" id="hr-profile-modal" onclick="closeFinModal('hr-profile-modal',event)">
+  <div class="modal-card" style="max-width:600px">
+    <div class="modal-title">Edit Employee Profile</div>
+    <div class="fin-form-grid" style="margin-top:16px">
+      <div class="fin-field span2"><label>Full Name *</label><input type="text" id="hrm-name" placeholder="Full name…" maxlength="100"></div>
+      <div class="fin-field"><label>Phone</label><input type="text" id="hrm-phone" placeholder="+964…" maxlength="40"></div>
+      <div class="fin-field"><label>National ID</label><input type="text" id="hrm-national-id" placeholder="ID number…" maxlength="60"></div>
+      <div class="fin-field"><label>Date of Birth</label><input type="date" id="hrm-dob"></div>
+      <div class="fin-field"><label>Address</label><input type="text" id="hrm-address" placeholder="Address…" maxlength="255"></div>
+      <div class="fin-field"><label>Emergency Contact Name</label><input type="text" id="hrm-ec-name" placeholder="Contact name…" maxlength="100"></div>
+      <div class="fin-field"><label>Emergency Contact Phone</label><input type="text" id="hrm-ec-phone" placeholder="Phone…" maxlength="40"></div>
+      <div class="fin-field"><label>Role</label><input type="text" id="hrm-role" placeholder="e.g. Engineer" maxlength="80"></div>
+      <div class="fin-field"><label>Monthly Salary (IQD)</label><input type="number" id="hrm-salary" min="0" placeholder="0"></div>
+      <div class="fin-field"><label>Start Date</label><input type="date" id="hrm-start-date"></div>
+      <div class="fin-field"><label>Status</label><select id="hrm-status"><option value="true">Active</option><option value="false">Inactive</option></select></div>
+      <div class="fin-field span2"><label>Notes</label><input type="text" id="hrm-notes" placeholder="Optional…" maxlength="255"></div>
+    </div>
+    <div id="hr-profile-err" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeFinModal('hr-profile-modal')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveHrProfile()">Save</button>
     </div>
   </div>
 </div>
@@ -7891,6 +7976,220 @@ function exportFinTable(name, headers, rowFn) {
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data.map(rowFn)]);
     XLSX.utils.book_append_sheet(wb, ws, name);
     XLSX.writeFile(wb, `Finance_${name}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ── HR EMPLOYEE PROFILES ─────────────────────────────────────────────────────
+
+let _hrSearchQ = '';
+let _hrViewId  = null;
+
+function _hrAvatarGrad(role) {
+    const p = [
+        'linear-gradient(135deg,#2563eb,#1d4ed8)', 'linear-gradient(135deg,#7c3aed,#6d28d9)',
+        'linear-gradient(135deg,#059669,#047857)', 'linear-gradient(135deg,#d97706,#b45309)',
+        'linear-gradient(135deg,#0d9488,#0f766e)', 'linear-gradient(135deg,#dc2626,#b91c1c)',
+        'linear-gradient(135deg,#0891b2,#0e7490)', 'linear-gradient(135deg,#65a30d,#4d7c0f)',
+    ];
+    if (!role) return p[0];
+    let h = 0; for (let i = 0; i < role.length; i++) h = (h * 31 + role.charCodeAt(i)) & 0xFFFF;
+    return p[h % p.length];
+}
+
+function _hrBadgeStyle(role) {
+    const p = [
+        ['#dbeafe','#1e40af'], ['#ede9fe','#5b21b6'], ['#d1fae5','#065f46'],
+        ['#fef3c7','#92400e'], ['#ccfbf1','#134e4a'], ['#fee2e2','#991b1b'],
+        ['#cffafe','#164e63'], ['#ecfccb','#365314'],
+    ];
+    if (!role) return `background:${p[0][0]};color:${p[0][1]}`;
+    let h = 0; for (let i = 0; i < role.length; i++) h = (h * 31 + role.charCodeAt(i)) & 0xFFFF;
+    return `background:${p[h%p.length][0]};color:${p[h%p.length][1]}`;
+}
+
+function _hrInitials(name) {
+    return (name || '?').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function _hrFilteredMembers() {
+    const q = _hrSearchQ.toLowerCase();
+    return q ? _finTeam.filter(m =>
+        (m.full_name || '').toLowerCase().includes(q) ||
+        (m.role || '').toLowerCase().includes(q) ||
+        (m.phone || '').toLowerCase().includes(q)) : _finTeam;
+}
+
+function _hrCardHtml(m) {
+    const grad  = _hrAvatarGrad(m.role);
+    const badge = _hrBadgeStyle(m.role);
+    return `<div class="hr-card">
+        <div class="hr-avatar" style="${grad}">${_hrInitials(m.full_name)}</div>
+        <div class="hr-card-name">${esc(m.full_name || '')}</div>
+        ${m.role ? `<span class="hr-role-badge" style="${badge}">${esc(m.role)}</span>` : ''}
+        ${m.phone ? `<div class="hr-card-phone">${esc(m.phone)}</div>` : ''}
+        <div class="${m.is_active ? 'hr-status-active' : 'hr-status-inactive'}">● ${m.is_active ? 'Active' : 'Inactive'}</div>
+        <button class="hr-view-btn" onclick="showHrProfile('${m.id}')">View Profile</button>
+    </div>`;
+}
+
+async function showHrProfiles(force = false) {
+    _finNavActive('nav-hr-profiles');
+    setTopbar('<span class="bc-cur">Employee Profiles</span>');
+    if (_finCacheOk() && !force) {
+        _renderHrProfiles(_finPanel());
+        _bgFinRefresh('nav-hr-profiles', () => _renderHrProfiles());
+    } else {
+        const pc = _finSpinner();
+        try { await _loadFinAll(); } catch(_) {}
+        _renderHrProfiles(pc);
+    }
+}
+
+function _renderHrProfiles(pc) {
+    pc = pc || document.getElementById('panel-content');
+    const members = _hrFilteredMembers();
+    pc.innerHTML = `<div class="hr-page">
+        <div class="hr-header">
+            <div>
+                <div class="hr-header-title">Employee Profiles</div>
+                <div class="hr-header-sub">Complete employee records</div>
+            </div>
+            <button class="btn btn-ghost" onclick="showHrProfiles(true)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
+            </button>
+        </div>
+        <div class="hr-search-wrap">
+            <span class="hr-search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+            <input class="hr-search-inp" type="text" placeholder="Search by name, role, phone…" value="${esc(_hrSearchQ)}" oninput="hrSearch(this)">
+            <button class="hr-search-clear" onclick="hrSearchClear()" style="${_hrSearchQ ? '' : 'display:none'}">×</button>
+        </div>
+        <div class="hr-cards">${members.length ? members.map(_hrCardHtml).join('') : '<div class="hr-empty">No employees found.</div>'}</div>
+    </div>`;
+}
+
+function hrSearch(el) {
+    _hrSearchQ = el.value;
+    document.querySelector('.hr-search-clear')?.style.setProperty('display', _hrSearchQ ? 'flex' : 'none');
+    const grid = document.querySelector('.hr-cards');
+    if (!grid) return;
+    const members = _hrFilteredMembers();
+    grid.innerHTML = members.length ? members.map(_hrCardHtml).join('') : '<div class="hr-empty">No employees found.</div>';
+}
+
+function hrSearchClear() {
+    _hrSearchQ = '';
+    const inp = document.querySelector('.hr-search-inp');
+    if (inp) { inp.value = ''; inp.focus(); }
+    document.querySelector('.hr-search-clear')?.style.setProperty('display', 'none');
+    const grid = document.querySelector('.hr-cards');
+    if (grid) grid.innerHTML = _finTeam.map(_hrCardHtml).join('') || '<div class="hr-empty">No employees found.</div>';
+}
+
+function showHrProfile(id) {
+    _hrViewId = id;
+    const m = _finTeam.find(x => x.id === id);
+    if (!m) return;
+    const pc = _finPanel();
+
+    const grad    = _hrAvatarGrad(m.role);
+    const badge   = _hrBadgeStyle(m.role);
+    const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '';
+    const field   = (label, val) => `<div>
+        <div class="hr-field-label">${label}</div>
+        ${val ? `<div class="hr-field-value">${esc(String(val))}</div>` : `<div class="hr-field-empty">—</div>`}
+    </div>`;
+
+    pc.innerHTML = `<div class="hr-profile">
+        <button class="hr-profile-back" onclick="showHrProfiles()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+            Back to Profiles
+        </button>
+        <div class="hr-profile-hero">
+            <div class="hr-profile-avatar" style="${grad}">${_hrInitials(m.full_name)}</div>
+            <div style="flex:1;min-width:0">
+                <div class="hr-profile-name">${esc(m.full_name || '')}</div>
+                <div class="hr-profile-meta">
+                    ${m.role ? `<span class="hr-role-badge" style="${badge}">${esc(m.role)}</span>` : ''}
+                    <span class="${m.is_active ? 'hr-status-active' : 'hr-status-inactive'}">● ${m.is_active ? 'Active' : 'Inactive'}</span>
+                </div>
+            </div>
+            <button class="hr-edit-btn" onclick="openHrProfileModal('${m.id}')">Edit Profile</button>
+        </div>
+
+        <div class="hr-section">
+            <div class="hr-section-title">Personal Information</div>
+            <div class="hr-fields">
+                ${field('Full Name', m.full_name)}
+                ${field('Phone', m.phone)}
+                ${field('National ID', m.national_id)}
+                ${field('Date of Birth', fmtDate(m.date_of_birth))}
+                ${field('Address', m.address)}
+                ${field('Emergency Contact Name', m.emergency_contact_name)}
+                ${field('Emergency Contact Phone', m.emergency_contact_phone)}
+            </div>
+        </div>
+
+        <div class="hr-section">
+            <div class="hr-section-title">Employment Information</div>
+            <div class="hr-fields">
+                ${field('Role', m.role)}
+                ${field('Monthly Salary', m.monthly_salary ? iqd(m.monthly_salary) : null)}
+                ${field('Start Date', fmtDate(m.start_date))}
+                ${field('Status', m.is_active ? 'Active' : 'Inactive')}
+                ${field('Notes', m.notes)}
+            </div>
+        </div>
+    </div>`;
+}
+
+function openHrProfileModal(id) {
+    const m = _finTeam.find(x => x.id === id);
+    if (!m) return;
+    _hrViewId = id;
+    document.getElementById('hrm-name').value        = m.full_name || '';
+    document.getElementById('hrm-phone').value       = m.phone || '';
+    document.getElementById('hrm-national-id').value = m.national_id || '';
+    document.getElementById('hrm-dob').value         = m.date_of_birth || '';
+    document.getElementById('hrm-address').value     = m.address || '';
+    document.getElementById('hrm-ec-name').value     = m.emergency_contact_name || '';
+    document.getElementById('hrm-ec-phone').value    = m.emergency_contact_phone || '';
+    document.getElementById('hrm-role').value        = m.role || '';
+    document.getElementById('hrm-salary').value      = m.monthly_salary || '';
+    document.getElementById('hrm-start-date').value  = m.start_date || '';
+    document.getElementById('hrm-status').value      = String(m.is_active !== false);
+    document.getElementById('hrm-notes').value       = m.notes || '';
+    document.getElementById('hr-profile-err').style.display = 'none';
+    openFinModal('hr-profile-modal');
+}
+
+async function saveHrProfile() {
+    const errEl = document.getElementById('hr-profile-err');
+    errEl.style.display = 'none';
+    const name = document.getElementById('hrm-name').value.trim();
+    if (!name) { errEl.textContent = 'Full Name is required.'; errEl.style.display = ''; return; }
+    const payload = {
+        full_name:               name,
+        phone:                   document.getElementById('hrm-phone').value.trim() || null,
+        national_id:             document.getElementById('hrm-national-id').value.trim() || null,
+        date_of_birth:           document.getElementById('hrm-dob').value || null,
+        address:                 document.getElementById('hrm-address').value.trim() || null,
+        emergency_contact_name:  document.getElementById('hrm-ec-name').value.trim() || null,
+        emergency_contact_phone: document.getElementById('hrm-ec-phone').value.trim() || null,
+        role:                    document.getElementById('hrm-role').value.trim() || null,
+        monthly_salary:          +document.getElementById('hrm-salary').value || null,
+        start_date:              document.getElementById('hrm-start-date').value || null,
+        is_active:               document.getElementById('hrm-status').value === 'true',
+        notes:                   document.getElementById('hrm-notes').value.trim() || null,
+    };
+    try {
+        const { error } = await _sb.from('team_members').update(payload).eq('id', _hrViewId);
+        if (error) throw error;
+    } catch(e) { errEl.textContent = e.message; errEl.style.display = ''; return; }
+    const idx = _finTeam.findIndex(x => x.id === _hrViewId);
+    if (idx >= 0) _finTeam[idx] = { ..._finTeam[idx], ...payload };
+    _invalidateFin();
+    closeFinModal('hr-profile-modal');
+    toast('Profile saved', 'ok');
+    showHrProfile(_hrViewId);
 }
 
 // Close dropdowns when clicking outside
