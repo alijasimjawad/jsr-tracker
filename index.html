@@ -6293,10 +6293,11 @@ async function deleteFinTeam(id) {
     const m = _finTeam.find(x => x.id === id);
     const { error } = await _sb.from('team_members').delete().eq('id', id);
     if (error) { toast(error.message, 'err'); return; }
+    _finTeam = _finTeam.filter(x => x.id !== id);
     closeFinModal('fin-del-modal');
     logActivity('Deleted Team Member', `Deleted Team Member: ${m?.full_name || id}`);
     toast('Member deleted', 'ok');
-    showFinTeam();
+    _renderFinTeam();
 }
 
 // ── Team Bulk Update ──────────────────────────────────
@@ -6538,6 +6539,8 @@ function tbulkAddParse() {
     }
     // A token is a salary if it contains only digits and commas (e.g. 650,000 or 1750000)
     function isSalaryToken(t) { return /^[\d,]+$/.test(t) && t.replace(/,/g,'').length > 0; }
+    // A token is a phone if stripping formatting leaves 10+ digits
+    function isPhoneToken(t) { return /^\d{10,}$/.test(t.replace(/[\s\-\(\)\+]/g, '')); }
 
     const existingNames = new Set(_finTeam.map(m => m.full_name.toLowerCase()));
     const rows = [];
@@ -6552,13 +6555,20 @@ function tbulkAddParse() {
         if (!name) continue; // nothing before the number — skip
 
         const salary = parseInt(tokens[pivotIdx].replace(/,/g, ''), 10);
-        const role   = tokens.slice(pivotIdx + 1).join(' ').trim() || null;
+
+        // Split post-salary tokens into role parts vs phone
+        let phone = null;
+        const roleParts = [];
+        for (const t of tokens.slice(pivotIdx + 1)) {
+            if (!phone && isPhoneToken(t)) { phone = t; }
+            else { roleParts.push(t); }
+        }
 
         rows.push({
             full_name:      name,
             monthly_salary: isNaN(salary) ? 0 : salary,
-            role,
-            phone:     null,
+            role:           roleParts.join(' ').trim() || null,
+            phone,
             notes:     null,
             is_active: true,
             _dup:      existingNames.has(name.toLowerCase()),
