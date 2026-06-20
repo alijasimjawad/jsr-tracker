@@ -453,6 +453,9 @@
         .hr-banner-photo { width:90px; height:90px; border-radius:50%; object-fit:cover; display:block; border:3px solid rgba(255,255,255,.28); box-shadow:0 4px 18px rgba(0,0,0,.25); }
         .hr-photo-btn { position:absolute; bottom:2px; right:2px; width:28px; height:28px; border-radius:50%; background:#1e40af; border:2.5px solid #fff; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s; padding:0; box-shadow:0 2px 6px rgba(0,0,0,.22); }
         .hr-photo-btn:hover { background:#2563eb; }
+        .hr-photo-lb { position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,.82); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s; cursor:zoom-out; }
+        .hr-photo-lb.open { opacity:1; }
+        .hr-photo-lb-img { max-width:90vw; max-height:88vh; border-radius:12px; object-fit:contain; box-shadow:0 24px 80px rgba(0,0,0,.6); cursor:default; }
         /* Tabs */
         .hr-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); background:var(--bg-panel); margin-top:16px; border-radius:12px 12px 0 0; }
         .hr-tab { padding:14px 22px; font-size:13px; font-weight:600; color:var(--slate-500); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:color .15s,border-color .15s; background:none; border-top:none; border-left:none; border-right:none; font-family:inherit; }
@@ -8437,7 +8440,7 @@ function showHrProfile(id, tab) {
         </button>
         <div class="hr-banner">
             <div class="hr-banner-av-wrap" id="hr-banner-av-wrap">${m.profile_photo_url
-                ? `<img class="hr-banner-photo" src="${esc(m.profile_photo_url)}" alt="">`
+                ? `<img class="hr-banner-photo" src="${esc(m.profile_photo_url)}" data-photo="${esc(m.profile_photo_url)}" onclick="openPhotoLightbox(this.dataset.photo)" style="cursor:zoom-in" alt="">`
                 : `<div class="hr-banner-avatar" style="${grad}">${_hrInitials(m.full_name)}</div>`
             }<button class="hr-photo-btn" onclick="document.getElementById('hr-photo-file-input').click()" title="Change photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button></div>
             <div class="hr-banner-info">
@@ -8630,7 +8633,7 @@ async function hrUploadPhoto(input) {
         // Update banner in-place
         const wrap = document.getElementById('hr-banner-av-wrap');
         if (wrap) wrap.innerHTML =
-            `<img class="hr-banner-photo" src="${photoUrl}" alt="">` +
+            `<img class="hr-banner-photo" src="${photoUrl}" data-photo="${photoUrl}" onclick="openPhotoLightbox(this.dataset.photo)" style="cursor:zoom-in" alt="">` +
             `<button class="hr-photo-btn" onclick="document.getElementById('hr-photo-file-input').click()" title="Change photo">${_hrCamSVG}</button>`;
 
         // Update modal preview if open
@@ -8719,6 +8722,27 @@ async function saveHrProfile() {
     toast('Profile saved', 'ok');
     showHrProfile(_hrViewId, _hrActiveTab);
 }
+
+// ── Photo lightbox ────────────────────────────────────────────────────────────
+function openPhotoLightbox(url) {
+    if (!url) return;
+    const lb = document.createElement('div');
+    lb.id = 'hr-photo-lb';
+    lb.className = 'hr-photo-lb';
+    lb.innerHTML = `<img class="hr-photo-lb-img" src="${url}" alt="">`;
+    lb.addEventListener('click', e => { if (e.target === lb) closePhotoLightbox(); });
+    document.body.appendChild(lb);
+    requestAnimationFrame(() => lb.classList.add('open'));
+}
+
+function closePhotoLightbox() {
+    const lb = document.getElementById('hr-photo-lb');
+    if (!lb) return;
+    lb.classList.remove('open');
+    setTimeout(() => lb.remove(), 200);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePhotoLightbox(); });
 
 // Close dropdowns when clicking outside
 document.addEventListener('click', function(e) {
