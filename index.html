@@ -6305,7 +6305,12 @@ function _renderFinTeam(pc) {
                     <div class="team-stat-value" style="color:${color}">${value}</div>
                 </div>`;
             };
-            return `<div class="team-stat-row">
+            const clearBtn = f && f !== 'all'
+                ? `<div style="display:flex;align-items:center">
+                    <button class="btn btn-ghost" style="white-space:nowrap;font-size:12px;padding:5px 10px;color:var(--slate-500);border-color:var(--slate-300)" onclick="teamStatFilter(null)">✕ Clear Filter</button>
+                  </div>`
+                : '';
+            return `<div class="team-stat-row" style="align-items:center">
                 ${card('Total Members', total,      '#2563eb', 'all')}
                 ${card('Active',        active,     '#16a34a', 'active')}
                 ${card('Inactive',      inactive,   '#94a3b8', 'inactive')}
@@ -6313,6 +6318,7 @@ function _renderFinTeam(pc) {
                 ${card('Technician',    technician, '#d97706', 'technician')}
                 ${card('Team Leader',   teamLeader, '#0d9488', 'teamleader')}
                 ${card('Other Roles',   other,      '#64748b', 'other')}
+                ${clearBtn}
             </div>`;
         })()}
         <div class="fin-toolbar">
@@ -6367,7 +6373,7 @@ function _renderFinTeam(pc) {
 }
 
 function teamStatFilter(key) {
-    _finTeamFilter = (_finTeamFilter === key || key === 'all') ? null : key;
+    _finTeamFilter = (!key || key === 'all' || _finTeamFilter === key) ? null : key;
     _renderFinTeam();
 }
 
