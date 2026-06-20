@@ -448,6 +448,11 @@
         .hr-banner-start { font-size:12px; color:rgba(255,255,255,.6); }
         .hr-banner-edit { padding:9px 20px; font-size:13px; font-weight:700; background:rgba(255,255,255,.14); color:#fff; border:1.5px solid rgba(255,255,255,.28); border-radius:8px; cursor:pointer; transition:background .15s; flex-shrink:0; }
         .hr-banner-edit:hover { background:rgba(255,255,255,.24); }
+        .hr-avatar-img { width:72px; height:72px; border-radius:50%; object-fit:cover; display:block; box-shadow:0 4px 14px rgba(0,0,0,.18); }
+        .hr-banner-av-wrap { position:relative; flex-shrink:0; width:fit-content; }
+        .hr-banner-photo { width:90px; height:90px; border-radius:50%; object-fit:cover; display:block; border:3px solid rgba(255,255,255,.28); box-shadow:0 4px 18px rgba(0,0,0,.25); }
+        .hr-photo-btn { position:absolute; bottom:2px; right:2px; width:28px; height:28px; border-radius:50%; background:#1e40af; border:2.5px solid #fff; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s; padding:0; box-shadow:0 2px 6px rgba(0,0,0,.22); }
+        .hr-photo-btn:hover { background:#2563eb; }
         /* Tabs */
         .hr-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); background:var(--bg-panel); margin-top:16px; border-radius:12px 12px 0 0; }
         .hr-tab { padding:14px 22px; font-size:13px; font-weight:600; color:var(--slate-500); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:color .15s,border-color .15s; background:none; border-top:none; border-left:none; border-right:none; font-family:inherit; }
@@ -2155,12 +2160,14 @@
 
 <!-- Hidden file input for HR document upload -->
 <input type="file" id="hr-doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.docx" style="display:none" onchange="hrUploadDoc(this)">
+<input type="file" id="hr-photo-file-input" accept="image/*" style="display:none" onchange="hrUploadPhoto(this)">
 
 <!-- HR Profile Edit Modal -->
 <div class="modal-overlay" id="hr-profile-modal" onclick="closeFinModal('hr-profile-modal',event)">
   <div class="modal-card" style="max-width:600px">
     <div class="modal-title">Edit Employee Profile</div>
     <div class="fin-form-grid" style="margin-top:16px">
+      <div class="fin-field span2" id="hrm-photo-wrap" style="text-align:center;padding:4px 0 10px"></div>
       <div class="fin-field span2"><label>Full Name *</label><input type="text" id="hrm-name" placeholder="Full name…" maxlength="100"></div>
       <div class="fin-field"><label>Phone</label><input type="text" id="hrm-phone" placeholder="+964…" maxlength="40"></div>
       <div class="fin-field"><label>National ID</label><input type="text" id="hrm-national-id" placeholder="ID number…" maxlength="60"></div>
@@ -8292,7 +8299,9 @@ function _hrCardHtml(m) {
     const phoneSVG = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.37 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.54a16 16 0 0 0 6.55 6.55l.92-.93a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
     return `<div class="hr-card">
         <div class="hr-av-wrap">
-            <div class="hr-avatar" style="${grad}">${_hrInitials(m.full_name)}</div>
+            ${m.profile_photo_url
+                ? `<img class="hr-avatar-img" src="${esc(m.profile_photo_url)}" alt="">`
+                : `<div class="hr-avatar" style="${grad}">${_hrInitials(m.full_name)}</div>`}
             <span class="hr-status-dot ${m.is_active ? 'active' : 'inactive'}"></span>
         </div>
         <div class="hr-card-name">${esc(m.full_name || '')}</div>
@@ -8427,7 +8436,10 @@ function showHrProfile(id, tab) {
             Back to Profiles
         </button>
         <div class="hr-banner">
-            <div class="hr-banner-avatar" style="${grad}">${_hrInitials(m.full_name)}</div>
+            <div class="hr-banner-av-wrap" id="hr-banner-av-wrap">${m.profile_photo_url
+                ? `<img class="hr-banner-photo" src="${esc(m.profile_photo_url)}" alt="">`
+                : `<div class="hr-banner-avatar" style="${grad}">${_hrInitials(m.full_name)}</div>`
+            }<button class="hr-photo-btn" onclick="document.getElementById('hr-photo-file-input').click()" title="Change photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button></div>
             <div class="hr-banner-info">
                 <div class="hr-banner-name">${esc(m.full_name || '')}</div>
                 <div class="hr-banner-meta">
@@ -8589,6 +8601,72 @@ async function hrDeleteDoc(docId, storagePath) {
     _renderHrDocsTab(_hrViewId);
 }
 
+// ── Photo upload ──────────────────────────────────────────────────────────────
+const _hrCamSVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+
+async function hrUploadPhoto(input) {
+    const file = input.files[0];
+    input.value = '';
+    if (!file || !_hrViewId) return;
+
+    if (file.size > 10 * 1024 * 1024) { toast('Photo must be under 10 MB', 'err'); return; }
+
+    const ext  = file.name.split('.').pop().toLowerCase() || 'jpg';
+    const path = `photos/${_hrViewId}_${Date.now()}.${ext}`;
+
+    toast('Uploading photo…', 'ok');
+    try {
+        const { error: upErr } = await _sb.storage.from('employee-docs').upload(path, file, { upsert: true });
+        if (upErr) throw upErr;
+
+        const photoUrl = _sb.storage.from('employee-docs').getPublicUrl(path).data.publicUrl;
+
+        const { error: dbErr } = await _sb.from('team_members').update({ profile_photo_url: photoUrl }).eq('id', _hrViewId);
+        if (dbErr) throw dbErr;
+
+        const member = _finTeam.find(x => x.id === _hrViewId);
+        if (member) member.profile_photo_url = photoUrl;
+
+        // Update banner in-place
+        const wrap = document.getElementById('hr-banner-av-wrap');
+        if (wrap) wrap.innerHTML =
+            `<img class="hr-banner-photo" src="${photoUrl}" alt="">` +
+            `<button class="hr-photo-btn" onclick="document.getElementById('hr-photo-file-input').click()" title="Change photo">${_hrCamSVG}</button>`;
+
+        // Update modal preview if open
+        _hrRefreshModalPhoto(member);
+
+        // Update the matching card in the grid if visible
+        document.querySelectorAll('.hr-card').forEach(card => {
+            if (card.querySelector(`[onclick*="${_hrViewId}"]`)) {
+                const avWrap = card.querySelector('.hr-av-wrap');
+                if (avWrap) {
+                    const dot = avWrap.querySelector('.hr-status-dot');
+                    avWrap.innerHTML = `<img class="hr-avatar-img" src="${photoUrl}" alt="">`;
+                    if (dot) avWrap.appendChild(dot);
+                }
+            }
+        });
+
+        _invalidateFin();
+        toast('Photo updated', 'ok');
+    } catch(e) {
+        toast('Upload failed: ' + e.message, 'err');
+    }
+}
+
+function _hrRefreshModalPhoto(m) {
+    const wrap = document.getElementById('hrm-photo-wrap');
+    if (!wrap || !m) return;
+    const grad = _hrAvatarGrad(m.role);
+    const btnStyle = 'font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;font-weight:600;margin-top:6px;display:block;width:100%;';
+    wrap.innerHTML = m.profile_photo_url
+        ? `<img src="${esc(m.profile_photo_url)}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2.5px solid var(--border);display:block;margin:0 auto;" alt="">
+           <button type="button" style="${btnStyle}" onclick="document.getElementById('hr-photo-file-input').click()">Change Photo</button>`
+        : `<div style="width:72px;height:72px;border-radius:50%;${grad};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;margin:0 auto;">${_hrInitials(m.full_name)}</div>
+           <button type="button" style="${btnStyle}" onclick="document.getElementById('hr-photo-file-input').click()">Add Photo</button>`;
+}
+
 // ── Edit Profile modal ────────────────────────────────────────────────────────
 function openHrProfileModal(id) {
     const m = _finTeam.find(x => x.id === id);
@@ -8607,6 +8685,7 @@ function openHrProfileModal(id) {
     document.getElementById('hrm-status').value      = String(m.is_active !== false);
     document.getElementById('hrm-notes').value       = m.notes || '';
     document.getElementById('hr-profile-err').style.display = 'none';
+    _hrRefreshModalPhoto(m);
     openFinModal('hr-profile-modal');
 }
 
