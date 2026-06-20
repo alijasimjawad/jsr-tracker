@@ -6219,19 +6219,6 @@ async function showFinTeam() {
 function _renderFinTeam(pc) {
     pc = pc || document.getElementById('panel-content');
     pc.innerHTML = `<div class="fin-page">
-        <div class="fin-toolbar">
-            <div class="fin-spacer"></div>
-            <button class="btn btn-ghost" onclick="showFinTeam()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
-            </button>
-            <button class="btn btn-orange" onclick="openTeamBulkModal()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Bulk Update
-            </button>
-            <button class="btn btn-green" onclick="openTeamBulkAddModal()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="15"/></svg> Bulk Add
-            </button>
-            <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
-        </div>
         ${(() => {
             const total      = _finTeam.length;
             const active     = _finTeam.filter(m => m.is_active).length;
@@ -6255,6 +6242,19 @@ function _renderFinTeam(pc) {
                 ${card('Other Roles',   other,      '#64748b')}
             </div>`;
         })()}
+        <div class="fin-toolbar">
+            <div class="fin-spacer"></div>
+            <button class="btn btn-ghost" onclick="showFinTeam()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
+            </button>
+            <button class="btn btn-orange" onclick="openTeamBulkModal()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Bulk Update
+            </button>
+            <button class="btn btn-green" onclick="openTeamBulkAddModal()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="15"/></svg> Bulk Add
+            </button>
+            <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
+        </div>
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
             <th>Full Name</th><th>Monthly Salary</th><th>Role</th><th>Phone</th><th>Notes</th><th>Status</th><th>Actions</th>
         </tr></thead><tbody>
