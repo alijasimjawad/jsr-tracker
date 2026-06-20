@@ -1089,6 +1089,17 @@
         }
         #tbulk-diff-paste:focus { border-color: var(--accent); background: var(--bg-panel); box-shadow: 0 0 0 4px rgba(37,99,235,.1); }
         #tbulk-diff-paste::placeholder { color: var(--text-muted); }
+        .tbulk-add-tags { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 14px; }
+        #tbulk-add-paste {
+            width:100%; padding:11px 14px; min-height:130px; resize:vertical;
+            background:var(--slate-50); border:1.5px solid var(--slate-200);
+            border-radius:var(--radius); font-size:13px; font-family:inherit;
+            color:var(--text-primary); outline:none; transition:var(--transition); line-height:1.6;
+        }
+        #tbulk-add-paste:focus { border-color:var(--accent); background:var(--bg-panel); box-shadow:0 0 0 4px rgba(37,99,235,.1); }
+        #tbulk-add-paste::placeholder { color:var(--text-muted); }
+        .tbulk-add-preview-wrap { border:1.5px solid var(--slate-200); border-radius:var(--radius); overflow:auto; max-height:210px; margin-top:12px; }
+        .tbulk-add-count { font-size:12px; color:var(--text-secondary); margin-top:7px; }
 
         /* ── Options panel ──────────────── */
         .options-wrap { position: relative; }
@@ -2071,6 +2082,37 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeTeamBulkModal()">Cancel</button>
       <button class="btn btn-orange" onclick="applyTeamBulkUpdate()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- Team Bulk Add Modal -->
+<div class="modal-overlay" id="team-bulk-add-modal" onclick="closeTeamBulkAddModal(event)">
+  <div class="modal-card" style="max-width:680px">
+    <div class="modal-title">Bulk Add Team Members</div>
+    <p class="modal-sub">Copy rows from Excel and paste below. First row must be headers.</p>
+    <div class="tbulk-add-tags">
+      <span class="bulk-col-chip bulk-col-chip-id">Full Name</span>
+      <span class="bulk-col-chip">Monthly Salary</span>
+      <span class="bulk-col-chip">Role</span>
+      <span class="bulk-col-chip">Phone</span>
+      <span class="bulk-col-chip">Notes</span>
+      <span class="bulk-col-chip">Status</span>
+    </div>
+    <textarea id="tbulk-add-paste" placeholder="Paste your Excel data here…" oninput="tbulkAddParse()"></textarea>
+    <div id="tbulk-add-preview" style="display:none">
+      <div class="tbulk-add-preview-wrap">
+        <table class="fin-table" id="tbulk-add-table" style="min-width:0;font-size:12px"></table>
+      </div>
+      <div class="tbulk-add-count" id="tbulk-add-count"></div>
+    </div>
+    <div id="tbulk-add-err" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeTeamBulkAddModal()">Cancel</button>
+      <button class="btn btn-green" id="tbulk-add-import-btn" onclick="importTeamBulkAdd()" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="15"/></svg>
+        Import
+      </button>
     </div>
   </div>
 </div>
@@ -6164,6 +6206,9 @@ function _renderFinTeam(pc) {
             <button class="btn btn-orange" onclick="openTeamBulkModal()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Bulk Update
             </button>
+            <button class="btn btn-green" onclick="openTeamBulkAddModal()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="15"/></svg> Bulk Add
+            </button>
             <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
         </div>
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
@@ -6433,6 +6478,128 @@ async function _applyTeamBulkDiff() {
     } catch(e) {
         if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
         toast('Update failed: ' + e.message, 'err');
+    }
+}
+
+// ── Team Bulk Add ──────────────────────────────────
+let _tbulkAddRows = [];
+
+function openTeamBulkAddModal() {
+    _tbulkAddRows = [];
+    document.getElementById('tbulk-add-paste').value = '';
+    document.getElementById('tbulk-add-preview').style.display = 'none';
+    document.getElementById('tbulk-add-import-btn').style.display = 'none';
+    document.getElementById('tbulk-add-err').style.display = 'none';
+    document.getElementById('team-bulk-add-modal').classList.add('open');
+    setTimeout(() => document.getElementById('tbulk-add-paste').focus(), 60);
+}
+
+function closeTeamBulkAddModal(e) {
+    if (e && e.target !== document.getElementById('team-bulk-add-modal')) return;
+    document.getElementById('team-bulk-add-modal').classList.remove('open');
+}
+
+function tbulkAddParse() {
+    const raw      = document.getElementById('tbulk-add-paste').value.trim();
+    const errEl    = document.getElementById('tbulk-add-err');
+    const previewEl= document.getElementById('tbulk-add-preview');
+    const importBtn= document.getElementById('tbulk-add-import-btn');
+    errEl.style.display = 'none';
+    _tbulkAddRows = [];
+
+    if (!raw) { previewEl.style.display = 'none'; importBtn.style.display = 'none'; return; }
+
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) {
+        previewEl.style.display = 'none'; importBtn.style.display = 'none';
+        errEl.textContent = 'Need at least a header row and one data row.'; errEl.style.display = ''; return;
+    }
+
+    const sep = lines[0].includes('\t') ? '\t' : ',';
+    const hdrs      = lines[0].split(sep).map(h => h.trim().toLowerCase());
+    const nameIdx   = hdrs.findIndex(h => h === 'full name');
+    const salIdx    = hdrs.findIndex(h => h === 'monthly salary');
+    const roleIdx   = hdrs.findIndex(h => h === 'role');
+    const phoneIdx  = hdrs.findIndex(h => h === 'phone');
+    const notesIdx  = hdrs.findIndex(h => h === 'notes');
+    const statusIdx = hdrs.findIndex(h => h === 'status');
+
+    if (nameIdx < 0) {
+        previewEl.style.display = 'none'; importBtn.style.display = 'none';
+        errEl.textContent = 'Header row must include a "Full Name" column.'; errEl.style.display = ''; return;
+    }
+
+    const existingNames = new Set(_finTeam.map(m => m.full_name.toLowerCase()));
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+        const p    = lines[i].split(sep).map(v => v.trim());
+        const name = p[nameIdx] || '';
+        if (!name) continue;
+        const salRaw = salIdx >= 0 ? +String(p[salIdx] || '').replace(/[^0-9.]/g, '') : null;
+        rows.push({
+            full_name:      name,
+            monthly_salary: salIdx    >= 0 ? (isNaN(salRaw) ? null : salRaw || null) : null,
+            role:           roleIdx   >= 0 ? (p[roleIdx]  || null) : null,
+            phone:          phoneIdx  >= 0 ? (p[phoneIdx] || null) : null,
+            notes:          notesIdx  >= 0 ? (p[notesIdx] || null) : null,
+            is_active:      statusIdx >= 0 ? String(p[statusIdx] || 'active').trim().toLowerCase() !== 'inactive' : true,
+            _dup:           existingNames.has(name.toLowerCase()),
+        });
+    }
+
+    if (!rows.length) {
+        previewEl.style.display = 'none'; importBtn.style.display = 'none';
+        errEl.textContent = 'No valid data rows found.'; errEl.style.display = ''; return;
+    }
+
+    _tbulkAddRows = rows;
+    const dupCount = rows.filter(r => r._dup).length;
+    const newCount = rows.length - dupCount;
+
+    document.getElementById('tbulk-add-table').innerHTML = `
+        <thead><tr>
+            <th>Full Name</th><th>Monthly Salary</th><th>Role</th><th>Phone</th><th>Notes</th><th>Status</th>
+        </tr></thead>
+        <tbody>${rows.map(r => `<tr style="${r._dup ? 'opacity:.4' : ''}">
+            <td><strong>${esc(r.full_name)}</strong>${r._dup ? ' <span class="fin-badge-inactive" style="font-size:10px;vertical-align:middle">duplicate</span>' : ''}</td>
+            <td class="fin-num">${r.monthly_salary != null ? r.monthly_salary.toLocaleString('en-US') + ' IQD' : '—'}</td>
+            <td>${esc(r.role||'')}</td>
+            <td>${esc(r.phone||'')}</td>
+            <td>${esc(r.notes||'')}</td>
+            <td>${r.is_active ? '<span class="fin-badge-active">Active</span>' : '<span class="fin-badge-inactive">Inactive</span>'}</td>
+        </tr>`).join('')}</tbody>`;
+
+    document.getElementById('tbulk-add-count').textContent =
+        `${rows.length} row${rows.length !== 1 ? 's' : ''} found` +
+        (dupCount > 0 ? ` · ${dupCount} duplicate${dupCount !== 1 ? 's' : ''} will be skipped · ${newCount} will be imported` : '');
+
+    previewEl.style.display = '';
+    if (newCount > 0) {
+        importBtn.style.display = ''; importBtn.disabled = false; importBtn.innerHTML =
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="15"/></svg> Import';
+    } else {
+        importBtn.style.display = 'none';
+        errEl.textContent = 'All rows are duplicates — nothing new to import.'; errEl.style.display = '';
+    }
+}
+
+async function importTeamBulkAdd() {
+    const toInsert = _tbulkAddRows.filter(r => !r._dup).map(({ _dup, ...r }) => r);
+    if (!toInsert.length) return;
+    const btn = document.getElementById('tbulk-add-import-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+        const { data, error } = await _sb.from('team_members').insert(toInsert).select('*');
+        if (error) throw error;
+        (data || []).forEach(m => _finTeam.push(m));
+        document.getElementById('team-bulk-add-modal').classList.remove('open');
+        logActivity('Bulk Added Team Members', `Added ${toInsert.length} member${toInsert.length !== 1 ? 's' : ''} via bulk add`);
+        toast(`Added ${toInsert.length} member${toInsert.length !== 1 ? 's' : ''} successfully`, 'ok');
+        showFinTeam();
+    } catch(e) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Import'; }
+        document.getElementById('tbulk-add-err').textContent = e.message;
+        document.getElementById('tbulk-add-err').style.display = '';
     }
 }
 
