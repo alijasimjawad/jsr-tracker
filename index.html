@@ -391,11 +391,17 @@
         .team-stat-card.active { border-width:2px; box-shadow:0 0 0 3px rgba(0,0,0,.06); }
         .team-stat-label { font-size:10px; color:var(--slate-500); text-transform:uppercase; letter-spacing:.6px; font-weight:700; margin-bottom:6px; }
         .team-stat-value { font-size:22px; font-weight:800; }
-        .team-filter-row th { background:var(--bg-panel); padding:4px 6px; border-bottom:2px solid var(--border); }
-        .team-filter-inp, .team-filter-sel { width:100%; box-sizing:border-box; padding:5px 8px; border:1px solid var(--border); border-radius:6px; font-size:12px; background:var(--bg); color:var(--text); }
+        .team-filter-inp, .team-filter-sel { width:100%; box-sizing:border-box; padding:4px 7px; border:1px solid var(--border); border-radius:6px; font-size:12px; background:var(--bg); color:var(--text); }
         .team-filter-inp::placeholder { color:var(--slate-400); }
         .team-filter-inp:focus, .team-filter-sel:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(37,99,235,.1); }
         .team-filter-sel { cursor:pointer; }
+        .team-col-filter-btn { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:5px; border:none; background:transparent; cursor:pointer; color:var(--slate-400); flex-shrink:0; padding:0; opacity:0; transition:opacity .12s,color .12s,background .12s; }
+        th:hover .team-col-filter-btn, .team-col-filter-btn.on { opacity:1; }
+        .team-col-filter-btn.on { color:var(--accent); background:rgba(37,99,235,.12); }
+        .team-col-filter-btn:hover:not(.on) { background:var(--slate-200); color:var(--slate-700); }
+        .team-col-filter-wrap { max-height:0; overflow:hidden; opacity:0; transition:max-height .18s ease,opacity .15s ease,padding-top .18s ease; padding-top:0; }
+        .team-col-filter-wrap.visible { max-height:42px; opacity:1; padding-top:5px; }
+        .team-col-filter-wrap.active .team-filter-inp, .team-col-filter-wrap.active .team-filter-sel { border-color:var(--accent); background:rgba(37,99,235,.04); }
         .fin-charts-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px; }
         .fin-chart-panel { background:var(--bg-panel); border-radius:10px; border:1px solid var(--slate-200); padding:16px 18px; }
         .fin-chart-title { font-size:13px; font-weight:700; color:var(--slate-700); margin-bottom:14px; }
@@ -6349,23 +6355,19 @@ function _renderFinTeam(pc) {
             <button class="btn btn-ghost" style="white-space:nowrap;font-size:12px;padding:5px 10px;color:var(--slate-500);border-color:var(--slate-300)" onclick="teamStatFilter(null)">✕ Clear Filter</button>
            </div>`
         : '';
-    const filterSVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
-    const filterRow = _teamFilterVisible ? `<tr class="team-filter-row">
-        <th><input class="team-filter-inp" placeholder="Name…" value="${esc(_teamFilters.name)}" oninput="setTeamFilter('name',this.value)"></th>
-        <th><input class="team-filter-inp" placeholder="Salary…" value="${esc(_teamFilters.salary)}" oninput="setTeamFilter('salary',this.value)"></th>
-        <th><select class="team-filter-sel" onchange="setTeamFilter('role',this.value)">
-            <option value="">All Roles</option>
-            ${uniqueRoles.map(r=>`<option value="${esc(r)}"${_teamFilters.role===r?' selected':''}>${esc(r)}</option>`).join('')}
-        </select></th>
-        <th><input class="team-filter-inp" placeholder="Phone…" value="${esc(_teamFilters.phone)}" oninput="setTeamFilter('phone',this.value)"></th>
-        <th><input class="team-filter-inp" placeholder="Notes…" value="${esc(_teamFilters.notes)}" oninput="setTeamFilter('notes',this.value)"></th>
-        <th><select class="team-filter-sel" onchange="setTeamFilter('status',this.value)">
-            <option value="">All</option>
-            <option value="active"${_teamFilters.status==='active'?' selected':''}>Active</option>
-            <option value="inactive"${_teamFilters.status==='inactive'?' selected':''}>Inactive</option>
-        </select></th>
-        <th></th>
-    </tr>` : '';
+    const fSVG = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
+    const colTh = (col, label, inputHtml) => {
+        const hasVal = !!_teamFilters[col];
+        const show   = hasVal || _teamFilterFocused === col;
+        return `<th>
+            <div style="display:flex;align-items:center;gap:3px;white-space:nowrap">
+                <span>${label}</span>
+                <button class="team-col-filter-btn${hasVal?' on':''}" data-col="${col}" onclick="teamColFilterToggle('${col}')" title="Filter">${fSVG}</button>
+            </div>
+            <div class="team-col-filter-wrap${show?' visible':''}${hasVal?' active':''}" id="tcf-${col}">${inputHtml}</div>
+        </th>`;
+    };
+    const roleOpts = `<option value="">All</option>${uniqueRoles.map(r=>`<option value="${esc(r)}"${_teamFilters.role===r?' selected':''}>${esc(r)}</option>`).join('')}`;
     pc.innerHTML = `<div class="fin-page">
         <div class="team-stat-row" style="align-items:center">
             ${card('Total Members', _finTeam.length,                                                                          '#2563eb', 'all')}
@@ -6393,15 +6395,15 @@ function _renderFinTeam(pc) {
             </button>
             <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
         </div>
-        <div class="fin-table-wrap"><table class="fin-table"><thead>
-            <tr>
-                <th>Full Name</th><th>Monthly Salary</th><th>Role</th><th>Phone</th><th>Notes</th><th>Status</th>
-                <th><div style="display:flex;align-items:center;justify-content:space-between;gap:4px">Actions
-                    <button class="dd-btn${_teamFilterVisible?' on':''}" onclick="toggleTeamFilter()" title="Toggle column filters" style="opacity:1;flex-shrink:0">${filterSVG}</button>
-                </div></th>
-            </tr>
-            ${filterRow}
-        </thead><tbody id="team-member-tbody"></tbody></table></div></div>`;
+        <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
+            ${colTh('name',   'Full Name',      `<input class="team-filter-inp" placeholder="Search…" value="${esc(_teamFilters.name)}" oninput="setTeamFilter('name',this.value)" onblur="teamColFilterBlur('name')" onkeydown="if(event.key==='Escape')teamColFilterEsc('name',this)">`)}
+            ${colTh('salary', 'Monthly Salary', `<input class="team-filter-inp" placeholder="Search…" value="${esc(_teamFilters.salary)}" oninput="setTeamFilter('salary',this.value)" onblur="teamColFilterBlur('salary')" onkeydown="if(event.key==='Escape')teamColFilterEsc('salary',this)">`)}
+            ${colTh('role',   'Role',           `<select class="team-filter-sel" onchange="setTeamFilter('role',this.value)" onblur="teamColFilterBlur('role')">${roleOpts}</select>`)}
+            ${colTh('phone',  'Phone',          `<input class="team-filter-inp" placeholder="Search…" value="${esc(_teamFilters.phone)}" oninput="setTeamFilter('phone',this.value)" onblur="teamColFilterBlur('phone')" onkeydown="if(event.key==='Escape')teamColFilterEsc('phone',this)">`)}
+            ${colTh('notes',  'Notes',          `<input class="team-filter-inp" placeholder="Search…" value="${esc(_teamFilters.notes)}" oninput="setTeamFilter('notes',this.value)" onblur="teamColFilterBlur('notes')" onkeydown="if(event.key==='Escape')teamColFilterEsc('notes',this)">`)}
+            ${colTh('status', 'Status',         `<select class="team-filter-sel" onchange="setTeamFilter('status',this.value)" onblur="teamColFilterBlur('status')"><option value="">All</option><option value="active"${_teamFilters.status==='active'?' selected':''}>Active</option><option value="inactive"${_teamFilters.status==='inactive'?' selected':''}>Inactive</option></select>`)}
+            <th>Actions</th>
+        </tr></thead><tbody id="team-member-tbody"></tbody></table></div></div>`;
     _applyTeamTableFilter();
 }
 
@@ -6410,15 +6412,47 @@ function teamStatFilter(key) {
     _renderFinTeam();
 }
 
-function toggleTeamFilter() {
-    _teamFilterVisible = !_teamFilterVisible;
-    if (!_teamFilterVisible) _teamFilters = { name:'', salary:'', role:'', phone:'', notes:'', status:'' };
-    _renderFinTeam();
+function teamColFilterToggle(col) {
+    if (_teamFilterFocused === col) {
+        _teamFilterFocused = null;
+        _teamColFilterUpdateVis(col);
+    } else {
+        _teamFilterFocused = col;
+        _teamColFilterUpdateVis(col);
+        setTimeout(() => document.getElementById(`tcf-${col}`)?.querySelector('input,select')?.focus(), 60);
+    }
+}
+
+function _teamColFilterUpdateVis(col) {
+    const wrap = document.getElementById(`tcf-${col}`);
+    if (!wrap) return;
+    const show = _teamFilterFocused === col || !!_teamFilters[col];
+    wrap.classList.toggle('visible', show);
+    wrap.classList.toggle('active', !!_teamFilters[col]);
+    document.querySelector(`.team-col-filter-btn[data-col="${col}"]`)?.classList.toggle('on', !!_teamFilters[col]);
+}
+
+function teamColFilterBlur(col) {
+    setTimeout(() => {
+        if (_teamFilterFocused === col && !_teamFilters[col]) {
+            _teamFilterFocused = null;
+            _teamColFilterUpdateVis(col);
+        }
+    }, 150);
+}
+
+function teamColFilterEsc(col, el) {
+    _teamFilters[col] = '';
+    if (el) el.value = '';
+    _teamFilterFocused = null;
+    _teamColFilterUpdateVis(col);
+    _applyTeamTableFilter();
 }
 
 function setTeamFilter(key, val) {
     _teamFilters[key] = val;
-    _applyTeamTableFilter(); // only update tbody — inputs keep focus
+    _applyTeamTableFilter();
+    _teamColFilterUpdateVis(key);
 }
 
 function exportTeamMembers() {
@@ -6503,7 +6537,7 @@ async function deleteFinTeam(id) {
 
 // ── Team Member Delete Modal ──────────────────────────
 let _teamDelId         = null;
-let _teamFilterVisible = false;
+let _teamFilterFocused = null;
 let _teamFilters       = { name:'', salary:'', role:'', phone:'', notes:'', status:'' };
 
 function openTeamDelModal(id) {
