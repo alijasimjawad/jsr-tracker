@@ -1981,6 +1981,8 @@
       <div class="fin-field span2"><label>Full Name *</label><input type="text" id="ft-name" placeholder="Name…" maxlength="100"></div>
       <div class="fin-field"><label>Monthly Salary (IQD) *</label><input type="number" id="ft-salary" min="0" placeholder="0"></div>
       <div class="fin-field"><label>Role</label><input type="text" id="ft-role" placeholder="e.g. Engineer" maxlength="80"></div>
+      <div class="fin-field"><label>Phone Number</label><input type="text" id="ft-phone" placeholder="e.g. +964…" maxlength="40"></div>
+      <div class="fin-field span2"><label>Notes</label><input type="text" id="ft-notes" placeholder="Optional…" maxlength="255"></div>
     </div>
     <div id="fin-team-err" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
     <div class="modal-actions" style="margin-top:18px">
@@ -6082,14 +6084,16 @@ function _renderFinTeam(pc) {
             <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
         </div>
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
-            <th>Full Name</th><th>Monthly Salary</th><th>Role</th><th>Status</th><th>Actions</th>
+            <th>Full Name</th><th>Monthly Salary</th><th>Role</th><th>Phone</th><th>Notes</th><th>Status</th><th>Actions</th>
         </tr></thead><tbody>
         ${_finTeam.length === 0
-            ? `<tr><td colspan="5" class="al-empty">No team members yet.</td></tr>`
+            ? `<tr><td colspan="7" class="al-empty">No team members yet.</td></tr>`
             : _finTeam.map(m => `<tr>
                 <td><strong>${esc(m.full_name)}</strong></td>
                 <td class="fin-num">${iqd(m.monthly_salary)}</td>
                 <td>${esc(m.role||'')}</td>
+                <td>${esc(m.phone||'')}</td>
+                <td style="color:var(--slate-500);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.notes||'')}</td>
                 <td>${m.is_active ? '<span class="fin-badge-active">Active</span>' : '<span class="fin-badge-inactive">Inactive</span>'}</td>
                 <td style="display:flex;gap:5px">
                     <button class="fin-act-btn" onclick="openFinTeamForm('${m.id}')" title="Edit">
@@ -6115,8 +6119,11 @@ function openFinTeamForm(id) {
         document.getElementById('ft-name').value   = m?.full_name || '';
         document.getElementById('ft-salary').value = m?.monthly_salary || '';
         document.getElementById('ft-role').value   = m?.role || '';
+        document.getElementById('ft-phone').value  = m?.phone || '';
+        document.getElementById('ft-notes').value  = m?.notes || '';
     } else {
         document.getElementById('ft-name').value = document.getElementById('ft-salary').value = document.getElementById('ft-role').value = '';
+        document.getElementById('ft-phone').value = document.getElementById('ft-notes').value = '';
     }
     openFinModal('fin-team-modal');
     setTimeout(() => document.getElementById('ft-name').focus(), 60);
@@ -6128,7 +6135,7 @@ async function saveFinTeamMember() {
     const salary = +document.getElementById('ft-salary').value;
     if (!name)          { errEl.textContent = 'Name is required.';          errEl.style.display = ''; return; }
     if (!salary || salary < 0) { errEl.textContent = 'Valid salary required.'; errEl.style.display = ''; return; }
-    const payload = { full_name: name, monthly_salary: salary, role: document.getElementById('ft-role').value.trim() || null };
+    const payload = { full_name: name, monthly_salary: salary, role: document.getElementById('ft-role').value.trim() || null, phone: document.getElementById('ft-phone').value.trim() || null, notes: document.getElementById('ft-notes').value.trim() || null };
     try {
         if (_finTeamEditId) {
             const { error } = await _sb.from('team_members').update(payload).eq('id', _finTeamEditId);
