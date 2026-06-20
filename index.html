@@ -1065,6 +1065,21 @@
             font-family: inherit; border-top: 1px solid var(--border); transition: background .15s;
         }
         .bulk-add-row-btn:hover { background: var(--blue-50); }
+        #tbulk-val-same-wrap input, #tbulk-val-same-wrap select {
+            width: 100%; padding: 11px 14px; background: var(--slate-50); border: 1.5px solid var(--slate-200);
+            border-radius: var(--radius); font-size: 14px; font-family: inherit;
+            color: var(--text-primary); outline: none; transition: var(--transition); appearance: none;
+        }
+        #tbulk-val-same-wrap input:focus, #tbulk-val-same-wrap select:focus { border-color: var(--accent); background: var(--bg-panel); box-shadow: 0 0 0 4px rgba(37,99,235,.1); }
+        #tbulk-names {
+            width: 100%; padding: 11px 14px; min-height: 100px; resize: vertical;
+            background: var(--slate-50); border: 1.5px solid var(--slate-200);
+            border-radius: var(--radius); font-size: 13px; font-family: inherit;
+            color: var(--text-primary); outline: none; transition: var(--transition); line-height: 1.6;
+        }
+        #tbulk-names:focus { border-color: var(--accent); background: var(--bg-panel); box-shadow: 0 0 0 4px rgba(37,99,235,.1); }
+        #tbulk-names::placeholder { color: var(--text-muted); }
+        .tbulk-diff-grid { grid-template-columns: 1fr 200px; }
 
         /* ── Options panel ──────────────── */
         .options-wrap { position: relative; }
@@ -1954,7 +1969,6 @@
                         Import Excel
                     </button>
                     <input type="file" id="import-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportFile(this)">
-                    <input type="file" id="team-bulk-input" accept=".xlsx,.xls" style="display:none" onchange="handleTeamBulkUpload(this)">
                     <button class="btn btn-green" id="topbar-add-site" onclick="openDetail(null)">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Add Site
@@ -1988,6 +2002,69 @@
     <div class="modal-actions" style="margin-top:18px">
       <button class="btn btn-ghost" onclick="closeFinModal('fin-team-modal')">Cancel</button>
       <button class="btn btn-accent" onclick="saveFinTeamMember()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Team Bulk Update Modal -->
+<div class="modal-overlay" id="team-bulk-modal" onclick="closeTeamBulkModal(event)">
+  <div class="modal-card" style="max-width:520px">
+    <div class="modal-title">Bulk Update Team Members</div>
+    <div class="bulk-tabs">
+      <button class="bulk-tab active" id="tbulk-tab-same" onclick="teamBulkSwitchTab('same')">Same value for all</button>
+      <button class="bulk-tab"        id="tbulk-tab-diff" onclick="teamBulkSwitchTab('diff')">Different value per member</button>
+    </div>
+
+    <!-- Pane 1: Same value for all -->
+    <div id="tbulk-pane-same">
+      <div class="modal-field" style="margin-top:18px">
+        <label>Field</label>
+        <select id="tbulk-col-same" onchange="teamBulkColSameChange()">
+          <option value="">— Select field —</option>
+          <option value="monthly_salary">Monthly Salary</option>
+          <option value="role">Role</option>
+          <option value="status">Status</option>
+          <option value="phone">Phone</option>
+          <option value="notes">Notes</option>
+        </select>
+      </div>
+      <div class="modal-field" style="margin-top:14px">
+        <label>New Value <span class="bulk-field-hint">leave empty to clear the field</span></label>
+        <div id="tbulk-val-same-wrap">
+          <input id="tbulk-val-same" type="text" placeholder="Enter new value…">
+        </div>
+      </div>
+      <div class="modal-field" style="margin-top:14px">
+        <label>Team Members <span class="bulk-field-hint">one per line · or comma separated</span></label>
+        <textarea id="tbulk-names" placeholder="e.g.&#10;Ali Jasim&#10;Ahmed Mohammed&#10;Sara Hassan"></textarea>
+      </div>
+    </div>
+
+    <!-- Pane 2: Different value per member -->
+    <div id="tbulk-pane-diff" style="display:none">
+      <div class="modal-field" style="margin-top:18px">
+        <label>Field</label>
+        <select id="tbulk-col-diff" onchange="teamBulkDiffFieldChange()">
+          <option value="">— Select field —</option>
+          <option value="monthly_salary">Monthly Salary</option>
+          <option value="role">Role</option>
+          <option value="status">Status</option>
+          <option value="phone">Phone</option>
+          <option value="notes">Notes</option>
+        </select>
+      </div>
+      <div id="tbulk-diff-rows" style="margin-top:14px;display:none">
+        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;letter-spacing:.2px">Values per member</label>
+        <div class="bulk-diff-wrap">
+          <div class="bulk-diff-head tbulk-diff-grid" id="tbulk-diff-head"></div>
+          <div class="bulk-diff-body" id="tbulk-diff-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeTeamBulkModal()">Cancel</button>
+      <button class="btn btn-orange" onclick="applyTeamBulkUpdate()">Apply</button>
     </div>
   </div>
 </div>
@@ -6078,8 +6155,8 @@ function _renderFinTeam(pc) {
             <button class="btn btn-ghost" onclick="showFinTeam()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
             </button>
-            <button class="btn btn-ghost" onclick="document.getElementById('team-bulk-input').value='';document.getElementById('team-bulk-input').click()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="15"/></svg> Bulk Upload
+            <button class="btn btn-orange" onclick="openTeamBulkModal()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Bulk Update
             </button>
             <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
         </div>
@@ -6171,51 +6248,125 @@ async function deleteFinTeam(id) {
     showFinTeam();
 }
 
-async function handleTeamBulkUpload(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            const wb  = XLSX.read(e.target.result, { type: 'array' });
-            const ws  = wb.Sheets[wb.SheetNames[0]];
-            const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-            if (!raw || raw.length < 2) { toast('File is empty or missing data rows', 'err'); return; }
+// ── Team Bulk Update ──────────────────────────────────
+let _teamBulkActiveTab = 'same';
 
-            const hdrs = raw[0].map(h => String(h).trim().toLowerCase());
-            const nameIdx   = hdrs.findIndex(h => h === 'full name');
-            const salIdx    = hdrs.findIndex(h => h === 'monthly salary');
-            const roleIdx   = hdrs.findIndex(h => h === 'role');
-            const statusIdx = hdrs.findIndex(h => h === 'status');
-            if (nameIdx < 0) { toast('Column "Full Name" not found in row 1', 'err'); return; }
+function openTeamBulkModal() {
+    _teamBulkActiveTab = 'same';
+    document.getElementById('tbulk-col-same').value = '';
+    document.getElementById('tbulk-val-same-wrap').innerHTML = '<input id="tbulk-val-same" type="text" placeholder="Enter new value…">';
+    document.getElementById('tbulk-names').value = '';
+    document.getElementById('tbulk-col-diff').value = '';
+    document.getElementById('tbulk-diff-rows').style.display = 'none';
+    teamBulkSwitchTab('same');
+    document.getElementById('team-bulk-modal').classList.add('open');
+}
 
-            const existingNames = new Set(_finTeam.map(m => m.full_name.toLowerCase()));
-            const toInsert = [];
-            for (let i = 1; i < raw.length; i++) {
-                const r    = raw[i];
-                const name = String(r[nameIdx] || '').trim();
-                if (!name) continue;
-                if (existingNames.has(name.toLowerCase())) continue;
-                existingNames.add(name.toLowerCase());
-                const salary    = salIdx    >= 0 ? (+String(r[salIdx]).replace(/[^0-9.]/g,'') || 0) : 0;
-                const role      = roleIdx   >= 0 ? String(r[roleIdx]   || '').trim() : null;
-                const statusRaw = statusIdx >= 0 ? String(r[statusIdx] || '').trim().toLowerCase() : 'active';
-                toInsert.push({ full_name: name, monthly_salary: salary, role: role || null, is_active: statusRaw !== 'inactive' });
-            }
+function closeTeamBulkModal(e) {
+    if (e && e.target !== document.getElementById('team-bulk-modal')) return;
+    document.getElementById('team-bulk-modal').classList.remove('open');
+}
 
-            if (toInsert.length === 0) { toast('No new members to add (all already exist)', 'ok'); return; }
+function teamBulkSwitchTab(tab) {
+    _teamBulkActiveTab = tab;
+    document.getElementById('tbulk-pane-same').style.display = tab === 'same' ? '' : 'none';
+    document.getElementById('tbulk-pane-diff').style.display = tab === 'diff' ? '' : 'none';
+    document.getElementById('tbulk-tab-same').className = 'bulk-tab' + (tab === 'same' ? ' active' : '');
+    document.getElementById('tbulk-tab-diff').className = 'bulk-tab' + (tab === 'diff' ? ' active' : '');
+}
 
-            const { data, error } = await _sb.from('team_members').insert(toInsert).select('id,full_name,monthly_salary,role,is_active');
-            if (error) { toast('Upload failed: ' + error.message, 'err'); return; }
-            (data || []).forEach(m => _finTeam.push(m));
-            logActivity('Bulk Uploaded Team Members', `Added ${toInsert.length} member${toInsert.length !== 1 ? 's' : ''} via bulk upload`);
-            toast(`Added ${toInsert.length} member${toInsert.length !== 1 ? 's' : ''}`, 'ok');
-            showFinTeam();
-        } catch (err) {
-            toast('Failed to read file: ' + err.message, 'err');
-        }
-    };
-    reader.readAsArrayBuffer(file);
+function teamBulkColSameChange() {
+    const field = document.getElementById('tbulk-col-same').value;
+    const wrap  = document.getElementById('tbulk-val-same-wrap');
+    if (field === 'status')
+        wrap.innerHTML = `<select id="tbulk-val-same"><option value="">— Select status —</option><option value="true">Active</option><option value="false">Inactive</option></select>`;
+    else if (field === 'monthly_salary')
+        wrap.innerHTML = `<input id="tbulk-val-same" type="number" min="0" placeholder="Enter salary…">`;
+    else
+        wrap.innerHTML = `<input id="tbulk-val-same" type="text" placeholder="Enter new value…">`;
+}
+
+function teamBulkDiffFieldChange() {
+    const field = document.getElementById('tbulk-col-diff').value;
+    const wrap  = document.getElementById('tbulk-diff-rows');
+    if (!field) { wrap.style.display = 'none'; return; }
+    wrap.style.display = '';
+    const fieldLabel = document.getElementById('tbulk-col-diff').options[document.getElementById('tbulk-col-diff').selectedIndex].text;
+    document.getElementById('tbulk-diff-head').innerHTML =
+        `<span>Member Name</span><span>${esc(fieldLabel)}</span>`;
+    document.getElementById('tbulk-diff-body').innerHTML = _finTeam.map(m => {
+        let inp;
+        if (field === 'status')
+            inp = `<select class="bulk-diff-input" data-id="${m.id}"><option value="">— —</option><option value="true"${m.is_active?' selected':''}>Active</option><option value="false"${!m.is_active?' selected':''}>Inactive</option></select>`;
+        else if (field === 'monthly_salary')
+            inp = `<input class="bulk-diff-input" type="number" min="0" data-id="${m.id}" value="${m.monthly_salary||''}">`;
+        else
+            inp = `<input class="bulk-diff-input" type="text" data-id="${m.id}" value="${esc(m[field]||'')}">`;
+        return `<div class="bulk-diff-row tbulk-diff-grid"><span style="padding:4px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.full_name)}</span><div>${inp}</div></div>`;
+    }).join('');
+}
+
+async function applyTeamBulkUpdate() {
+    if (_teamBulkActiveTab === 'same') await _applyTeamBulkSame();
+    else await _applyTeamBulkDiff();
+}
+
+async function _applyTeamBulkSame() {
+    const field = document.getElementById('tbulk-col-same').value;
+    if (!field) { document.getElementById('tbulk-col-same').focus(); return; }
+    const rawNames = document.getElementById('tbulk-names').value;
+    if (!rawNames.trim()) { document.getElementById('tbulk-names').focus(); return; }
+    const names  = rawNames.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    const rawVal = (document.getElementById('tbulk-val-same') || {}).value ?? '';
+    let hit = 0, miss = 0;
+    const updates = [];
+    names.forEach(name => {
+        const m = _finTeam.find(x => x.full_name.toLowerCase() === name.toLowerCase());
+        if (!m) { miss++; return; }
+        hit++;
+        if (field === 'status')          updates.push({ id: m.id, payload: { is_active: rawVal === 'true' } });
+        else if (field === 'monthly_salary') updates.push({ id: m.id, payload: { monthly_salary: +rawVal || 0 } });
+        else                             updates.push({ id: m.id, payload: { [field]: rawVal || null } });
+    });
+    if (!hit) { toast('No matching member names found', 'err'); return; }
+    const btn = document.querySelector('#team-bulk-modal .btn-orange');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+        await Promise.all(updates.map(u => _sb.from('team_members').update(u.payload).eq('id', u.id)));
+        document.getElementById('team-bulk-modal').classList.remove('open');
+        logActivity('Bulk Updated Team Members', `Updated ${hit} member${hit !== 1 ? 's' : ''} (field: ${field})`);
+        toast(miss > 0 ? `Updated ${hit} member${hit !== 1 ? 's' : ''} · ${miss} name${miss !== 1 ? 's' : ''} not found` : `Updated ${hit} member${hit !== 1 ? 's' : ''}`, 'ok');
+        showFinTeam();
+    } catch(e) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
+        toast('Update failed: ' + e.message, 'err');
+    }
+}
+
+async function _applyTeamBulkDiff() {
+    const field = document.getElementById('tbulk-col-diff').value;
+    if (!field) { document.getElementById('tbulk-col-diff').focus(); return; }
+    const inputs  = [...document.querySelectorAll('#tbulk-diff-body .bulk-diff-input')];
+    const updates = inputs.map(inp => {
+        const id = inp.dataset.id;
+        const v  = inp.value;
+        if (field === 'status')          return { id, payload: { is_active: v === 'true' } };
+        if (field === 'monthly_salary')  return { id, payload: { monthly_salary: +v || 0 } };
+        return { id, payload: { [field]: v || null } };
+    }).filter(u => u.id);
+    if (!updates.length) { toast('No members to update', 'err'); return; }
+    const btn = document.querySelector('#team-bulk-modal .btn-orange');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+        await Promise.all(updates.map(u => _sb.from('team_members').update(u.payload).eq('id', u.id)));
+        document.getElementById('team-bulk-modal').classList.remove('open');
+        logActivity('Bulk Updated Team Members', `Updated ${updates.length} member${updates.length !== 1 ? 's' : ''} (field: ${field})`);
+        toast(`Updated ${updates.length} member${updates.length !== 1 ? 's' : ''}`, 'ok');
+        showFinTeam();
+    } catch(e) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
+        toast('Update failed: ' + e.message, 'err');
+    }
 }
 
 // ══════════════════════════════════════════════
