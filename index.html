@@ -1299,6 +1299,11 @@
         .chip-count { font-weight: 700; font-size: 11px; background: rgba(0,0,0,.07); color: inherit; padding: 1px 7px; border-radius: 10px; }
         .status-chip.active .chip-count { background: rgba(255,255,255,.22); }
         .panel-content.table-mode .chip-row { flex-shrink: 0; }
+        /* Section stats bar */
+        .sec-stats-bar { display:flex; gap:10px; padding:14px 16px 10px; flex-wrap:wrap; flex-shrink:0; border-bottom:1px solid var(--border); background:var(--bg); }
+        .sec-stat { background:var(--bg-panel); border:1.5px solid var(--border); border-radius:10px; padding:10px 16px; }
+        .sec-stat-value { font-size:22px; font-weight:800; line-height:1.1; margin-bottom:3px; }
+        .sec-stat-label { font-size:10px; color:var(--slate-500); font-weight:700; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
 
         /* ── Status cell coloring ─────────── */
         td.status-col { color: var(--green) !important; font-weight: 600; }
@@ -4011,6 +4016,23 @@ function _renderTableContent(el) {
             return `<div class="status-chip${isActive ? ' active' + colorCls : ''}" data-status="${esc(status)}" onclick="toggleChip('${esc(status).replace(/'/g,"\\'")}')">${esc(status)}<span class="chip-count">${count}</span></div>`;
         }).join('');
 
+    // Section stats bar
+    const _impIdx  = headers.indexOf('Imp. Date');
+    const _atpIdx  = headers.indexOf('ATP Status');
+    const _implemented  = _impIdx  >= 0 ? rows.filter(r => String(r[_impIdx]  || '').trim() !== '').length : null;
+    const _atpAccepted  = _atpIdx  >= 0 ? rows.filter(r => String(r[_atpIdx]  || '').trim() === 'Accepted').length : null;
+    const _atpPending   = _atpIdx  >= 0 ? rows.filter(r => String(r[_atpIdx]  || '').trim() === 'Pending').length  : null;
+    const _atpRejected  = _atpIdx  >= 0 ? rows.filter(r => String(r[_atpIdx]  || '').trim() === 'Rejected').length : null;
+    const _statCard = (val, label, color) =>
+        `<div class="sec-stat"><div class="sec-stat-value" style="color:${color}">${val}</div><div class="sec-stat-label">${label}</div></div>`;
+    const statsBar = `<div class="sec-stats-bar">
+        ${_statCard(rows.length, 'Total Sites', '#2563eb')}
+        ${_implemented  !== null ? _statCard(_implemented,  'Implemented',  '#16a34a') : ''}
+        ${_atpAccepted  !== null ? _statCard(_atpAccepted,  'ATP Accepted',  '#16a34a') : ''}
+        ${_atpPending   !== null ? _statCard(_atpPending,   'ATP Pending',   '#d97706') : ''}
+        ${_atpRejected  !== null ? _statCard(_atpRejected,  'ATP Rejected',  '#dc2626') : ''}
+    </div>`;
+
     const hiddenSet = _hiddenCols();
 
     const theadCols = headers.map((h, ci) => {
@@ -4054,6 +4076,7 @@ function _renderTableContent(el) {
     }).join('');
 
     el.innerHTML = `
+    ${statsBar}
     ${chipHtml ? `<div class="chip-row" id="chip-row">${chipHtml}</div>` : ''}
     <div class="table-wrap">
         <div class="table-toolbar">
