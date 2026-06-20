@@ -2141,7 +2141,7 @@
     <div class="fin-form-grid" style="margin-top:16px">
       <div class="fin-field span2"><label>Full Name *</label><input type="text" id="ft-name" placeholder="Name…" maxlength="100"></div>
       <div class="fin-field"><label>Monthly Salary (IQD) *</label><input type="number" id="ft-salary" min="0" placeholder="0"></div>
-      <div class="fin-field"><label>Role</label><input type="text" id="ft-role" placeholder="e.g. Engineer" maxlength="80"></div>
+      <div class="fin-field"><label>Job Title</label><input type="text" id="ft-role" placeholder="e.g. Engineer" maxlength="80"></div>
       <div class="fin-field"><label>Phone Number</label><input type="text" id="ft-phone" placeholder="e.g. +964…" maxlength="40"></div>
       <div class="fin-field span2"><label>Notes</label><input type="text" id="ft-notes" placeholder="Optional…" maxlength="255"></div>
     </div>
@@ -2198,7 +2198,7 @@
         <select id="tbulk-col-same" onchange="teamBulkColSameChange()">
           <option value="">— Select field —</option>
           <option value="monthly_salary">Monthly Salary</option>
-          <option value="role">Role</option>
+          <option value="role">Job Title</option>
           <option value="status">Status</option>
           <option value="phone">Phone</option>
           <option value="notes">Notes</option>
@@ -2246,11 +2246,11 @@
 <div class="modal-overlay" id="team-bulk-add-modal" onclick="closeTeamBulkAddModal(event)">
   <div class="modal-card" style="max-width:680px">
     <div class="modal-title">Bulk Add Team Members</div>
-    <p class="modal-sub">Paste rows from Excel or type directly. Format per line: <strong>Name · Salary · Role</strong>. A header row is auto-detected and skipped.</p>
+    <p class="modal-sub">Paste rows from Excel or type directly. Format per line: <strong>Name · Salary · Job Title</strong>. A header row is auto-detected and skipped.</p>
     <div class="tbulk-add-tags">
       <span class="bulk-col-chip bulk-col-chip-id">Full Name</span>
       <span class="bulk-col-chip">Monthly Salary</span>
-      <span class="bulk-col-chip">Role</span>
+      <span class="bulk-col-chip">Job Title</span>
       <span class="bulk-col-chip">Phone</span>
       <span class="bulk-col-chip">Notes</span>
       <span class="bulk-col-chip">Status</span>
@@ -6610,7 +6610,7 @@ function _renderFinTeam(pc) {
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
             ${colTh('name',   'Full Name')}
             ${colTh('salary', 'Monthly Salary')}
-            ${colTh('role',   'Role')}
+            ${colTh('role',   'Job Title')}
             ${colTh('phone',  'Phone')}
             ${colTh('notes',  'Notes')}
             ${colTh('status', 'Status')}
@@ -6651,7 +6651,7 @@ function tmDdOpen(col, evt) {
 
     const selected = _tmDropFilters[col] || null;
     const allOn    = !selected;
-    const colLabels = { name:'Full Name', salary:'Monthly Salary', role:'Role', phone:'Phone', notes:'Notes', status:'Status' };
+    const colLabels = { name:'Full Name', salary:'Monthly Salary', role:'Job Title', phone:'Phone', notes:'Notes', status:'Status' };
 
     const items = allVals.map(v => {
         const chk = allOn || selected.has(v) ? 'checked' : '';
@@ -6771,7 +6771,7 @@ function tmSearchClear() {
 
 function exportTeamMembers() {
     if (!_finTeam.length) { toast('No data to export', 'err'); return; }
-    const headers = ['Full Name', 'Monthly Salary', 'Role', 'Phone', 'Notes', 'Status'];
+    const headers = ['Full Name', 'Monthly Salary', 'Job Title', 'Phone', 'Notes', 'Status'];
     const rows = _finTeam.map(m => [
         m.full_name,
         m.monthly_salary || 0,
@@ -6965,7 +6965,7 @@ function teamBulkColSameChange() {
 
 const _TBULK_FIELDS = [
     { key: 'monthly_salary', label: 'Monthly Salary' },
-    { key: 'role',           label: 'Role'           },
+    { key: 'role',           label: 'Job Title'      },
     { key: 'phone',          label: 'Phone'          },
     { key: 'notes',          label: 'Notes'          },
     { key: 'status',         label: 'Status'         },
@@ -7210,7 +7210,7 @@ function tbulkAddParse() {
 
     document.getElementById('tbulk-add-table').innerHTML = `
         <thead><tr>
-            <th>Full Name</th><th>Monthly Salary</th><th>Role</th><th>Phone</th><th>Notes</th><th>Status</th>
+            <th>Full Name</th><th>Monthly Salary</th><th>Job Title</th><th>Phone</th><th>Notes</th><th>Status</th>
         </tr></thead>
         <tbody>${rows.map(r => `<tr style="${r._dup ? 'opacity:.4' : ''}">
             <td><strong>${esc(r.full_name)}</strong>${r._dup ? ' <span class="fin-badge-inactive" style="font-size:10px;vertical-align:middle">duplicate</span>' : ''}</td>
