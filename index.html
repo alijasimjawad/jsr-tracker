@@ -7947,124 +7947,250 @@ function _renderReport(pc) {
 
     const m = _repMonth, y = _repYear;
 
-    // Active projects: those with work_log OR revenue OR project_expenses in this month
-    const projSet = new Set();
-    _finWorkLog.filter(r => r.month===m && r.year===y && +r.total_cost > 0).forEach(r => r.project_name && projSet.add(r.project_name));
-    _finRevenue.filter(r => r.month===m && r.year===y).forEach(r => r.project_name && projSet.add(r.project_name));
-    _finProjExp.filter(r => r.month===m && r.year===y).forEach(r => r.project_name && projSet.add(r.project_name));
-    const activeProjs = FIN_PROJECTS.filter(p => projSet.has(p));
+    // Revenue by project for this month
+    const projRevMap = {};
+    _finRevenue.filter(r => r.month === m && r.year === y).forEach(r => {
+        if (r.project_name) projRevMap[r.project_name] = (projRevMap[r.project_name] || 0) + (+r.amount || 0);
+    });
+    // Preserve FIN_PROJECTS order; append any revenue projects not in the list
+    const activeProjs = [
+        ...FIN_PROJECTS.filter(p => projRevMap[p] > 0),
+        ...Object.keys(projRevMap).filter(p => !FIN_PROJECTS.includes(p) && projRevMap[p] > 0)
+    ];
 
-    // General expense total for this month — shared equally
-    const genTotal  = _finGenExp.filter(r => r.month===m && r.year===y).reduce((s,r) => s + (+r.amount||0), 0);
-    const genShare  = activeProjs.length > 0 ? Math.round(genTotal / activeProjs.length) : 0;
+    const totalRevenue        = activeProjs.reduce((s, p) => s + (projRevMap[p] || 0), 0);
+    const totalSalaryBudget   = _finTeam.filter(t => t.is_active).reduce((s, t) => s + (+t.monthly_salary || 0), 0);
+    const activeEmployeeCount = _finTeam.filter(t => t.is_active).length;
+    const totalGenExp         = _finGenExp.filter(r => r.month === m && r.year === y).reduce((s, r) => s + (+r.amount || 0), 0);
+    const companyNet          = totalRevenue - totalSalaryBudget - totalGenExp;
 
-    const rows = activeProjs.map(proj => {
-        const revenue   = _finRevenue.filter(r => r.project_name===proj && r.month===m && r.year===y).reduce((s,r) => s + (+r.amount||0), 0);
-        const projExp   = _finProjExp.filter(r => r.project_name===proj && r.month===m && r.year===y).reduce((s,r) => s + (+r.amount||0), 0);
-        const salaryCost= _finWorkLog.filter(r => r.project_name===proj && r.month===m && r.year===y).reduce((s,r) => s + (+r.total_cost||0), 0);
-        const netProfit = revenue - projExp - salaryCost - genShare;
-        return { proj, revenue, projExp, salaryCost, genShare, netProfit };
+    // Per-project computed rows
+    const projRows = activeProjs.map(proj => {
+        const revenue    = projRevMap[proj] || 0;
+        const weight     = totalRevenue > 0 ? revenue / totalRevenue : 0;
+        const salaryCost = Math.round(totalSalaryBudget * weight);
+        const netProfit  = revenue - salaryCost;
+        const margin     = revenue > 0 ? (netProfit / revenue * 100) : 0;
+        return { proj, revenue, weight, salaryCost, netProfit, margin };
     });
 
-    const totRev   = rows.reduce((s,r) => s + r.revenue, 0);
-    const totPExp  = rows.reduce((s,r) => s + r.projExp, 0);
-    const totSal   = rows.reduce((s,r) => s + r.salaryCost, 0);
-    const totGen   = genTotal;
-    const totNet   = totRev - totPExp - totSal - totGen;
+    const yearsOpts  = _yearOptions(_repYear);
+    const pct        = v => v.toFixed(1) + '%';
+    const repSection = (title) =>
+        `<h3 style="font-size:13px;font-weight:700;color:var(--text-primary);letter-spacing:.3px;text-transform:uppercase;margin:28px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)">${title}</h3>`;
 
-    const yearsOpts = _yearOptions(_repYear);
-
-    pc.innerHTML = `<div class="fin-page" id="fin-rep-wrap">
+    pc.innerHTML = `<div class="fin-page" id="fin-rep-wrap" style="padding-bottom:40px">
         <div class="fin-toolbar">
             <select class="fin-sel" onchange="_repMonth=+this.value;_renderReport()">
-                ${FIN_MONTHS.map((mn,i)=>`<option value="${i+1}"${i+1===_repMonth?' selected':''}>${mn}</option>`).join('')}
+                ${FIN_MONTHS.map((mn,i) => `<option value="${i+1}"${i+1===_repMonth?' selected':''}>${mn}</option>`).join('')}
             </select>
             <select class="fin-sel" onchange="_repYear=+this.value;_renderReport()">${yearsOpts}</select>
             <div class="fin-spacer"></div>
             <button class="btn btn-ghost" onclick="showFinReport(true)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
             </button>
-            <button class="btn btn-ghost" onclick="exportFinReport(${m},${y})">Export Excel</button>
+            <button class="btn btn-green" onclick="exportFinReport(${m},${y})">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export Excel
+            </button>
         </div>
-        <h2 style="font-size:16px;font-weight:700;color:var(--text-primary);margin:0 0 16px">
-            ${_monthName(m)} ${y} — Financial Summary
+        <h2 style="font-size:17px;font-weight:800;color:var(--text-primary);margin:0 0 20px">
+            ${_monthName(m)} ${y} — Monthly Report
         </h2>
-        ${rows.length === 0
-            ? `<div class="al-empty">No financial data for ${_monthName(m)} ${y}.</div>`
-            : `<div class="fin-table-wrap"><table class="fin-table fin-report-table"><thead><tr>
-                <th>Project</th>
-                <th class="fin-num" style="color:#16a34a">Revenue</th>
-                <th class="fin-num" style="color:var(--red)">Project Expenses</th>
-                <th class="fin-num" style="color:var(--warning)">Salary Cost</th>
-                <th class="fin-num" style="color:var(--slate-500)">General Share</th>
-                <th class="fin-num">Net Profit</th>
-            </tr></thead><tbody>
-            ${rows.map(r => `<tr>
-                <td><strong>${esc(r.proj)}</strong></td>
-                <td class="fin-num" style="color:#16a34a">${iqd(r.revenue)}</td>
-                <td class="fin-num" style="color:var(--red)">${iqd(r.projExp)}</td>
-                <td class="fin-num" style="color:var(--warning)">${iqd(r.salaryCost)}</td>
-                <td class="fin-num" style="color:var(--slate-500)">${iqd(r.genShare)}</td>
-                <td class="fin-num ${r.netProfit >= 0 ? 'fin-profit-pos' : 'fin-profit-neg'}">${iqd(r.netProfit)}</td>
-            </tr>`).join('')}
-            </tbody><tfoot>
-                <tr style="background:var(--slate-100)">
-                    <td><strong>TOTALS</strong></td>
-                    <td class="fin-num" style="color:#16a34a"><strong>${iqd(totRev)}</strong></td>
-                    <td class="fin-num" style="color:var(--red)"><strong>${iqd(totPExp)}</strong></td>
-                    <td class="fin-num" style="color:var(--warning)"><strong>${iqd(totSal)}</strong></td>
-                    <td class="fin-num" style="color:var(--slate-500)"><strong>${iqd(totGen)}</strong></td>
-                    <td class="fin-num ${totNet >= 0 ? 'fin-profit-pos' : 'fin-profit-neg'}"><strong>${iqd(totNet)}</strong></td>
-                </tr>
-            </tfoot></table></div>
-            <div style="margin-top:24px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
-                <h3 style="font-size:14px;font-weight:700;margin:0 0 14px">Net Profit by Project</h3>
-                <div style="position:relative;height:240px"><canvas id="fin-rep-chart"></canvas></div>
-            </div>`}
+
+        ${activeProjs.length === 0
+            ? `<div class="al-empty">No revenue data for ${_monthName(m)} ${y}.</div>`
+            : `
+
+        <!-- ── Summary Cards ── -->
+        <div class="fin-kpi-row">
+            <div class="fin-kpi-card">
+                <div class="fin-kpi-label">Total Revenue</div>
+                <div class="fin-kpi-value fin-kpi-pos">${iqd(totalRevenue)}</div>
+                <div class="fin-kpi-sub">${activeProjs.length} project${activeProjs.length !== 1 ? 's' : ''}</div>
+            </div>
+            <div class="fin-kpi-card">
+                <div class="fin-kpi-label">Total Salary</div>
+                <div class="fin-kpi-value" style="color:var(--warning)">${iqd(totalSalaryBudget)}</div>
+                <div class="fin-kpi-sub">${activeEmployeeCount} active employee${activeEmployeeCount !== 1 ? 's' : ''}</div>
+            </div>
+            <div class="fin-kpi-card">
+                <div class="fin-kpi-label">General Expenses</div>
+                <div class="fin-kpi-value fin-kpi-neg">${iqd(totalGenExp)}</div>
+                <div class="fin-kpi-sub">Shared overhead</div>
+            </div>
+            <div class="fin-kpi-card">
+                <div class="fin-kpi-label">Net Profit</div>
+                <div class="fin-kpi-value ${companyNet >= 0 ? 'fin-kpi-pos' : 'fin-kpi-neg'}">${iqd(companyNet)}</div>
+                <div class="fin-kpi-sub">Rev − Salary − Gen. Exp.</div>
+            </div>
+        </div>
+
+        <!-- ── Revenue by Project ── -->
+        ${repSection('Revenue by Project')}
+        <div class="fin-table-wrap">
+        <table class="fin-table fin-report-table"><thead><tr>
+            <th>Project</th>
+            <th class="fin-num">Revenue (IQD)</th>
+            <th class="fin-num">Weight %</th>
+        </tr></thead><tbody>
+        ${projRows.map(r => `<tr>
+            <td><strong>${esc(r.proj)}</strong></td>
+            <td class="fin-num" style="color:#16a34a">${iqd(r.revenue)}</td>
+            <td class="fin-num">
+                <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
+                    <div style="width:80px;height:6px;border-radius:3px;background:var(--slate-100);overflow:hidden">
+                        <div style="width:${(r.weight*100).toFixed(1)}%;height:100%;background:#2563eb;border-radius:3px"></div>
+                    </div>
+                    <span style="min-width:38px;text-align:right">${pct(r.weight*100)}</span>
+                </div>
+            </td>
+        </tr>`).join('')}
+        </tbody><tfoot><tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="fin-num"><strong style="color:#16a34a">${iqd(totalRevenue)}</strong></td>
+            <td class="fin-num"><strong>100.0%</strong></td>
+        </tr></tfoot></table></div>
+
+        <!-- ── Salary Distribution ── -->
+        ${repSection('Salary Distribution')}
+        <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px">
+            Total monthly salary budget: <strong style="color:var(--text-primary)">${iqd(totalSalaryBudget)}</strong>
+            distributed across projects by revenue weight
+            (${activeEmployeeCount} active employee${activeEmployeeCount !== 1 ? 's' : ''}).
+        </p>
+        <div class="fin-table-wrap">
+        <table class="fin-table fin-report-table"><thead><tr>
+            <th>Project</th>
+            <th class="fin-num">Revenue Weight %</th>
+            <th class="fin-num">Salary Cost (IQD)</th>
+        </tr></thead><tbody>
+        ${projRows.map(r => `<tr>
+            <td><strong>${esc(r.proj)}</strong></td>
+            <td class="fin-num">${pct(r.weight*100)}</td>
+            <td class="fin-num" style="color:var(--warning)">${iqd(r.salaryCost)}</td>
+        </tr>`).join('')}
+        </tbody><tfoot><tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="fin-num"><strong>100.0%</strong></td>
+            <td class="fin-num"><strong style="color:var(--warning)">${iqd(projRows.reduce((s,r)=>s+r.salaryCost,0))}</strong></td>
+        </tr></tfoot></table></div>
+
+        <!-- ── Per-Project P&L ── -->
+        ${repSection('Per-Project P&L')}
+        <div class="fin-table-wrap">
+        <table class="fin-table fin-report-table"><thead><tr>
+            <th>Project</th>
+            <th class="fin-num">Revenue (IQD)</th>
+            <th class="fin-num">Salary Cost (IQD)</th>
+            <th class="fin-num">Net Profit (IQD)</th>
+            <th class="fin-num">Margin %</th>
+        </tr></thead><tbody>
+        ${projRows.map(r => `<tr>
+            <td><strong>${esc(r.proj)}</strong></td>
+            <td class="fin-num" style="color:#16a34a">${iqd(r.revenue)}</td>
+            <td class="fin-num" style="color:var(--warning)">${iqd(r.salaryCost)}</td>
+            <td class="fin-num ${r.netProfit >= 0 ? 'fin-profit-pos' : 'fin-profit-neg'}">${iqd(r.netProfit)}</td>
+            <td class="fin-num ${r.margin >= 0 ? 'fin-profit-pos' : 'fin-profit-neg'}">${pct(r.margin)}</td>
+        </tr>`).join('')}
+        </tbody><tfoot><tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="fin-num"><strong style="color:#16a34a">${iqd(totalRevenue)}</strong></td>
+            <td class="fin-num"><strong style="color:var(--warning)">${iqd(projRows.reduce((s,r)=>s+r.salaryCost,0))}</strong></td>
+            ${(()=>{ const tn=projRows.reduce((s,r)=>s+r.netProfit,0); const tm=totalRevenue>0?(tn/totalRevenue*100):0;
+              return `<td class="fin-num ${tn>=0?'fin-profit-pos':'fin-profit-neg'}"><strong>${iqd(tn)}</strong></td>
+                      <td class="fin-num ${tm>=0?'fin-profit-pos':'fin-profit-neg'}"><strong>${pct(tm)}</strong></td>`; })()}
+        </tr></tfoot></table></div>
+
+        <!-- ── Chart ── -->
+        ${repSection('Net Profit by Project')}
+        <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+            <div style="position:relative;height:240px"><canvas id="fin-rep-chart"></canvas></div>
+        </div>`}
     </div>`;
 
-    if (rows.length > 0) {
+    if (projRows.length > 0) {
         requestAnimationFrame(() => {
             const ctx = document.getElementById('fin-rep-chart');
             if (!ctx) return;
-            const colors = rows.map(r => r.netProfit >= 0 ? 'rgba(22,163,74,.8)' : 'rgba(220,38,38,.8)');
+            const colors = projRows.map(r => r.netProfit >= 0 ? 'rgba(22,163,74,.8)' : 'rgba(220,38,38,.8)');
             _repCharts.push(new Chart(ctx, {
                 type: 'bar',
-                data: { labels: rows.map(r => r.proj.replace(' Project','')), datasets: [{ label:'Net Profit (IQD)', data: rows.map(r => r.netProfit), backgroundColor: colors, borderRadius:4 }] },
-                options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-                    scales:{ y:{ ticks:{ callback: v => v.toLocaleString() } }, x:{ grid:{ display:false } } } }
+                data: {
+                    labels: projRows.map(r => r.proj.replace(' Project', '')),
+                    datasets: [{ label: 'Net Profit (IQD)', data: projRows.map(r => r.netProfit), backgroundColor: colors, borderRadius: 4 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { ticks: { callback: v => v.toLocaleString() } }, x: { grid: { display: false } } }
+                }
             }));
         });
     }
 }
 
 function exportFinReport(m, y) {
-    const rows = [];
-    rows.push(['Monthly Financial Report — ' + _monthName(m) + ' ' + y]);
-    rows.push([]);
-    rows.push(['Project','Revenue (IQD)','Project Expenses (IQD)','Salary Cost (IQD)','General Share (IQD)','Net Profit (IQD)']);
-    const genTotal = _finGenExp.filter(r=>r.month===m&&r.year===y).reduce((s,r)=>s+(+r.amount||0),0);
-    const projSet  = new Set();
-    _finWorkLog.filter(r=>r.month===m&&r.year===y&&+r.total_cost>0).forEach(r=>r.project_name&&projSet.add(r.project_name));
-    _finRevenue.filter(r=>r.month===m&&r.year===y).forEach(r=>r.project_name&&projSet.add(r.project_name));
-    _finProjExp.filter(r=>r.month===m&&r.year===y).forEach(r=>r.project_name&&projSet.add(r.project_name));
-    const activeProjs = FIN_PROJECTS.filter(p=>projSet.has(p));
-    const genShare = activeProjs.length > 0 ? Math.round(genTotal/activeProjs.length) : 0;
-    let tR=0,tPE=0,tS=0,tN=0;
-    activeProjs.forEach(proj => {
-        const rev = _finRevenue.filter(r=>r.project_name===proj&&r.month===m&&r.year===y).reduce((s,r)=>s+(+r.amount||0),0);
-        const pe  = _finProjExp.filter(r=>r.project_name===proj&&r.month===m&&r.year===y).reduce((s,r)=>s+(+r.amount||0),0);
-        const sal = _finWorkLog.filter(r=>r.project_name===proj&&r.month===m&&r.year===y).reduce((s,r)=>s+(+r.total_cost||0),0);
-        const net = rev-pe-sal-genShare;
-        rows.push([proj,rev,pe,sal,genShare,net]);
-        tR+=rev; tPE+=pe; tS+=sal; tN+=(rev-pe-sal-genShare);
+    // Recompute data
+    const projRevMap = {};
+    _finRevenue.filter(r => r.month === m && r.year === y).forEach(r => {
+        if (r.project_name) projRevMap[r.project_name] = (projRevMap[r.project_name] || 0) + (+r.amount || 0);
     });
-    rows.push(['TOTALS',tR,tPE,tS,genTotal,tN]);
+    const activeProjs = [
+        ...FIN_PROJECTS.filter(p => projRevMap[p] > 0),
+        ...Object.keys(projRevMap).filter(p => !FIN_PROJECTS.includes(p) && projRevMap[p] > 0)
+    ];
+    const totalRevenue      = activeProjs.reduce((s, p) => s + (projRevMap[p] || 0), 0);
+    const totalSalaryBudget = _finTeam.filter(t => t.is_active).reduce((s, t) => s + (+t.monthly_salary || 0), 0);
+    const totalGenExp       = _finGenExp.filter(r => r.month === m && r.year === y).reduce((s, r) => s + (+r.amount || 0), 0);
+    const companyNet        = totalRevenue - totalSalaryBudget - totalGenExp;
+
+    const projRows = activeProjs.map(proj => {
+        const revenue    = projRevMap[proj] || 0;
+        const weight     = totalRevenue > 0 ? revenue / totalRevenue : 0;
+        const salaryCost = Math.round(totalSalaryBudget * weight);
+        return { proj, revenue, weight, salaryCost, netProfit: revenue - salaryCost, margin: revenue > 0 ? ((revenue - salaryCost) / revenue * 100) : 0 };
+    });
+    const pct = v => (v.toFixed(1) + '%');
+    const rows = [];
+
+    // Header
+    rows.push([`Monthly Financial Report — ${_monthName(m)} ${y}`]);
+    rows.push([]);
+
+    // Summary
+    rows.push(['COMPANY SUMMARY']);
+    rows.push(['Total Revenue (IQD)', totalRevenue]);
+    rows.push(['Total Salary (IQD)',  totalSalaryBudget]);
+    rows.push(['General Expenses (IQD)', totalGenExp]);
+    rows.push(['Net Profit (IQD)', companyNet]);
+    rows.push([]);
+
+    // Revenue by Project
+    rows.push(['REVENUE BY PROJECT']);
+    rows.push(['Project', 'Revenue (IQD)', 'Weight %']);
+    projRows.forEach(r => rows.push([r.proj, r.revenue, pct(r.weight * 100)]));
+    rows.push(['TOTAL', totalRevenue, '100.0%']);
+    rows.push([]);
+
+    // Salary Distribution
+    rows.push(['SALARY DISTRIBUTION']);
+    rows.push(['Project', 'Weight %', 'Salary Cost (IQD)']);
+    projRows.forEach(r => rows.push([r.proj, pct(r.weight * 100), r.salaryCost]));
+    rows.push(['TOTAL', '100.0%', projRows.reduce((s, r) => s + r.salaryCost, 0)]);
+    rows.push([]);
+
+    // P&L
+    rows.push(['PER-PROJECT P&L']);
+    rows.push(['Project', 'Revenue (IQD)', 'Salary Cost (IQD)', 'Net Profit (IQD)', 'Margin %']);
+    projRows.forEach(r => rows.push([r.proj, r.revenue, r.salaryCost, r.netProfit, pct(r.margin)]));
+    const tn = projRows.reduce((s, r) => s + r.netProfit, 0);
+    rows.push(['TOTAL', totalRevenue, projRows.reduce((s,r)=>s+r.salaryCost,0), tn, pct(totalRevenue > 0 ? tn/totalRevenue*100 : 0)]);
+
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [22,18,22,18,18,18].map(w=>({wch:w}));
-    XLSX.utils.book_append_sheet(wb,ws,'Monthly Report');
-    XLSX.writeFile(wb,`Finance_Report_${_monthName(m)}_${y}.xlsx`);
+    ws['!cols'] = [28, 20, 18, 20, 12].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Monthly Report');
+    XLSX.writeFile(wb, `Finance_Report_${_monthName(m)}_${y}.xlsx`);
 }
 
 // ── Generic helpers ───────────────────────────
