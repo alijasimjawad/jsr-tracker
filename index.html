@@ -1300,11 +1300,14 @@
         .status-chip.active .chip-count { background: rgba(255,255,255,.22); }
         .panel-content.table-mode .chip-row { flex-shrink: 0; }
         /* Section stats bar */
-        .sec-stats-bar { display:flex; gap:10px; padding:14px 16px 10px; flex-wrap:wrap; flex-shrink:0; border-bottom:1px solid var(--border); background:var(--bg); }
+        .sec-stats-bar { display:flex; gap:10px; padding:14px 16px 10px; flex-wrap:wrap; align-items:center; flex-shrink:0; border-bottom:1px solid var(--border); background:var(--bg); }
         .sec-stat { background:var(--bg-panel); border:1.5px solid var(--border); border-radius:10px; padding:10px 16px; cursor:pointer; transition:border-color .15s,box-shadow .15s,background .12s; user-select:none; }
         .sec-stat:hover { background:var(--slate-50,#f8fafc); box-shadow:0 2px 8px rgba(0,0,0,.07); }
         .sec-stat-value { font-size:22px; font-weight:800; line-height:1.1; margin-bottom:3px; }
         .sec-stat-label { font-size:10px; color:var(--slate-500); font-weight:700; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+        .sec-stat-clear { display:none; align-items:center; gap:5px; padding:6px 12px; border:1.5px solid var(--slate-300); border-radius:8px; background:var(--bg-panel); color:var(--slate-600); font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; transition:background .12s,border-color .12s,color .12s; white-space:nowrap; }
+        .sec-stat-clear.visible { display:flex; }
+        .sec-stat-clear:hover { background:#fee2e2; border-color:#fca5a5; color:#dc2626; }
 
         /* ── Status cell coloring ─────────── */
         td.status-col { color: var(--green) !important; font-weight: 600; }
@@ -4030,12 +4033,14 @@ function _renderTableContent(el) {
         const activeStyle = isActive ? ` border-color:${color};box-shadow:0 0 0 3px ${color}28;` : '';
         return `<div class="sec-stat${isActive ? ' active' : ''}" data-key="${key}" data-color="${color}" style="${activeStyle}" onclick="setSecStatFilter('${key}','${color}')"><div class="sec-stat-value" style="color:${color}">${val}</div><div class="sec-stat-label">${label}</div></div>`;
     };
+    const _hasStatFilter = _secStatFilter && _secStatFilter !== 'all';
     const statsBar = `<div class="sec-stats-bar">
         ${_statCard(rows.length,   'Total Sites',   '#2563eb', 'all')}
         ${_statCard(_implemented,  'Implemented',   '#16a34a', 'implemented')}
         ${_statCard(_atpAccepted,  'ATP Accepted',  '#16a34a', 'atp:Accepted')}
         ${_statCard(_atpPending,   'ATP Pending',   '#d97706', 'atp:Pending')}
         ${_statCard(_atpRejected,  'ATP Rejected',  '#dc2626', 'atp:Rejected')}
+        <button id="sec-stat-clear-btn" class="sec-stat-clear${_hasStatFilter ? ' visible' : ''}" onclick="setSecStatFilter(null,null)">✕ Clear Filter</button>
     </div>`;
 
     const hiddenSet = _hiddenCols();
@@ -4400,7 +4405,7 @@ function syncDdBtn(ci) {
 }
 
 function setSecStatFilter(key, color) {
-    _secStatFilter = _secStatFilter === key ? null : key;
+    _secStatFilter = (key === null || _secStatFilter === key) ? null : key;
     document.querySelectorAll('.sec-stat').forEach(card => {
         const isActive = _secStatFilter === card.dataset.key;
         const c = card.dataset.color;
@@ -4408,6 +4413,8 @@ function setSecStatFilter(key, color) {
         card.style.borderColor = isActive ? c : '';
         card.style.boxShadow   = isActive ? `0 0 0 3px ${c}28` : '';
     });
+    const clearBtn = document.getElementById('sec-stat-clear-btn');
+    if (clearBtn) clearBtn.classList.toggle('visible', !!_secStatFilter && _secStatFilter !== 'all');
     currentPage = 1;
     applyDropFilters();
 }
@@ -4420,6 +4427,8 @@ function clearAllFilters() {
     currentPage = 1;
     document.querySelectorAll('.dd-btn').forEach(b => b.classList.remove('on'));
     document.querySelectorAll('.sec-stat').forEach(c => { c.classList.remove('active'); c.style.borderColor = ''; c.style.boxShadow = ''; });
+    const _scb = document.getElementById('sec-stat-clear-btn');
+    if (_scb) _scb.classList.remove('visible');
     document.querySelectorAll('.status-chip').forEach(c => c.classList.remove('active','chip-green','chip-amber'));
     syncChipClearBtn();
     const si = document.querySelector('.search-input');
