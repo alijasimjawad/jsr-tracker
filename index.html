@@ -2209,6 +2209,22 @@
   </div>
 </div>
 
+<!-- Team Member Delete Modal -->
+<div class="modal-overlay" id="team-del-modal" onclick="closeTeamDelModal(event)">
+  <div class="modal-card" style="max-width:430px">
+    <div class="modal-title" style="color:var(--red)">Delete Team Member</div>
+    <p class="modal-sub" id="team-del-sub" style="margin-bottom:14px"></p>
+    <div id="team-del-err" style="background:var(--red-50);color:var(--red);border:1px solid #fca5a5;border-radius:var(--radius);padding:10px 13px;font-size:13px;line-height:1.5;margin-bottom:14px;display:none"></div>
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px;justify-content:space-between">
+      <button class="btn btn-ghost" onclick="closeTeamDelModal()">Cancel</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="team-del-deactivate-btn" onclick="confirmDeactivateTeamMember()" style="color:var(--warning);border-color:var(--warning)">Deactivate Instead</button>
+        <button class="btn btn-danger" id="team-del-confirm-btn" onclick="confirmDeleteTeamMember()">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Add Section Modal -->
 <div class="modal-overlay" id="add-section-modal" onclick="closeAddSectionModal(event)">
     <div class="modal-card">
@@ -6230,7 +6246,7 @@ function _renderFinTeam(pc) {
                     <button class="fin-act-btn" onclick="toggleFinTeamActive('${m.id}',${!m.is_active})" title="${m.is_active?'Deactivate':'Activate'}">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
                     </button>
-                    <button class="fin-act-btn del" onclick="finDelConfirm('Delete team member?',()=>deleteFinTeam('${m.id}'))" title="Delete">
+                    <button class="fin-act-btn del" onclick="openTeamDelModal('${m.id}')" title="Delete">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                     </button>
                 </td>
@@ -6297,6 +6313,77 @@ async function deleteFinTeam(id) {
     closeFinModal('fin-del-modal');
     logActivity('Deleted Team Member', `Deleted Team Member: ${m?.full_name || id}`);
     toast('Member deleted', 'ok');
+    _renderFinTeam();
+}
+
+// ── Team Member Delete Modal ──────────────────────────
+let _teamDelId = null;
+
+function openTeamDelModal(id) {
+    const m = _finTeam.find(x => x.id === id);
+    _teamDelId = id;
+    document.getElementById('team-del-sub').textContent =
+        `Are you sure you want to delete ${m ? `"${m.full_name}"` : 'this member'}? This action cannot be undone.`;
+    document.getElementById('team-del-err').style.display = 'none';
+    const deactivateBtn = document.getElementById('team-del-deactivate-btn');
+    deactivateBtn.style.display = (m && !m.is_active) ? 'none' : '';
+    deactivateBtn.disabled = false;
+    deactivateBtn.textContent = 'Deactivate Instead';
+    const delBtn = document.getElementById('team-del-confirm-btn');
+    delBtn.disabled = false;
+    delBtn.textContent = 'Delete';
+    openFinModal('team-del-modal');
+}
+
+function closeTeamDelModal(e) {
+    if (e && e.target !== document.getElementById('team-del-modal')) return;
+    document.getElementById('team-del-modal').classList.remove('open');
+}
+
+async function confirmDeleteTeamMember() {
+    if (!_teamDelId) return;
+    const m = _finTeam.find(x => x.id === _teamDelId);
+    const btn = document.getElementById('team-del-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Deleting…';
+
+    const { error } = await _sb.from('team_members').delete().eq('id', _teamDelId);
+
+    if (error) {
+        btn.disabled = false; btn.textContent = 'Delete';
+        const errEl = document.getElementById('team-del-err');
+        const isFk = error.code === '23503' ||
+            (error.message || '').toLowerCase().includes('foreign key') ||
+            (error.message || '').toLowerCase().includes('work_log');
+        errEl.textContent = isFk
+            ? `Cannot delete "${m?.full_name || 'this member'}" because they have work log entries. Please delete their work log entries first, or deactivate them instead.`
+            : error.message;
+        errEl.style.display = '';
+        return;
+    }
+
+    _finTeam = _finTeam.filter(x => x.id !== _teamDelId);
+    document.getElementById('team-del-modal').classList.remove('open');
+    logActivity('Deleted Team Member', `Deleted Team Member: ${m?.full_name || _teamDelId}`);
+    toast('Member deleted', 'ok');
+    _teamDelId = null;
+    _renderFinTeam();
+}
+
+async function confirmDeactivateTeamMember() {
+    if (!_teamDelId) return;
+    const m = _finTeam.find(x => x.id === _teamDelId);
+    const btn = document.getElementById('team-del-deactivate-btn');
+    btn.disabled = true; btn.textContent = 'Deactivating…';
+
+    const { error } = await _sb.from('team_members').update({ is_active: false }).eq('id', _teamDelId);
+
+    if (error) { btn.disabled = false; btn.textContent = 'Deactivate Instead'; toast(error.message, 'err'); return; }
+
+    if (m) m.is_active = false;
+    document.getElementById('team-del-modal').classList.remove('open');
+    logActivity('Deactivated Team Member', `Deactivated: ${m?.full_name || _teamDelId}`);
+    toast(`${m?.full_name || 'Member'} deactivated`, 'ok');
+    _teamDelId = null;
     _renderFinTeam();
 }
 
