@@ -385,7 +385,7 @@
         .fin-kpi-sub { font-size:12px; color:var(--slate-400); margin-top:5px; }
         .fin-kpi-pos { color:var(--green-600) !important; }
         .fin-kpi-neg { color:var(--red-600) !important; }
-        .team-stat-row { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; margin-bottom:18px; }
+        .team-stat-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-bottom:18px; }
         .team-stat-card { background:var(--bg-panel); border-radius:10px; padding:14px 16px; border:1px solid var(--slate-200); cursor:pointer; transition:border-color .15s, box-shadow .15s; }
         .team-stat-card:hover { border-color:var(--slate-400); }
         .team-stat-card.active { border-width:2px; box-shadow:0 0 0 3px rgba(0,0,0,.06); }
@@ -1433,7 +1433,7 @@
             .dash-grid { grid-template-columns:1fr; }
             /* Finance Dashboard mobile */
             .fin-kpi-row { grid-template-columns:1fr 1fr; }
-            .team-stat-row { grid-template-columns:repeat(4,1fr); }
+            .team-stat-row { grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); }
             .fin-charts-grid { grid-template-columns:1fr; }
             .fin-bottom-row { grid-template-columns:1fr; }
         }
@@ -6323,13 +6323,13 @@ function _tmColVal(m, col) {
 
 function _tmStatRows() {
     const sf = _finTeamFilter;
-    if (sf === null || sf === 'all') return _finTeam;
+    if (!sf || sf === 'all') return _finTeam;
     if (sf === 'active')     return _finTeam.filter(m => m.is_active);
     if (sf === 'inactive')   return _finTeam.filter(m => !m.is_active);
-    if (sf === 'engineer')   return _finTeam.filter(m => (m.role||'').toLowerCase().includes('engineer'));
-    if (sf === 'technician') return _finTeam.filter(m => (m.role||'').toLowerCase().includes('technician'));
-    if (sf === 'teamleader') return _finTeam.filter(m => (m.role||'').trim().toLowerCase() === 'team leader');
-    if (sf === 'other')      return _finTeam.filter(m => { const r=(m.role||'').toLowerCase(); return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader'; });
+    if (sf.startsWith('role:')) {
+        const role = sf.slice(5);
+        return _finTeam.filter(m => (m.role || '') === role);
+    }
     return _finTeam;
 }
 
@@ -6376,13 +6376,14 @@ function _renderFinTeam(pc) {
     };
     pc.innerHTML = `<div class="fin-page">
         <div class="team-stat-row" style="align-items:center">
-            ${card('Total Members', _finTeam.length,                                                                          '#2563eb', 'all')}
-            ${card('Active',        _finTeam.filter(m=>m.is_active).length,                                                   '#16a34a', 'active')}
-            ${card('Inactive',      _finTeam.filter(m=>!m.is_active).length,                                                  '#94a3b8', 'inactive')}
-            ${card('Engineer',      _finTeam.filter(m=>(m.role||'').toLowerCase().includes('engineer')).length,               '#7c3aed', 'engineer')}
-            ${card('Technician',    _finTeam.filter(m=>(m.role||'').toLowerCase().includes('technician')).length,             '#d97706', 'technician')}
-            ${card('Team Leader',   _finTeam.filter(m=>(m.role||'').trim().toLowerCase()==='team leader').length,             '#0d9488', 'teamleader')}
-            ${card('Other Roles',   _finTeam.filter(m=>{const r=(m.role||'').toLowerCase();return r&&!r.includes('engineer')&&!r.includes('technician')&&r!=='team leader';}).length, '#64748b', 'other')}
+            ${card('Total Members', _finTeam.length, '#2563eb', 'all')}
+            ${card('Active',   _finTeam.filter(m=>m.is_active).length,  '#16a34a', 'active')}
+            ${card('Inactive', _finTeam.filter(m=>!m.is_active).length, '#94a3b8', 'inactive')}
+            ${(()=>{
+                const roleColors=['#7c3aed','#d97706','#0d9488','#dc2626','#0891b2','#65a30d','#9333ea','#ea580c'];
+                const roles=[..._finTeam.reduce((s,m)=>{if(m.role)s.add(m.role);return s;},new Set())].sort();
+                return roles.map((r,i)=>card(r,_finTeam.filter(m=>m.role===r).length,roleColors[i%roleColors.length],'role:'+r)).join('');
+            })()}
             ${clearBtn}
         </div>
         <div class="tm-search-wrap">
@@ -6435,17 +6436,9 @@ function tmDdOpen(col, evt) {
     });
 
     // Faceted counts: rows passing stat-card filter + all OTHER column filters
+    const statRows = new Set(_tmStatRows());
     const contextRows = _finTeam.filter(m => {
-        const sf = _finTeamFilter;
-        let pass = sf === null || sf === 'all' ? true
-            : sf === 'active'     ? m.is_active
-            : sf === 'inactive'   ? !m.is_active
-            : sf === 'engineer'   ? (m.role||'').toLowerCase().includes('engineer')
-            : sf === 'technician' ? (m.role||'').toLowerCase().includes('technician')
-            : sf === 'teamleader' ? (m.role||'').trim().toLowerCase() === 'team leader'
-            : sf === 'other'      ? (() => { const r=(m.role||'').toLowerCase(); return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader'; })()
-            : true;
-        if (!pass) return false;
+        if (!statRows.has(m)) return false;
         return Object.entries(_tmDropFilters).every(([c, allowed]) =>
             c === col ? true : allowed.has(_tmColVal(m, c))
         );
