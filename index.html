@@ -386,7 +386,9 @@
         .fin-kpi-pos { color:var(--green-600) !important; }
         .fin-kpi-neg { color:var(--red-600) !important; }
         .team-stat-row { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; margin-bottom:18px; }
-        .team-stat-card { background:var(--bg-panel); border-radius:10px; padding:14px 16px; border:1px solid var(--slate-200); }
+        .team-stat-card { background:var(--bg-panel); border-radius:10px; padding:14px 16px; border:1px solid var(--slate-200); cursor:pointer; transition:border-color .15s, box-shadow .15s; }
+        .team-stat-card:hover { border-color:var(--slate-400); }
+        .team-stat-card.active { border-width:2px; box-shadow:0 0 0 3px rgba(0,0,0,.06); }
         .team-stat-label { font-size:10px; color:var(--slate-500); text-transform:uppercase; letter-spacing:.6px; font-weight:700; margin-bottom:6px; }
         .team-stat-value { font-size:22px; font-weight:800; }
         .fin-charts-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px; }
@@ -5907,6 +5909,7 @@ let _finDashCharts = [];
 
 // Edit tracking per module
 let _finTeamEditId    = null;
+let _finTeamFilter    = null;
 let _finRevEditId     = null;
 let _finGenExpEditId  = null;
 let _finProjExpEditId = null;
@@ -6230,16 +6233,24 @@ function _renderFinTeam(pc) {
                 const r = (m.role||'').toLowerCase();
                 return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader';
             }).length;
-            const card = (label, value, color) =>
-                `<div class="team-stat-card"><div class="team-stat-label">${label}</div><div class="team-stat-value" style="color:${color}">${value}</div></div>`;
+            const f = _finTeamFilter;
+            const card = (label, value, color, key) => {
+                const isActive = f === key;
+                const borderStyle = isActive ? `border-color:${color};` : '';
+                const bgStyle = isActive ? `background:${color}18;` : '';
+                return `<div class="team-stat-card${isActive?' active':''}" style="${borderStyle}${bgStyle}" onclick="teamStatFilter('${key}')">
+                    <div class="team-stat-label">${label}</div>
+                    <div class="team-stat-value" style="color:${color}">${value}</div>
+                </div>`;
+            };
             return `<div class="team-stat-row">
-                ${card('Total Members', total,      '#2563eb')}
-                ${card('Active',        active,     '#16a34a')}
-                ${card('Inactive',      inactive,   '#94a3b8')}
-                ${card('Engineer',      engineer,   '#7c3aed')}
-                ${card('Technician',    technician, '#d97706')}
-                ${card('Team Leader',   teamLeader, '#0d9488')}
-                ${card('Other Roles',   other,      '#64748b')}
+                ${card('Total Members', total,      '#2563eb', 'all')}
+                ${card('Active',        active,     '#16a34a', 'active')}
+                ${card('Inactive',      inactive,   '#94a3b8', 'inactive')}
+                ${card('Engineer',      engineer,   '#7c3aed', 'engineer')}
+                ${card('Technician',    technician, '#d97706', 'technician')}
+                ${card('Team Leader',   teamLeader, '#0d9488', 'teamleader')}
+                ${card('Other Roles',   other,      '#64748b', 'other')}
             </div>`;
         })()}
         <div class="fin-toolbar">
@@ -6258,9 +6269,19 @@ function _renderFinTeam(pc) {
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
             <th>Full Name</th><th>Monthly Salary</th><th>Role</th><th>Phone</th><th>Notes</th><th>Status</th><th>Actions</th>
         </tr></thead><tbody>
-        ${_finTeam.length === 0
-            ? `<tr><td colspan="7" class="al-empty">No team members yet.</td></tr>`
-            : _finTeam.map(m => `<tr>
+        ${(() => {
+            const f = _finTeamFilter;
+            const rows = f === null || f === 'all' ? _finTeam
+                : f === 'active'     ? _finTeam.filter(m => m.is_active)
+                : f === 'inactive'   ? _finTeam.filter(m => !m.is_active)
+                : f === 'engineer'   ? _finTeam.filter(m => (m.role||'').toLowerCase().includes('engineer'))
+                : f === 'technician' ? _finTeam.filter(m => (m.role||'').toLowerCase().includes('technician'))
+                : f === 'teamleader' ? _finTeam.filter(m => (m.role||'').trim().toLowerCase() === 'team leader')
+                : f === 'other'      ? _finTeam.filter(m => { const r=(m.role||'').toLowerCase(); return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader'; })
+                : _finTeam;
+            return rows.length === 0
+                ? `<tr><td colspan="7" class="al-empty">No members match this filter.</td></tr>`
+                : rows.map(m => `<tr>
                 <td><strong>${esc(m.full_name)}</strong></td>
                 <td class="fin-num">${iqd(m.monthly_salary)}</td>
                 <td>${esc(m.role||'')}</td>
@@ -6278,8 +6299,14 @@ function _renderFinTeam(pc) {
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                     </button>
                 </td>
-            </tr>`).join('')}
+            </tr>`).join('');
+        })()}
         </tbody></table></div></div>`;
+}
+
+function teamStatFilter(key) {
+    _finTeamFilter = (_finTeamFilter === key || key === 'all') ? null : key;
+    _renderFinTeam();
 }
 
 function openFinTeamForm(id) {
