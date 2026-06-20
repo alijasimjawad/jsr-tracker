@@ -385,6 +385,10 @@
         .fin-kpi-sub { font-size:12px; color:var(--slate-400); margin-top:5px; }
         .fin-kpi-pos { color:var(--green-600) !important; }
         .fin-kpi-neg { color:var(--red-600) !important; }
+        .team-stat-row { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; margin-bottom:18px; }
+        .team-stat-card { background:var(--bg-panel); border-radius:10px; padding:14px 16px; border:1px solid var(--slate-200); }
+        .team-stat-label { font-size:10px; color:var(--slate-500); text-transform:uppercase; letter-spacing:.6px; font-weight:700; margin-bottom:6px; }
+        .team-stat-value { font-size:22px; font-weight:800; }
         .fin-charts-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px; }
         .fin-chart-panel { background:var(--bg-panel); border-radius:10px; border:1px solid var(--slate-200); padding:16px 18px; }
         .fin-chart-title { font-size:13px; font-weight:700; color:var(--slate-700); margin-bottom:14px; }
@@ -1419,6 +1423,7 @@
             .dash-grid { grid-template-columns:1fr; }
             /* Finance Dashboard mobile */
             .fin-kpi-row { grid-template-columns:1fr 1fr; }
+            .team-stat-row { grid-template-columns:repeat(4,1fr); }
             .fin-charts-grid { grid-template-columns:1fr; }
             .fin-bottom-row { grid-template-columns:1fr; }
         }
@@ -6227,6 +6232,29 @@ function _renderFinTeam(pc) {
             </button>
             <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
         </div>
+        ${(() => {
+            const total      = _finTeam.length;
+            const active     = _finTeam.filter(m => m.is_active).length;
+            const inactive   = _finTeam.filter(m => !m.is_active).length;
+            const engineer   = _finTeam.filter(m => (m.role||'').toLowerCase().includes('engineer')).length;
+            const technician = _finTeam.filter(m => (m.role||'').toLowerCase().includes('technician')).length;
+            const teamLeader = _finTeam.filter(m => (m.role||'').trim().toLowerCase() === 'team leader').length;
+            const other      = _finTeam.filter(m => {
+                const r = (m.role||'').toLowerCase();
+                return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader';
+            }).length;
+            const card = (label, value, color) =>
+                `<div class="team-stat-card"><div class="team-stat-label">${label}</div><div class="team-stat-value" style="color:${color}">${value}</div></div>`;
+            return `<div class="team-stat-row">
+                ${card('Total Members', total,      '#2563eb')}
+                ${card('Active',        active,     '#16a34a')}
+                ${card('Inactive',      inactive,   '#94a3b8')}
+                ${card('Engineer',      engineer,   '#7c3aed')}
+                ${card('Technician',    technician, '#d97706')}
+                ${card('Team Leader',   teamLeader, '#0d9488')}
+                ${card('Other Roles',   other,      '#64748b')}
+            </div>`;
+        })()}
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
             <th>Full Name</th><th>Monthly Salary</th><th>Role</th><th>Phone</th><th>Notes</th><th>Status</th><th>Actions</th>
         </tr></thead><tbody>
