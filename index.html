@@ -6499,6 +6499,26 @@ function closeTeamBulkAddModal(e) {
     document.getElementById('team-bulk-add-modal').classList.remove('open');
 }
 
+function _tbulkSplitLine(line, sep) {
+    if (sep === '\t') return line.split('\t').map(v => v.trim());
+    // Quoted-CSV splitter so "650,000" or "Engineer EHS" inside quotes aren't broken
+    const result = [];
+    let cur = '', inQ = false;
+    for (const ch of line) {
+        if (ch === '"') { inQ = !inQ; }
+        else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+    }
+    result.push(cur.trim());
+    return result;
+}
+
+function _tbulkParseSalary(raw) {
+    const s = String(raw || '').replace(/,/g, '').replace(/[^0-9.]/g, '');
+    const n = parseFloat(s);
+    return (s && !isNaN(n) && n > 0) ? n : null;
+}
+
 function tbulkAddParse() {
     const raw      = document.getElementById('tbulk-add-paste').value.trim();
     const errEl    = document.getElementById('tbulk-add-err');
@@ -6515,8 +6535,10 @@ function tbulkAddParse() {
         errEl.textContent = 'Need at least a header row and one data row.'; errEl.style.display = ''; return;
     }
 
-    const sep = lines[0].includes('\t') ? '\t' : ',';
-    const hdrs      = lines[0].split(sep).map(h => h.trim().toLowerCase());
+    // Use tabs if ANY line has them (Excel paste); otherwise CSV with quoted-field handling
+    const sep = lines.some(l => l.includes('\t')) ? '\t' : ',';
+
+    const hdrs      = _tbulkSplitLine(lines[0], sep).map(h => h.toLowerCase());
     const nameIdx   = hdrs.findIndex(h => h === 'full name');
     const salIdx    = hdrs.findIndex(h => h === 'monthly salary');
     const roleIdx   = hdrs.findIndex(h => h === 'role');
@@ -6532,17 +6554,16 @@ function tbulkAddParse() {
     const existingNames = new Set(_finTeam.map(m => m.full_name.toLowerCase()));
     const rows = [];
     for (let i = 1; i < lines.length; i++) {
-        const p    = lines[i].split(sep).map(v => v.trim());
-        const name = p[nameIdx] || '';
+        const p    = _tbulkSplitLine(lines[i], sep);
+        const name = (p[nameIdx] || '').trim();
         if (!name) continue;
-        const salRaw = salIdx >= 0 ? +String(p[salIdx] || '').replace(/[^0-9.]/g, '') : null;
         rows.push({
             full_name:      name,
-            monthly_salary: salIdx    >= 0 ? (isNaN(salRaw) ? null : salRaw || null) : null,
-            role:           roleIdx   >= 0 ? (p[roleIdx]  || null) : null,
-            phone:          phoneIdx  >= 0 ? (p[phoneIdx] || null) : null,
-            notes:          notesIdx  >= 0 ? (p[notesIdx] || null) : null,
-            is_active:      statusIdx >= 0 ? String(p[statusIdx] || 'active').trim().toLowerCase() !== 'inactive' : true,
+            monthly_salary: salIdx    >= 0 ? _tbulkParseSalary(p[salIdx])                                    : null,
+            role:           roleIdx   >= 0 ? (p[roleIdx]  || '').trim() || null                              : null,
+            phone:          phoneIdx  >= 0 ? (p[phoneIdx] || '').trim() || null                              : null,
+            notes:          notesIdx  >= 0 ? (p[notesIdx] || '').trim() || null                              : null,
+            is_active:      statusIdx >= 0 ? (p[statusIdx] || '').trim().toLowerCase() !== 'inactive' : true,
             _dup:           existingNames.has(name.toLowerCase()),
         });
     }
@@ -6586,21 +6607,49 @@ function tbulkAddParse() {
 async function importTeamBulkAdd() {
     const toInsert = _tbulkAddRows.filter(r => !r._dup).map(({ _dup, ...r }) => r);
     if (!toInsert.length) return;
-    const btn = document.getElementById('tbulk-add-import-btn');
+    const btn    = document.getElementById('tbulk-add-import-btn');
+    const errEl  = document.getElementById('tbulk-add-err');
     if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    errEl.style.display = 'none';
+
+    let added = 0;
+    const failures = [];
+
+    // Try bulk insert first; fall back to one-by-one on any error
     try {
         const { data, error } = await _sb.from('team_members').insert(toInsert).select('*');
         if (error) throw error;
         (data || []).forEach(m => _finTeam.push(m));
-        document.getElementById('team-bulk-add-modal').classList.remove('open');
-        logActivity('Bulk Added Team Members', `Added ${toInsert.length} member${toInsert.length !== 1 ? 's' : ''} via bulk add`);
-        toast(`Added ${toInsert.length} member${toInsert.length !== 1 ? 's' : ''} successfully`, 'ok');
-        showFinTeam();
-    } catch(e) {
-        if (btn) { btn.disabled = false; btn.textContent = 'Import'; }
-        document.getElementById('tbulk-add-err').textContent = e.message;
-        document.getElementById('tbulk-add-err').style.display = '';
+        added = (data || []).length;
+    } catch (_bulkErr) {
+        for (const member of toInsert) {
+            try {
+                const { data, error } = await _sb.from('team_members').insert(member).select('*');
+                if (error) throw error;
+                if (data?.[0]) { _finTeam.push(data[0]); added++; }
+            } catch(e) {
+                failures.push(`${member.full_name}: ${e.message}`);
+            }
+        }
     }
+
+    if (added === 0) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Import'; }
+        errEl.textContent = failures.length ? 'Import failed — ' + failures[0] : 'No members were saved.';
+        errEl.style.display = '';
+        return;
+    }
+
+    document.getElementById('team-bulk-add-modal').classList.remove('open');
+    logActivity('Bulk Added Team Members', `Added ${added} member${added !== 1 ? 's' : ''} via bulk add`);
+    toast(
+        failures.length
+            ? `Added ${added} · ${failures.length} failed (see console)`
+            : `Added ${added} member${added !== 1 ? 's' : ''} successfully`,
+        failures.length ? 'err' : 'ok'
+    );
+    if (failures.length) console.warn('Bulk add partial failures:', failures);
+    showFinTeam();
 }
 
 // ══════════════════════════════════════════════
