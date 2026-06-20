@@ -3248,6 +3248,7 @@ async function login() {
             applyDeletedSections();
             refreshStatusDots();
             showDashboard();
+            _loadFinAll().catch(() => {}); // preload finance data in background
         }
     } catch (err) {
         e.textContent   = 'Connection error. Please try again.';
@@ -3487,17 +3488,26 @@ async function showDashboard() {
 
     const pc = document.getElementById('panel-content');
     pc.classList.remove('table-mode');
-    pc.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
 
-    try {
-        await sbLoadAll();
-        renderCustomSectionsAll();
-        applySectionLabels();
-        applyDeletedSections();
-        refreshStatusDots();
-    } catch (_) {}
-
-    _renderDashboard(pc);
+    if (_dbCacheOk()) {
+        _renderDashboard(pc);
+        sbLoadAll().then(() => {
+            _dbLoadTs = Date.now();
+            renderCustomSectionsAll(); applySectionLabels(); applyDeletedSections(); refreshStatusDots();
+            if (!selProj && !selSec) _renderDashboard(document.getElementById('panel-content'));
+        }).catch(() => {});
+    } else {
+        pc.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+        try {
+            await sbLoadAll();
+            _dbLoadTs = Date.now();
+            renderCustomSectionsAll();
+            applySectionLabels();
+            applyDeletedSections();
+            refreshStatusDots();
+        } catch (_) {}
+        _renderDashboard(pc);
+    }
 }
 
 function _renderDashboard(pc) {
@@ -3752,19 +3762,21 @@ async function selectSection(proj, sec) {
         <span class="bc-sep">›</span>
         <span class="bc-cur">${secLabel(sec)}</span>`, true);
 
-    // Show spinner while fetching fresh data
     const el = document.getElementById('panel-content');
     el.classList.remove('table-mode');
-    el.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
 
-    try {
-        await _fetchSectionData(proj, sec);
-        refreshStatusDots();
-    } catch (_) {
-        // silently fall back to cached data on network error
+    if (db[proj]?.[sec] !== undefined) {
+        // Instant render from in-memory data; refresh in background
+        renderMain();
+        _bgSecRefresh(proj, sec);
+    } else {
+        el.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+        try {
+            await _fetchSectionData(proj, sec);
+            refreshStatusDots();
+        } catch (_) {}
+        renderMain();
     }
-
-    renderMain();
 }
 
 function setTopbar(html, showAddSite) {
@@ -5435,6 +5447,8 @@ async function refreshAllData() {
 
     try {
         await sbLoadAll();
+        _dbLoadTs = Date.now();
+        _invalidateFin(); // force finance pages to re-fetch on next navigation
         renderCustomSectionsAll();
         applySectionLabels();
         applyDeletedSections();
@@ -5471,6 +5485,7 @@ async function initApp() {
 
     try {
         const hasData = await sbLoadAll();
+        _dbLoadTs = Date.now();
         if (!hasData) {
             // First run: seed hardcoded data to Supabase
             overlay.querySelector('p').textContent = 'Setting up database…';
@@ -5500,6 +5515,7 @@ async function initApp() {
         applyDeletedSections();
         refreshStatusDots();
         showDashboard();
+        _loadFinAll().catch(() => {}); // preload finance data in background
     }
 }
 
@@ -5910,6 +5926,38 @@ let _finDashCharts = [];
 // Edit tracking per module
 let _finTeamEditId    = null;
 let _finTeamFilter    = null;
+
+// ── Data cache ────────────────────────────────────
+let _finLoaded = false;   // has finance data been loaded at least once?
+let _finLoadTs = 0;       // timestamp of last successful finance load
+let _dbLoadTs  = 0;       // timestamp of last successful sbLoadAll
+const _CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function _finCacheOk()   { return _finLoaded && (Date.now() - _finLoadTs) < _CACHE_TTL; }
+function _dbCacheOk()    { return _dbLoadTs > 0 && (Date.now() - _dbLoadTs) < _CACHE_TTL; }
+function _invalidateFin(){ _finLoaded = false; _finLoadTs = 0; }
+
+// Get panel element without showing a spinner (for cache-first renders)
+function _finPanel() {
+    const pc = document.getElementById('panel-content');
+    pc.classList.remove('table-mode');
+    return pc;
+}
+
+// Refresh finance data in background; re-render only if user is still on that page
+function _bgFinRefresh(navId, renderFn) {
+    _loadFinAll().then(() => {
+        if (document.getElementById(navId)?.classList.contains('active')) renderFn();
+    }).catch(() => {});
+}
+
+// Refresh sections data in background; re-render if user is still on that proj/sec
+function _bgSecRefresh(proj, sec) {
+    _fetchSectionData(proj, sec).then(() => {
+        refreshStatusDots();
+        if (selProj === proj && selSec === sec) renderMain();
+    }).catch(() => {});
+}
 let _finRevEditId     = null;
 let _finGenExpEditId  = null;
 let _finProjExpEditId = null;
@@ -5963,17 +6011,25 @@ async function _loadFinAll() {
     if (!rv.error) _finRevenue = rv.data || [];
     if (!ge.error) _finGenExp  = ge.data || [];
     if (!pe.error) _finProjExp = pe.data || [];
+    _finLoaded = true;
+    _finLoadTs = Date.now();
 }
 
 // ══════════════════════════════════════════════
 // FINANCE DASHBOARD
 // ══════════════════════════════════════════════
-async function showFinDashboard() {
+async function showFinDashboard(force = false) {
     _finNavActive('nav-fin-dashboard');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Dashboard</span>');
-    const pc = _finSpinner();
-    await _loadFinAll();
-    _renderFinDashboard(pc);
+    if (_finCacheOk() && !force) {
+        const pc = _finPanel();
+        _renderFinDashboard(pc);
+        _bgFinRefresh('nav-fin-dashboard', () => _renderFinDashboard());
+    } else {
+        const pc = _finSpinner();
+        await _loadFinAll();
+        _renderFinDashboard(pc);
+    }
 }
 
 function _renderFinDashboard(pc) {
@@ -6211,12 +6267,18 @@ function _renderFinDashboard(pc) {
 // ══════════════════════════════════════════════
 // TEAM MEMBERS
 // ══════════════════════════════════════════════
-async function showFinTeam() {
+async function showFinTeam(force = false) {
     _finNavActive('nav-fin-team');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Team Members</span>');
-    const pc = _finSpinner();
-    try { const { data, error } = await _sb.from('team_members').select('*').order('full_name'); if (!error) _finTeam = data || []; } catch(_) {}
-    _renderFinTeam(pc);
+    if (_finCacheOk() && !force) {
+        const pc = _finPanel();
+        _renderFinTeam(pc);
+        _bgFinRefresh('nav-fin-team', () => _renderFinTeam());
+    } else {
+        const pc = _finSpinner();
+        try { await _loadFinAll(); } catch(_) {}
+        _renderFinTeam(pc);
+    }
 }
 
 function _renderFinTeam(pc) {
@@ -6255,7 +6317,7 @@ function _renderFinTeam(pc) {
         })()}
         <div class="fin-toolbar">
             <div class="fin-spacer"></div>
-            <button class="btn btn-ghost" onclick="showFinTeam()">
+            <button class="btn btn-ghost" onclick="showFinTeam(true)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
             </button>
             <button class="btn btn-orange" onclick="openTeamBulkModal()">
@@ -6348,7 +6410,7 @@ async function saveFinTeamMember() {
     } catch(e) { errEl.textContent = e.message; errEl.style.display = ''; return; }
     closeFinModal('fin-team-modal');
     toast(_finTeamEditId ? 'Member updated' : 'Member added', 'ok');
-    showFinTeam();
+    showFinTeam(true);
 }
 
 async function toggleFinTeamActive(id, val) {
@@ -6566,7 +6628,7 @@ async function _applyTeamBulkSame() {
         document.getElementById('team-bulk-modal').classList.remove('open');
         logActivity('Bulk Updated Team Members', `Updated ${hit} member${hit !== 1 ? 's' : ''} (field: ${field})`);
         toast(miss > 0 ? `Updated ${hit} member${hit !== 1 ? 's' : ''} · ${miss} name${miss !== 1 ? 's' : ''} not found` : `Updated ${hit} member${hit !== 1 ? 's' : ''}`, 'ok');
-        showFinTeam();
+        showFinTeam(true);
     } catch(e) {
         if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
         toast('Update failed: ' + e.message, 'err');
@@ -6617,7 +6679,7 @@ async function _applyTeamBulkDiff() {
         toast(miss > 0
             ? `Updated ${hit} member${hit !== 1 ? 's' : ''} · ${miss} name${miss !== 1 ? 's' : ''} not found`
             : `Updated ${hit} member${hit !== 1 ? 's' : ''}`, 'ok');
-        showFinTeam();
+        showFinTeam(true);
     } catch(e) {
         if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
         toast('Update failed: ' + e.message, 'err');
@@ -6799,7 +6861,7 @@ async function importTeamBulkAdd() {
         failures.length ? 'err' : 'ok'
     );
     if (failures.length) console.warn('Bulk add partial failures:', failures);
-    showFinTeam();
+    showFinTeam(true);
 }
 
 // ══════════════════════════════════════════════
@@ -6807,19 +6869,18 @@ async function importTeamBulkAdd() {
 // ══════════════════════════════════════════════
 let _wlMonth = _nowM(), _wlYear = _nowY(), _wlWorkDays = 22;
 
-async function showFinWorkLog() {
+async function showFinWorkLog(force = false) {
     _finNavActive('nav-fin-worklog');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Work Log</span>');
-    const pc = _finSpinner();
-    try {
-        const [t, wl] = await Promise.all([
-            _sb.from('team_members').select('*').eq('is_active', true).order('full_name'),
-            _sb.from('work_log').select('*')
-        ]);
-        if (!t.error)  _finTeam    = t.data  || [];
-        if (!wl.error) _finWorkLog = wl.data || [];
-    } catch(_) {}
-    _renderWorkLog(pc);
+    if (_finCacheOk() && !force) {
+        const pc = _finPanel();
+        _renderWorkLog(pc);
+        _bgFinRefresh('nav-fin-worklog', () => _renderWorkLog());
+    } else {
+        const pc = _finSpinner();
+        try { await _loadFinAll(); } catch(_) {}
+        _renderWorkLog(pc);
+    }
 }
 
 function _renderWorkLog(pc) {
@@ -6854,7 +6915,7 @@ function _renderWorkLog(pc) {
                     onchange="_wlWorkDays=Math.max(1,+this.value);_renderWorkLog()">
             </label>
             <div class="fin-spacer"></div>
-            <button class="btn btn-ghost" onclick="showFinWorkLog()">
+            <button class="btn btn-ghost" onclick="showFinWorkLog(true)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
             </button>
         </div>
@@ -7036,13 +7097,19 @@ async function _updateRevAmount(id, val) {
     toast('Amount updated', 'ok');
 }
 
-async function showFinRevenue() {
+async function showFinRevenue(force = false) {
     _finNavActive('nav-fin-revenue');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Revenue</span>');
     _revFilters = { proj:'', month: _nowM(), year: _nowY() };
-    const pc = _finSpinner();
-    try { const { data, error } = await _sb.from('revenue').select('*').order('invoice_date', { ascending: false }); if (!error) _finRevenue = data || []; } catch(_) {}
-    _renderRevenue(pc);
+    if (_finCacheOk() && !force) {
+        const pc = _finPanel();
+        _renderRevenue(pc);
+        _bgFinRefresh('nav-fin-revenue', () => _renderRevenue());
+    } else {
+        const pc = _finSpinner();
+        try { await _loadFinAll(); } catch(_) {}
+        _renderRevenue(pc);
+    }
 }
 
 function _renderRevenue(pc) {
@@ -7067,7 +7134,7 @@ function _renderRevenue(pc) {
             </select>
             <select class="fin-sel" onchange="_revFilters.year=+this.value;_renderRevenue()">${yearsOpts}</select>
             <div class="fin-spacer"></div>
-            <button class="btn btn-ghost" onclick="showFinRevenue()">
+            <button class="btn btn-ghost" onclick="showFinRevenue(true)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
             </button>
             <button id="sync-rev-btn" class="btn btn-ghost" onclick="runSyncAllRevenue()">
@@ -7177,13 +7244,19 @@ async function deleteFinRev(id) {
 // ══════════════════════════════════════════════
 let _geFilters = { cat:'', month:0, year:0 };
 
-async function showFinGenExp() {
+async function showFinGenExp(force = false) {
     _finNavActive('nav-fin-genexp');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">General Expenses</span>');
     _geFilters = { cat:'', month: _nowM(), year: _nowY() };
-    const pc = _finSpinner();
-    try { const { data, error } = await _sb.from('general_expenses').select('*').order('expense_date', { ascending: false }); if (!error) _finGenExp = data || []; } catch(_) {}
-    _renderGenExp(pc);
+    if (_finCacheOk() && !force) {
+        const pc = _finPanel();
+        _renderGenExp(pc);
+        _bgFinRefresh('nav-fin-genexp', () => _renderGenExp());
+    } else {
+        const pc = _finSpinner();
+        try { await _loadFinAll(); } catch(_) {}
+        _renderGenExp(pc);
+    }
 }
 
 function _renderGenExp(pc) {
@@ -7207,7 +7280,7 @@ function _renderGenExp(pc) {
             </select>
             <select class="fin-sel" onchange="_geFilters.year=+this.value;_renderGenExp()">${_yearOptions(_geFilters.year)}</select>
             <div class="fin-spacer"></div>
-            <button class="btn btn-ghost" onclick="showFinGenExp()">
+            <button class="btn btn-ghost" onclick="showFinGenExp(true)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
             </button>
             <button class="btn btn-ghost" onclick="exportFinTable('genexp',['Date','Description','Category','Amount (IQD)','Notes','Added By'],r=>[r.expense_date,r.description,r.category,r.amount,r.notes,r.added_by])">Export</button>
@@ -7298,13 +7371,19 @@ async function deleteFinGenExp(id) {
 // ══════════════════════════════════════════════
 let _peFilters = { proj:'', cat:'', month:0, year:0 };
 
-async function showFinProjExp() {
+async function showFinProjExp(force = false) {
     _finNavActive('nav-fin-projexp');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Project Expenses</span>');
     _peFilters = { proj:'', cat:'', month: _nowM(), year: _nowY() };
-    const pc = _finSpinner();
-    try { const { data, error } = await _sb.from('project_expenses').select('*').order('expense_date', { ascending: false }); if (!error) _finProjExp = data || []; } catch(_) {}
-    _renderProjExp(pc);
+    if (_finCacheOk() && !force) {
+        const pc = _finPanel();
+        _renderProjExp(pc);
+        _bgFinRefresh('nav-fin-projexp', () => _renderProjExp());
+    } else {
+        const pc = _finSpinner();
+        try { await _loadFinAll(); } catch(_) {}
+        _renderProjExp(pc);
+    }
 }
 
 function _renderProjExp(pc) {
@@ -7333,7 +7412,7 @@ function _renderProjExp(pc) {
             </select>
             <select class="fin-sel" onchange="_peFilters.year=+this.value;_renderProjExp()">${_yearOptions(_peFilters.year)}</select>
             <div class="fin-spacer"></div>
-            <button class="btn btn-ghost" onclick="showFinProjExp()">
+            <button class="btn btn-ghost" onclick="showFinProjExp(true)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
             </button>
             <button class="btn btn-ghost" onclick="exportFinTable('projexp',['Date','Project','Description','Category','Amount (IQD)','Notes'],r=>[r.expense_date,r.project_name,r.description,r.category,r.amount,r.notes])">Export</button>
@@ -7428,13 +7507,19 @@ async function deleteFinProjExp(id) {
 let _repMonth = _nowM(), _repYear = _nowY();
 let _repCharts = [];
 
-async function showFinReport() {
+async function showFinReport(force = false) {
     _finNavActive('nav-fin-report');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Monthly Report</span>');
-    const pc = _finSpinner();
     _repCharts.forEach(c => { try { c.destroy(); } catch(_) {} }); _repCharts = [];
-    try { await _loadFinAll(); } catch(e) { pc.innerHTML = `<div style="padding:40px;color:var(--red)">Failed: ${esc(e.message)}</div>`; return; }
-    _renderReport(pc);
+    if (_finCacheOk() && !force) {
+        const pc = _finPanel();
+        _renderReport(pc);
+        _bgFinRefresh('nav-fin-report', () => _renderReport());
+    } else {
+        const pc = _finSpinner();
+        try { await _loadFinAll(); } catch(e) { pc.innerHTML = `<div style="padding:40px;color:var(--red)">Failed: ${esc(e.message)}</div>`; return; }
+        _renderReport(pc);
+    }
 }
 
 function _renderReport(pc) {
@@ -7477,7 +7562,7 @@ function _renderReport(pc) {
             </select>
             <select class="fin-sel" onchange="_repYear=+this.value;_renderReport()">${yearsOpts}</select>
             <div class="fin-spacer"></div>
-            <button class="btn btn-ghost" onclick="showFinReport()">
+            <button class="btn btn-ghost" onclick="showFinReport(true)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
             </button>
             <button class="btn btn-ghost" onclick="exportFinReport(${m},${y})">Export Excel</button>
