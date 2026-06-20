@@ -391,16 +391,7 @@
         .team-stat-card.active { border-width:2px; box-shadow:0 0 0 3px rgba(0,0,0,.06); }
         .team-stat-label { font-size:10px; color:var(--slate-500); text-transform:uppercase; letter-spacing:.6px; font-weight:700; margin-bottom:6px; }
         .team-stat-value { font-size:22px; font-weight:800; }
-        .team-filter-sel { width:100%; box-sizing:border-box; padding:4px 7px; border:1px solid var(--border); border-radius:6px; font-size:12px; background:var(--bg); color:var(--text); cursor:pointer; }
-        .team-filter-sel:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(37,99,235,.1); }
-        .team-col-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); display:inline-block; flex-shrink:0; margin-left:1px; }
-        .team-col-filter-btn { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:5px; border:none; background:transparent; cursor:pointer; color:var(--slate-400); flex-shrink:0; padding:0; opacity:0; transition:opacity .12s,color .12s,background .12s; }
-        th:hover .team-col-filter-btn, .team-col-filter-btn.on { opacity:1; }
-        .team-col-filter-btn.on { color:var(--accent); background:rgba(37,99,235,.12); }
-        .team-col-filter-btn:hover:not(.on) { background:var(--slate-200); color:var(--slate-700); }
-        .team-col-filter-wrap { max-height:0; overflow:hidden; opacity:0; transition:max-height .18s ease,opacity .15s ease,padding-top .18s ease; padding-top:0; }
-        .team-col-filter-wrap.visible { max-height:42px; opacity:1; padding-top:5px; }
-        .team-col-filter-wrap.active .team-filter-inp, .team-col-filter-wrap.active .team-filter-sel { border-color:var(--accent); background:rgba(37,99,235,.04); }
+        .fin-table th .th-inner { display:flex; align-items:center; gap:4px; justify-content:space-between; }
         .fin-charts-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px; }
         .fin-chart-panel { background:var(--bg-panel); border-radius:10px; border:1px solid var(--slate-200); padding:16px 18px; }
         .fin-chart-title { font-size:13px; font-weight:700; color:var(--slate-700); margin-bottom:14px; }
@@ -6313,26 +6304,35 @@ function _teamMemberRow(m) {
     </tr>`;
 }
 
-function _applyTeamTableFilter() {
+function _tmColVal(m, col) {
+    if (col === 'name')   return m.full_name || '';
+    if (col === 'salary') return String(m.monthly_salary || 0);
+    if (col === 'role')   return m.role || '';
+    if (col === 'phone')  return m.phone || '';
+    if (col === 'notes')  return m.notes || '';
+    if (col === 'status') return m.is_active ? 'Active' : 'Inactive';
+    return '';
+}
+
+function _tmStatRows() {
+    const sf = _finTeamFilter;
+    if (sf === null || sf === 'all') return _finTeam;
+    if (sf === 'active')     return _finTeam.filter(m => m.is_active);
+    if (sf === 'inactive')   return _finTeam.filter(m => !m.is_active);
+    if (sf === 'engineer')   return _finTeam.filter(m => (m.role||'').toLowerCase().includes('engineer'));
+    if (sf === 'technician') return _finTeam.filter(m => (m.role||'').toLowerCase().includes('technician'));
+    if (sf === 'teamleader') return _finTeam.filter(m => (m.role||'').trim().toLowerCase() === 'team leader');
+    if (sf === 'other')      return _finTeam.filter(m => { const r=(m.role||'').toLowerCase(); return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader'; });
+    return _finTeam;
+}
+
+function applyTmFilters() {
     const tbody = document.getElementById('team-member-tbody');
     if (!tbody) return;
-    const sf = _finTeamFilter;
-    let rows = sf === null || sf === 'all' ? _finTeam
-        : sf === 'active'     ? _finTeam.filter(m => m.is_active)
-        : sf === 'inactive'   ? _finTeam.filter(m => !m.is_active)
-        : sf === 'engineer'   ? _finTeam.filter(m => (m.role||'').toLowerCase().includes('engineer'))
-        : sf === 'technician' ? _finTeam.filter(m => (m.role||'').toLowerCase().includes('technician'))
-        : sf === 'teamleader' ? _finTeam.filter(m => (m.role||'').trim().toLowerCase() === 'team leader')
-        : sf === 'other'      ? _finTeam.filter(m => { const r=(m.role||'').toLowerCase(); return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader'; })
-        : _finTeam;
-    const tf = _teamFilters;
-    if (tf.name)                rows = rows.filter(m => m.full_name === tf.name);
-    if (tf.salary)              rows = rows.filter(m => String(m.monthly_salary||0) === tf.salary);
-    if (tf.role)                rows = rows.filter(m => (m.role||'') === tf.role);
-    if (tf.phone)               rows = rows.filter(m => (m.phone||'') === tf.phone);
-    if (tf.notes)               rows = rows.filter(m => (m.notes||'') === tf.notes);
-    if (tf.status === 'active')   rows = rows.filter(m => m.is_active);
-    if (tf.status === 'inactive') rows = rows.filter(m => !m.is_active);
+    let rows = _tmStatRows();
+    Object.entries(_tmDropFilters).forEach(([col, allowed]) => {
+        rows = rows.filter(m => allowed.has(_tmColVal(m, col)));
+    });
     tbody.innerHTML = rows.length === 0
         ? `<tr><td colspan="7" class="al-empty">No members match this filter.</td></tr>`
         : rows.map(_teamMemberRow).join('');
@@ -6340,7 +6340,6 @@ function _applyTeamTableFilter() {
 
 function _renderFinTeam(pc) {
     pc = pc || document.getElementById('panel-content');
-    const uniqueRoles = [...new Set(_finTeam.map(m => m.role).filter(Boolean))].sort();
     const f = _finTeamFilter;
     const card = (label, value, color, key) => {
         const isActive = f === key;
@@ -6354,24 +6353,10 @@ function _renderFinTeam(pc) {
             <button class="btn btn-ghost" style="white-space:nowrap;font-size:12px;padding:5px 10px;color:var(--slate-500);border-color:var(--slate-300)" onclick="teamStatFilter(null)">✕ Clear Filter</button>
            </div>`
         : '';
-    const uniqueNames    = [...new Set(_finTeam.map(m => m.full_name).filter(Boolean))].sort();
-    const uniqueSalaries = [...new Set(_finTeam.map(m => m.monthly_salary||0))].sort((a,b)=>a-b);
-    const uniquePhones   = [...new Set(_finTeam.map(m => m.phone||'').filter(Boolean))].sort();
-    const uniqueNotes    = [...new Set(_finTeam.map(m => m.notes||'').filter(Boolean))].sort();
-    const opts = (vals, cur, labelFn) =>
-        `<option value="">All</option>${vals.map(v=>`<option value="${esc(String(v))}"${cur===String(v)?' selected':''}>${esc(labelFn?labelFn(v):String(v))}</option>`).join('')}`;
-    const fSVG = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
-    const colTh = (col, label, selectHtml) => {
-        const hasVal = !!_teamFilters[col];
-        const show   = hasVal || _teamFilterFocused === col;
-        return `<th>
-            <div style="display:flex;align-items:center;gap:3px;white-space:nowrap">
-                <span>${label}</span>
-                ${hasVal ? `<span class="team-col-dot"></span>` : ''}
-                <button class="team-col-filter-btn${hasVal?' on':''}" data-col="${col}" onclick="teamColFilterToggle('${col}')" title="Filter">${fSVG}</button>
-            </div>
-            <div class="team-col-filter-wrap${show?' visible':''}${hasVal?' active':''}" id="tcf-${col}">${selectHtml}</div>
-        </th>`;
+    const fSVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
+    const colTh = (col, label) => {
+        const isOn = !!_tmDropFilters[col];
+        return `<th><div class="th-inner"><span>${label}</span><button class="dd-btn tm-dd-btn${isOn?' on':''}" data-col="${col}" onclick="tmDdOpen('${col}',event)" title="Filter">${fSVG}</button></div></th>`;
     };
     pc.innerHTML = `<div class="fin-page">
         <div class="team-stat-row" style="align-items:center">
@@ -6401,15 +6386,15 @@ function _renderFinTeam(pc) {
             <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
         </div>
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
-            ${colTh('name',   'Full Name',      `<select class="team-filter-sel" onchange="setTeamFilter('name',this.value)" onblur="teamColFilterBlur('name')">${opts(uniqueNames, _teamFilters.name)}</select>`)}
-            ${colTh('salary', 'Monthly Salary', `<select class="team-filter-sel" onchange="setTeamFilter('salary',this.value)" onblur="teamColFilterBlur('salary')">${opts(uniqueSalaries, _teamFilters.salary, v=>iqd(v))}</select>`)}
-            ${colTh('role',   'Role',           `<select class="team-filter-sel" onchange="setTeamFilter('role',this.value)" onblur="teamColFilterBlur('role')">${opts(uniqueRoles, _teamFilters.role)}</select>`)}
-            ${colTh('phone',  'Phone',          `<select class="team-filter-sel" onchange="setTeamFilter('phone',this.value)" onblur="teamColFilterBlur('phone')">${opts(uniquePhones, _teamFilters.phone)}</select>`)}
-            ${colTh('notes',  'Notes',          `<select class="team-filter-sel" onchange="setTeamFilter('notes',this.value)" onblur="teamColFilterBlur('notes')">${opts(uniqueNotes, _teamFilters.notes)}</select>`)}
-            ${colTh('status', 'Status',         `<select class="team-filter-sel" onchange="setTeamFilter('status',this.value)" onblur="teamColFilterBlur('status')"><option value="">All</option><option value="active"${_teamFilters.status==='active'?' selected':''}>Active</option><option value="inactive"${_teamFilters.status==='inactive'?' selected':''}>Inactive</option></select>`)}
+            ${colTh('name',   'Full Name')}
+            ${colTh('salary', 'Monthly Salary')}
+            ${colTh('role',   'Role')}
+            ${colTh('phone',  'Phone')}
+            ${colTh('notes',  'Notes')}
+            ${colTh('status', 'Status')}
             <th>Actions</th>
         </tr></thead><tbody id="team-member-tbody"></tbody></table></div></div>`;
-    _applyTeamTableFilter();
+    applyTmFilters();
 }
 
 function teamStatFilter(key) {
@@ -6417,47 +6402,141 @@ function teamStatFilter(key) {
     _renderFinTeam();
 }
 
-function teamColFilterToggle(col) {
-    if (_teamFilterFocused === col) {
-        _teamFilterFocused = null;
-        _teamColFilterUpdateVis(col);
-    } else {
-        _teamFilterFocused = col;
-        _teamColFilterUpdateVis(col);
-        setTimeout(() => document.getElementById(`tcf-${col}`)?.querySelector('input,select')?.focus(), 60);
+function tmDdOpen(col, evt) {
+    evt.stopPropagation();
+    if (_tmDdOpenCol === col) { tmDdClose(); return; }
+    tmDdClose();
+    _tmDdOpenCol = col;
+
+    const allVals = [...new Set(_finTeam.map(m => _tmColVal(m, col)))].sort((a, b) => {
+        const na = Number(a), nb = Number(b);
+        return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.localeCompare(b);
+    });
+
+    // Faceted counts: rows passing stat-card filter + all OTHER column filters
+    const contextRows = _finTeam.filter(m => {
+        const sf = _finTeamFilter;
+        let pass = sf === null || sf === 'all' ? true
+            : sf === 'active'     ? m.is_active
+            : sf === 'inactive'   ? !m.is_active
+            : sf === 'engineer'   ? (m.role||'').toLowerCase().includes('engineer')
+            : sf === 'technician' ? (m.role||'').toLowerCase().includes('technician')
+            : sf === 'teamleader' ? (m.role||'').trim().toLowerCase() === 'team leader'
+            : sf === 'other'      ? (() => { const r=(m.role||'').toLowerCase(); return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader'; })()
+            : true;
+        if (!pass) return false;
+        return Object.entries(_tmDropFilters).every(([c, allowed]) =>
+            c === col ? true : allowed.has(_tmColVal(m, c))
+        );
+    });
+    const countMap = {};
+    contextRows.forEach(m => {
+        const v = _tmColVal(m, col);
+        countMap[v] = (countMap[v] || 0) + 1;
+    });
+
+    const selected = _tmDropFilters[col] || null;
+    const allOn    = !selected;
+    const colLabels = { name:'Full Name', salary:'Monthly Salary', role:'Role', phone:'Phone', notes:'Notes', status:'Status' };
+
+    const items = allVals.map(v => {
+        const chk = allOn || selected.has(v) ? 'checked' : '';
+        const lbl = v === '' ? '<em style="opacity:.45">Empty</em>'
+                  : col === 'salary' ? esc(iqd(Number(v)))
+                  : esc(v);
+        const cnt = countMap[v] ?? 0;
+        return `<label class="dd-item">
+            <input type="checkbox" value="${esc(v)}" ${chk} onchange="tmDdToggleVal('${col}',this)">
+            <span class="dd-item-label">${lbl}</span>
+            <span class="dd-item-count">${cnt}</span>
+        </label>`;
+    }).join('');
+
+    const portal = document.createElement('div');
+    portal.className = 'dd-portal';
+    portal.id = 'tm-dd-portal';
+    portal.innerHTML = `
+        <div class="dd-head">
+            <span class="dd-head-name">${esc(colLabels[col] || col)}</span>
+            <span class="dd-head-count">${allVals.length} values</span>
+        </div>
+        <div class="dd-search-wrap">
+            <input class="dd-search-input" type="text" placeholder="Search values…" oninput="tmDdSearch(this)">
+        </div>
+        <div class="dd-list" id="tm-dd-list">
+            <label class="dd-item select-all">
+                <input type="checkbox" id="tm-dd-all-cb" ${allOn ? 'checked' : ''} onchange="tmDdToggleAll('${col}',this)">
+                <span class="dd-item-label">Select All</span>
+            </label>
+            ${items}
+        </div>
+        <div class="dd-footer">
+            <span class="dd-footer-info" id="tm-dd-sel-count">${allOn ? allVals.length : (selected?.size ?? 0)} of ${allVals.length}</span>
+            <button class="dd-ok" onclick="tmDdClose()">Done</button>
+        </div>`;
+
+    const btn  = evt.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    portal.style.top  = (rect.bottom + 4) + 'px';
+    portal.style.left = Math.min(rect.left, window.innerWidth - 248) + 'px';
+
+    document.body.appendChild(portal);
+    portal.querySelector('.dd-search-input').focus();
+    setTimeout(() => document.addEventListener('click', tmDdOutside), 10);
+}
+
+function tmDdOutside(e) {
+    if (!document.getElementById('tm-dd-portal')?.contains(e.target)) tmDdClose();
+}
+
+function tmDdClose() {
+    document.getElementById('tm-dd-portal')?.remove();
+    document.removeEventListener('click', tmDdOutside);
+    _tmDdOpenCol = null;
+}
+
+function tmDdSearch(input) {
+    const q = input.value.toLowerCase();
+    document.querySelectorAll('#tm-dd-list .dd-item:not(.select-all)').forEach(item => {
+        const txt = item.querySelector('.dd-item-label')?.textContent.toLowerCase() ?? '';
+        item.style.display = txt.includes(q) ? '' : 'none';
+    });
+}
+
+function tmDdToggleVal(col, cb) {
+    const allVals = [...new Set(_finTeam.map(m => _tmColVal(m, col)))];
+    if (!_tmDropFilters[col]) _tmDropFilters[col] = new Set(allVals);
+    if (cb.checked) _tmDropFilters[col].add(cb.value);
+    else            _tmDropFilters[col].delete(cb.value);
+    if (_tmDropFilters[col].size >= allVals.length) delete _tmDropFilters[col];
+
+    const allCb = document.getElementById('tm-dd-all-cb');
+    if (allCb) {
+        allCb.checked       = !_tmDropFilters[col];
+        allCb.indeterminate = !!(_tmDropFilters[col]?.size > 0 && _tmDropFilters[col]?.size < allVals.length);
     }
+    const sel = _tmDropFilters[col] ? _tmDropFilters[col].size : allVals.length;
+    const countEl = document.getElementById('tm-dd-sel-count');
+    if (countEl) countEl.textContent = `${sel} of ${allVals.length}`;
+
+    applyTmFilters();
+    syncTmDdBtn(col);
 }
 
-function _teamColFilterUpdateVis(col) {
-    const wrap = document.getElementById(`tcf-${col}`);
-    if (!wrap) return;
-    const show = _teamFilterFocused === col || !!_teamFilters[col];
-    wrap.classList.toggle('visible', show);
-    wrap.classList.toggle('active', !!_teamFilters[col]);
-    document.querySelector(`.team-col-filter-btn[data-col="${col}"]`)?.classList.toggle('on', !!_teamFilters[col]);
+function tmDdToggleAll(col, cb) {
+    const allVals = [...new Set(_finTeam.map(m => _tmColVal(m, col)))];
+    if (cb.checked) { delete _tmDropFilters[col]; }
+    else            { _tmDropFilters[col] = new Set(); }
+    document.querySelectorAll('#tm-dd-list .dd-item:not(.select-all) input[type="checkbox"]')
+        .forEach(c => { c.checked = cb.checked; });
+    const countEl = document.getElementById('tm-dd-sel-count');
+    if (countEl) countEl.textContent = `${cb.checked ? allVals.length : 0} of ${allVals.length}`;
+    applyTmFilters();
+    syncTmDdBtn(col);
 }
 
-function teamColFilterBlur(col) {
-    setTimeout(() => {
-        if (_teamFilterFocused === col && !_teamFilters[col]) {
-            _teamFilterFocused = null;
-            _teamColFilterUpdateVis(col);
-        }
-    }, 150);
-}
-
-function teamColFilterEsc(col, el) {
-    _teamFilters[col] = '';
-    if (el) el.value = '';
-    _teamFilterFocused = null;
-    _teamColFilterUpdateVis(col);
-    _applyTeamTableFilter();
-}
-
-function setTeamFilter(key, val) {
-    _teamFilters[key] = val;
-    _applyTeamTableFilter();
-    _teamColFilterUpdateVis(key);
+function syncTmDdBtn(col) {
+    document.querySelector(`.tm-dd-btn[data-col="${col}"]`)?.classList.toggle('on', !!_tmDropFilters[col]);
 }
 
 function exportTeamMembers() {
@@ -6541,9 +6620,9 @@ async function deleteFinTeam(id) {
 }
 
 // ── Team Member Delete Modal ──────────────────────────
-let _teamDelId         = null;
-let _teamFilterFocused = null;
-let _teamFilters       = { name:'', salary:'', role:'', phone:'', notes:'', status:'' };
+let _teamDelId     = null;
+let _tmDropFilters = {};
+let _tmDdOpenCol   = null;
 
 function openTeamDelModal(id) {
     const m = _finTeam.find(x => x.id === id);
