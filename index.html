@@ -391,6 +391,11 @@
         .team-stat-card.active { border-width:2px; box-shadow:0 0 0 3px rgba(0,0,0,.06); }
         .team-stat-label { font-size:10px; color:var(--slate-500); text-transform:uppercase; letter-spacing:.6px; font-weight:700; margin-bottom:6px; }
         .team-stat-value { font-size:22px; font-weight:800; }
+        .team-filter-row th { background:var(--bg-panel); padding:4px 6px; border-bottom:2px solid var(--border); }
+        .team-filter-inp, .team-filter-sel { width:100%; box-sizing:border-box; padding:5px 8px; border:1px solid var(--border); border-radius:6px; font-size:12px; background:var(--bg); color:var(--text); }
+        .team-filter-inp::placeholder { color:var(--slate-400); }
+        .team-filter-inp:focus, .team-filter-sel:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(37,99,235,.1); }
+        .team-filter-sel { cursor:pointer; }
         .fin-charts-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px; }
         .fin-chart-panel { background:var(--bg-panel); border-radius:10px; border:1px solid var(--slate-200); padding:16px 18px; }
         .fin-chart-title { font-size:13px; font-weight:700; color:var(--slate-700); margin-bottom:14px; }
@@ -6281,46 +6286,97 @@ async function showFinTeam(force = false) {
     }
 }
 
+function _teamMemberRow(m) {
+    return `<tr>
+        <td><strong>${esc(m.full_name)}</strong></td>
+        <td class="fin-num">${iqd(m.monthly_salary)}</td>
+        <td>${esc(m.role||'')}</td>
+        <td>${esc(m.phone||'')}</td>
+        <td style="color:var(--slate-500);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.notes||'')}</td>
+        <td>${m.is_active ? '<span class="fin-badge-active">Active</span>' : '<span class="fin-badge-inactive">Inactive</span>'}</td>
+        <td style="display:flex;gap:5px">
+            <button class="fin-act-btn" onclick="openFinTeamForm('${m.id}')" title="Edit">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="fin-act-btn" onclick="toggleFinTeamActive('${m.id}',${!m.is_active})" title="${m.is_active?'Deactivate':'Activate'}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+            </button>
+            <button class="fin-act-btn del" onclick="openTeamDelModal('${m.id}')" title="Delete">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </button>
+        </td>
+    </tr>`;
+}
+
+function _applyTeamTableFilter() {
+    const tbody = document.getElementById('team-member-tbody');
+    if (!tbody) return;
+    const sf = _finTeamFilter;
+    let rows = sf === null || sf === 'all' ? _finTeam
+        : sf === 'active'     ? _finTeam.filter(m => m.is_active)
+        : sf === 'inactive'   ? _finTeam.filter(m => !m.is_active)
+        : sf === 'engineer'   ? _finTeam.filter(m => (m.role||'').toLowerCase().includes('engineer'))
+        : sf === 'technician' ? _finTeam.filter(m => (m.role||'').toLowerCase().includes('technician'))
+        : sf === 'teamleader' ? _finTeam.filter(m => (m.role||'').trim().toLowerCase() === 'team leader')
+        : sf === 'other'      ? _finTeam.filter(m => { const r=(m.role||'').toLowerCase(); return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader'; })
+        : _finTeam;
+    const tf = _teamFilters;
+    if (tf.name)                rows = rows.filter(m => m.full_name.toLowerCase().includes(tf.name.toLowerCase()));
+    if (tf.salary)              rows = rows.filter(m => String(m.monthly_salary||'').includes(tf.salary));
+    if (tf.role)                rows = rows.filter(m => (m.role||'') === tf.role);
+    if (tf.phone)               rows = rows.filter(m => (m.phone||'').toLowerCase().includes(tf.phone.toLowerCase()));
+    if (tf.notes)               rows = rows.filter(m => (m.notes||'').toLowerCase().includes(tf.notes.toLowerCase()));
+    if (tf.status === 'active')   rows = rows.filter(m => m.is_active);
+    if (tf.status === 'inactive') rows = rows.filter(m => !m.is_active);
+    tbody.innerHTML = rows.length === 0
+        ? `<tr><td colspan="7" class="al-empty">No members match this filter.</td></tr>`
+        : rows.map(_teamMemberRow).join('');
+}
+
 function _renderFinTeam(pc) {
     pc = pc || document.getElementById('panel-content');
+    const uniqueRoles = [...new Set(_finTeam.map(m => m.role).filter(Boolean))].sort();
+    const f = _finTeamFilter;
+    const card = (label, value, color, key) => {
+        const isActive = f === key;
+        return `<div class="team-stat-card${isActive?' active':''}" style="${isActive?`border-color:${color};background:${color}18;`:''}" onclick="teamStatFilter('${key}')">
+            <div class="team-stat-label">${label}</div>
+            <div class="team-stat-value" style="color:${color}">${value}</div>
+        </div>`;
+    };
+    const clearBtn = f && f !== 'all'
+        ? `<div style="display:flex;align-items:center">
+            <button class="btn btn-ghost" style="white-space:nowrap;font-size:12px;padding:5px 10px;color:var(--slate-500);border-color:var(--slate-300)" onclick="teamStatFilter(null)">✕ Clear Filter</button>
+           </div>`
+        : '';
+    const filterSVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
+    const filterRow = _teamFilterVisible ? `<tr class="team-filter-row">
+        <th><input class="team-filter-inp" placeholder="Name…" value="${esc(_teamFilters.name)}" oninput="setTeamFilter('name',this.value)"></th>
+        <th><input class="team-filter-inp" placeholder="Salary…" value="${esc(_teamFilters.salary)}" oninput="setTeamFilter('salary',this.value)"></th>
+        <th><select class="team-filter-sel" onchange="setTeamFilter('role',this.value)">
+            <option value="">All Roles</option>
+            ${uniqueRoles.map(r=>`<option value="${esc(r)}"${_teamFilters.role===r?' selected':''}>${esc(r)}</option>`).join('')}
+        </select></th>
+        <th><input class="team-filter-inp" placeholder="Phone…" value="${esc(_teamFilters.phone)}" oninput="setTeamFilter('phone',this.value)"></th>
+        <th><input class="team-filter-inp" placeholder="Notes…" value="${esc(_teamFilters.notes)}" oninput="setTeamFilter('notes',this.value)"></th>
+        <th><select class="team-filter-sel" onchange="setTeamFilter('status',this.value)">
+            <option value="">All</option>
+            <option value="active"${_teamFilters.status==='active'?' selected':''}>Active</option>
+            <option value="inactive"${_teamFilters.status==='inactive'?' selected':''}>Inactive</option>
+        </select></th>
+        <th></th>
+    </tr>` : '';
     pc.innerHTML = `<div class="fin-page">
-        ${(() => {
-            const total      = _finTeam.length;
-            const active     = _finTeam.filter(m => m.is_active).length;
-            const inactive   = _finTeam.filter(m => !m.is_active).length;
-            const engineer   = _finTeam.filter(m => (m.role||'').toLowerCase().includes('engineer')).length;
-            const technician = _finTeam.filter(m => (m.role||'').toLowerCase().includes('technician')).length;
-            const teamLeader = _finTeam.filter(m => (m.role||'').trim().toLowerCase() === 'team leader').length;
-            const other      = _finTeam.filter(m => {
-                const r = (m.role||'').toLowerCase();
-                return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader';
-            }).length;
-            const f = _finTeamFilter;
-            const card = (label, value, color, key) => {
-                const isActive = f === key;
-                const borderStyle = isActive ? `border-color:${color};` : '';
-                const bgStyle = isActive ? `background:${color}18;` : '';
-                return `<div class="team-stat-card${isActive?' active':''}" style="${borderStyle}${bgStyle}" onclick="teamStatFilter('${key}')">
-                    <div class="team-stat-label">${label}</div>
-                    <div class="team-stat-value" style="color:${color}">${value}</div>
-                </div>`;
-            };
-            const clearBtn = f && f !== 'all'
-                ? `<div style="display:flex;align-items:center">
-                    <button class="btn btn-ghost" style="white-space:nowrap;font-size:12px;padding:5px 10px;color:var(--slate-500);border-color:var(--slate-300)" onclick="teamStatFilter(null)">✕ Clear Filter</button>
-                  </div>`
-                : '';
-            return `<div class="team-stat-row" style="align-items:center">
-                ${card('Total Members', total,      '#2563eb', 'all')}
-                ${card('Active',        active,     '#16a34a', 'active')}
-                ${card('Inactive',      inactive,   '#94a3b8', 'inactive')}
-                ${card('Engineer',      engineer,   '#7c3aed', 'engineer')}
-                ${card('Technician',    technician, '#d97706', 'technician')}
-                ${card('Team Leader',   teamLeader, '#0d9488', 'teamleader')}
-                ${card('Other Roles',   other,      '#64748b', 'other')}
-                ${clearBtn}
-            </div>`;
-        })()}
+        <div class="team-stat-row" style="align-items:center">
+            ${card('Total Members', _finTeam.length,                                                                          '#2563eb', 'all')}
+            ${card('Active',        _finTeam.filter(m=>m.is_active).length,                                                   '#16a34a', 'active')}
+            ${card('Inactive',      _finTeam.filter(m=>!m.is_active).length,                                                  '#94a3b8', 'inactive')}
+            ${card('Engineer',      _finTeam.filter(m=>(m.role||'').toLowerCase().includes('engineer')).length,               '#7c3aed', 'engineer')}
+            ${card('Technician',    _finTeam.filter(m=>(m.role||'').toLowerCase().includes('technician')).length,             '#d97706', 'technician')}
+            ${card('Team Leader',   _finTeam.filter(m=>(m.role||'').trim().toLowerCase()==='team leader').length,             '#0d9488', 'teamleader')}
+            ${card('Other Roles',   _finTeam.filter(m=>{const r=(m.role||'').toLowerCase();return r&&!r.includes('engineer')&&!r.includes('technician')&&r!=='team leader';}).length, '#64748b', 'other')}
+            ${clearBtn}
+        </div>
         <div class="fin-toolbar">
             <div class="fin-spacer"></div>
             <button class="btn btn-ghost" onclick="showFinTeam(true)">
@@ -6334,47 +6390,32 @@ function _renderFinTeam(pc) {
             </button>
             <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
         </div>
-        <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
-            <th>Full Name</th><th>Monthly Salary</th><th>Role</th><th>Phone</th><th>Notes</th><th>Status</th><th>Actions</th>
-        </tr></thead><tbody>
-        ${(() => {
-            const f = _finTeamFilter;
-            const rows = f === null || f === 'all' ? _finTeam
-                : f === 'active'     ? _finTeam.filter(m => m.is_active)
-                : f === 'inactive'   ? _finTeam.filter(m => !m.is_active)
-                : f === 'engineer'   ? _finTeam.filter(m => (m.role||'').toLowerCase().includes('engineer'))
-                : f === 'technician' ? _finTeam.filter(m => (m.role||'').toLowerCase().includes('technician'))
-                : f === 'teamleader' ? _finTeam.filter(m => (m.role||'').trim().toLowerCase() === 'team leader')
-                : f === 'other'      ? _finTeam.filter(m => { const r=(m.role||'').toLowerCase(); return r && !r.includes('engineer') && !r.includes('technician') && r !== 'team leader'; })
-                : _finTeam;
-            return rows.length === 0
-                ? `<tr><td colspan="7" class="al-empty">No members match this filter.</td></tr>`
-                : rows.map(m => `<tr>
-                <td><strong>${esc(m.full_name)}</strong></td>
-                <td class="fin-num">${iqd(m.monthly_salary)}</td>
-                <td>${esc(m.role||'')}</td>
-                <td>${esc(m.phone||'')}</td>
-                <td style="color:var(--slate-500);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.notes||'')}</td>
-                <td>${m.is_active ? '<span class="fin-badge-active">Active</span>' : '<span class="fin-badge-inactive">Inactive</span>'}</td>
-                <td style="display:flex;gap:5px">
-                    <button class="fin-act-btn" onclick="openFinTeamForm('${m.id}')" title="Edit">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
-                    <button class="fin-act-btn" onclick="toggleFinTeamActive('${m.id}',${!m.is_active})" title="${m.is_active?'Deactivate':'Activate'}">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-                    </button>
-                    <button class="fin-act-btn del" onclick="openTeamDelModal('${m.id}')" title="Delete">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-                    </button>
-                </td>
-            </tr>`).join('');
-        })()}
-        </tbody></table></div></div>`;
+        <div class="fin-table-wrap"><table class="fin-table"><thead>
+            <tr>
+                <th>Full Name</th><th>Monthly Salary</th><th>Role</th><th>Phone</th><th>Notes</th><th>Status</th>
+                <th><div style="display:flex;align-items:center;justify-content:space-between;gap:4px">Actions
+                    <button class="dd-btn${_teamFilterVisible?' on':''}" onclick="toggleTeamFilter()" title="Toggle column filters" style="opacity:1;flex-shrink:0">${filterSVG}</button>
+                </div></th>
+            </tr>
+            ${filterRow}
+        </thead><tbody id="team-member-tbody"></tbody></table></div></div>`;
+    _applyTeamTableFilter();
 }
 
 function teamStatFilter(key) {
     _finTeamFilter = (!key || key === 'all' || _finTeamFilter === key) ? null : key;
     _renderFinTeam();
+}
+
+function toggleTeamFilter() {
+    _teamFilterVisible = !_teamFilterVisible;
+    if (!_teamFilterVisible) _teamFilters = { name:'', salary:'', role:'', phone:'', notes:'', status:'' };
+    _renderFinTeam();
+}
+
+function setTeamFilter(key, val) {
+    _teamFilters[key] = val;
+    _applyTeamTableFilter(); // only update tbody — inputs keep focus
 }
 
 function openFinTeamForm(id) {
@@ -6440,7 +6481,9 @@ async function deleteFinTeam(id) {
 }
 
 // ── Team Member Delete Modal ──────────────────────────
-let _teamDelId = null;
+let _teamDelId         = null;
+let _teamFilterVisible = false;
+let _teamFilters       = { name:'', salary:'', role:'', phone:'', notes:'', status:'' };
 
 function openTeamDelModal(id) {
     const m = _finTeam.find(x => x.id === id);
