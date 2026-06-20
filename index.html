@@ -6297,11 +6297,11 @@ function teamBulkDiffFieldChange() {
     document.getElementById('tbulk-diff-body').innerHTML = _finTeam.map(m => {
         let inp;
         if (field === 'status')
-            inp = `<select class="bulk-diff-input" data-id="${m.id}"><option value="">— —</option><option value="true"${m.is_active?' selected':''}>Active</option><option value="false"${!m.is_active?' selected':''}>Inactive</option></select>`;
+            inp = `<select class="bulk-diff-input" data-id="${m.id}"><option value="">— no change —</option><option value="true">Active</option><option value="false">Inactive</option></select>`;
         else if (field === 'monthly_salary')
-            inp = `<input class="bulk-diff-input" type="number" min="0" data-id="${m.id}" value="${m.monthly_salary||''}">`;
+            inp = `<input class="bulk-diff-input" type="number" min="0" data-id="${m.id}" placeholder="no change">`;
         else
-            inp = `<input class="bulk-diff-input" type="text" data-id="${m.id}" value="${esc(m[field]||'')}">`;
+            inp = `<input class="bulk-diff-input" type="text" data-id="${m.id}" placeholder="no change">`;
         return `<div class="bulk-diff-row tbulk-diff-grid"><span style="padding:4px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.full_name)}</span><div>${inp}</div></div>`;
     }).join('');
 }
@@ -6347,14 +6347,16 @@ async function _applyTeamBulkDiff() {
     const field = document.getElementById('tbulk-col-diff').value;
     if (!field) { document.getElementById('tbulk-col-diff').focus(); return; }
     const inputs  = [...document.querySelectorAll('#tbulk-diff-body .bulk-diff-input')];
-    const updates = inputs.map(inp => {
-        const id = inp.dataset.id;
-        const v  = inp.value;
-        if (field === 'status')          return { id, payload: { is_active: v === 'true' } };
-        if (field === 'monthly_salary')  return { id, payload: { monthly_salary: +v || 0 } };
-        return { id, payload: { [field]: v || null } };
-    }).filter(u => u.id);
-    if (!updates.length) { toast('No members to update', 'err'); return; }
+    const updates = inputs
+        .filter(inp => inp.value.trim() !== '')
+        .map(inp => {
+            const id = inp.dataset.id;
+            const v  = inp.value.trim();
+            if (field === 'status')         return { id, payload: { is_active: v === 'true' } };
+            if (field === 'monthly_salary') return { id, payload: { monthly_salary: +v } };
+            return { id, payload: { [field]: v || null } };
+        });
+    if (!updates.length) { toast('No values entered — fill in at least one member', 'err'); return; }
     const btn = document.querySelector('#team-bulk-modal .btn-orange');
     if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
     try {
