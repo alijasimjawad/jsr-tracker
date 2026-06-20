@@ -4019,23 +4019,23 @@ function _renderTableContent(el) {
         }).join('');
 
     // Section stats bar
-    const _impIdx  = headers.indexOf('Imp. Date');
-    const _atpIdx  = headers.indexOf('ATP Status');
-    const _implemented  = _impIdx  >= 0 ? rows.filter(r => String(r[_impIdx]  || '').trim() !== '').length : null;
-    const _atpAccepted  = _atpIdx  >= 0 ? rows.filter(r => String(r[_atpIdx]  || '').trim() === 'Accepted').length : null;
-    const _atpPending   = _atpIdx  >= 0 ? rows.filter(r => String(r[_atpIdx]  || '').trim() === 'Pending').length  : null;
-    const _atpRejected  = _atpIdx  >= 0 ? rows.filter(r => String(r[_atpIdx]  || '').trim() === 'Rejected').length : null;
+    const _impIdx  = headers.findIndex(h => /imp.*date/i.test(String(h)));
+    const _atpIdx  = headers.findIndex(h => /atp/i.test(String(h)) && /status/i.test(String(h)));
+    const _implemented = rows.filter(r => String(r[_impIdx] || '').trim() !== '').length;
+    const _atpAccepted = _atpIdx >= 0 ? rows.filter(r => /^accepted$/i.test(String(r[_atpIdx] || '').trim())).length : 0;
+    const _atpPending  = _atpIdx >= 0 ? rows.filter(r => /^pending$/i.test( String(r[_atpIdx] || '').trim())).length : 0;
+    const _atpRejected = _atpIdx >= 0 ? rows.filter(r => /^rejected$/i.test(String(r[_atpIdx] || '').trim())).length : 0;
     const _statCard = (val, label, color, key) => {
         const isActive = _secStatFilter === key;
         const activeStyle = isActive ? ` border-color:${color};box-shadow:0 0 0 3px ${color}28;` : '';
         return `<div class="sec-stat${isActive ? ' active' : ''}" data-key="${key}" data-color="${color}" style="${activeStyle}" onclick="setSecStatFilter('${key}','${color}')"><div class="sec-stat-value" style="color:${color}">${val}</div><div class="sec-stat-label">${label}</div></div>`;
     };
     const statsBar = `<div class="sec-stats-bar">
-        ${_statCard(rows.length, 'Total Sites', '#2563eb', 'all')}
-        ${_implemented  !== null ? _statCard(_implemented,  'Implemented',  '#16a34a', 'implemented') : ''}
-        ${_atpAccepted  !== null ? _statCard(_atpAccepted,  'ATP Accepted',  '#16a34a', 'atp:Accepted') : ''}
-        ${_atpPending   !== null ? _statCard(_atpPending,   'ATP Pending',   '#d97706', 'atp:Pending') : ''}
-        ${_atpRejected  !== null ? _statCard(_atpRejected,  'ATP Rejected',  '#dc2626', 'atp:Rejected') : ''}
+        ${_statCard(rows.length,   'Total Sites',   '#2563eb', 'all')}
+        ${_statCard(_implemented,  'Implemented',   '#16a34a', 'implemented')}
+        ${_statCard(_atpAccepted,  'ATP Accepted',  '#16a34a', 'atp:Accepted')}
+        ${_statCard(_atpPending,   'ATP Pending',   '#d97706', 'atp:Pending')}
+        ${_statCard(_atpRejected,  'ATP Rejected',  '#dc2626', 'atp:Rejected')}
     </div>`;
 
     const hiddenSet = _hiddenCols();
@@ -4318,8 +4318,8 @@ function applyDropFilters() {
 
     // Stat card filter column indices
     const _headers      = _data ? _data[0] : [];
-    const _impFilterIdx = _headers.indexOf('Imp. Date');
-    const _atpFilterIdx = _headers.indexOf('ATP Status');
+    const _impFilterIdx = _headers.findIndex(h => /imp.*date/i.test(String(h)));
+    const _atpFilterIdx = _headers.findIndex(h => /atp/i.test(String(h)) && /status/i.test(String(h)));
 
     // Which rows pass filter + search + chips + stat card
     const filtered = allRows.filter(tr => {
