@@ -2379,7 +2379,7 @@
           <div class="fpe-emp-dropdown" id="fpe-emp-dropdown" style="display:none" onclick="event.stopPropagation()"></div>
         </div>
       </div>
-      <div class="fin-field span2">
+      <div class="fin-field span2" id="fpe-accom-wrap" style="display:none">
         <label>Accommodation</label>
         <select id="fpe-accom" onchange="_fpeFoodAutoFill('accom')"><option value="">— Select —</option><option value="Returned Home">Returned Home</option><option value="Hotel">Hotel</option></select>
       </div>
@@ -7989,10 +7989,13 @@ function openFinProjExpForm(id) {
         document.getElementById('fpe-date').value   = r?.activity_date || r?.expense_date || '';
         document.getElementById('fpe-notes').value  = r?.notes         || '';
         try { _fpeSelectedEmpIds = JSON.parse(r?.employee_ids || '[]'); } catch(_) { _fpeSelectedEmpIds = []; }
-        document.getElementById('fpe-accom').value = r?.accommodation || '';
+        const isFood = (r?.category || '') === 'Food';
+        document.getElementById('fpe-accom-wrap').style.display = isFood ? '' : 'none';
+        document.getElementById('fpe-accom').value = isFood ? (r?.accommodation || '') : '';
     } else {
         ['fpe-proj','fpe-cat','fpe-desc','fpe-site','fpe-amount','fpe-notes'].forEach(fid => document.getElementById(fid).value = '');
         document.getElementById('fpe-date').value = new Date().toISOString().slice(0,10);
+        document.getElementById('fpe-accom-wrap').style.display = 'none';
         document.getElementById('fpe-accom').value = '';
         _fpeSelectedEmpIds = [];
     }
@@ -8002,10 +8005,13 @@ function openFinProjExpForm(id) {
 }
 
 function _fpeFoodAutoFill(changed) {
-    const cat   = document.getElementById('fpe-cat').value;
-    const accom = document.getElementById('fpe-accom').value;
-    const amtEl = document.getElementById('fpe-amount');
+    const cat       = document.getElementById('fpe-cat').value;
+    const accomEl   = document.getElementById('fpe-accom');
+    const accomWrap = document.getElementById('fpe-accom-wrap');
+    const amtEl     = document.getElementById('fpe-amount');
     if (cat === 'Food') {
+        accomWrap.style.display = '';
+        const accom = accomEl.value;
         if (accom === 'Returned Home') amtEl.value = 10000;
         else if (accom === 'Hotel')   amtEl.value = 15000;
         if (changed === 'cat' && _fpeSelectedEmpIds.length > 1) {
@@ -8013,6 +8019,8 @@ function _fpeFoodAutoFill(changed) {
             _fpeRenderTags();
         }
     } else if (changed === 'cat') {
+        accomWrap.style.display = 'none';
+        accomEl.value = '';
         amtEl.value = 0;
     }
 }
