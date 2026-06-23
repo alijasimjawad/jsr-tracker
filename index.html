@@ -386,6 +386,12 @@
         .fpe-emp-item { display:flex; align-items:center; gap:8px; padding:7px 13px; cursor:pointer; font-size:13px; user-select:none; }
         .fpe-emp-item:hover { background:var(--slate-50); }
         .fpe-emp-item input[type=checkbox] { width:15px; height:15px; flex-shrink:0; cursor:pointer; accent-color:var(--accent); }
+        /* Accommodation button-group */
+        .fpe-btn-group { display:flex; gap:0; border:1.5px solid var(--slate-200); border-radius:var(--radius-sm); overflow:hidden; }
+        .fpe-btn-group-opt { flex:1; padding:8px 12px; font-size:13px; font-family:inherit; font-weight:500; background:var(--slate-50); color:var(--slate-600); border:none; cursor:pointer; transition:var(--transition-fast); text-align:center; }
+        .fpe-btn-group-opt:not(:last-child) { border-right:1.5px solid var(--slate-200); }
+        .fpe-btn-group-opt.active { background:var(--accent); color:#fff; }
+        .fpe-btn-group-opt:hover:not(.active) { background:var(--slate-100); }
         /* Active badge */
         .fin-badge-active   { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; background:#dcfce7; color:#166534; }
         .fin-badge-inactive { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; background:var(--slate-100); color:var(--slate-500); }
@@ -2371,6 +2377,13 @@
         <div class="fpe-multiselect" id="fpe-emp-wrap" onclick="toggleFpeEmpDropdown(event)">
           <div class="fpe-emp-tags" id="fpe-emp-tags"><span class="fpe-emp-placeholder" id="fpe-emp-placeholder">Select employees…</span></div>
           <div class="fpe-emp-dropdown" id="fpe-emp-dropdown" style="display:none" onclick="event.stopPropagation()"></div>
+        </div>
+      </div>
+      <div class="fin-field span2">
+        <label>Accommodation</label>
+        <div class="fpe-btn-group" id="fpe-accom-group">
+          <button type="button" class="fpe-btn-group-opt active" data-val="Returned Home" onclick="fpeSetAccom('Returned Home')">Returned Home</button>
+          <button type="button" class="fpe-btn-group-opt" data-val="Hotel" onclick="fpeSetAccom('Hotel')">Hotel</button>
         </div>
       </div>
       <div class="fin-field span2"><label>Notes</label><textarea id="fpe-notes" placeholder="Optional…"></textarea></div>
@@ -7869,9 +7882,9 @@ function _renderProjExp(pc) {
             <button class="btn btn-accent" onclick="openFinProjExpForm(null)">+ Add Expense</button>
         </div>
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
-            <th>Date</th><th>Project</th><th>Description</th><th>Site ID</th><th>Category</th><th class="fin-num">Amount (IQD)</th><th>Employees</th><th>Notes</th><th>Actions</th>
+            <th>Date</th><th>Project</th><th>Description</th><th>Site ID</th><th>Category</th><th class="fin-num">Amount (IQD)</th><th>Employees</th><th>Accommodation</th><th>Notes</th><th>Actions</th>
         </tr></thead><tbody>
-        ${rows.length === 0 ? `<tr><td colspan="9" class="al-empty">No project expenses.</td></tr>`
+        ${rows.length === 0 ? `<tr><td colspan="10" class="al-empty">No project expenses.</td></tr>`
             : rows.map(r => {
                 let empNames = '';
                 try {
@@ -7887,6 +7900,10 @@ function _renderProjExp(pc) {
                 <td>${esc(r.category||'')}</td>
                 <td class="fin-num" style="color:var(--red)">${iqd(r.amount)}</td>
                 <td style="max-width:180px">${empNames||'<span style="color:var(--slate-400)">—</span>'}</td>
+                <td>${r.accommodation === 'Hotel'
+                    ? '<span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;background:#dbeafe;color:#1d4ed8">Hotel</span>'
+                    : '<span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;background:var(--slate-100);color:var(--slate-500)">Returned Home</span>'
+                }</td>
                 <td style="color:var(--slate-500);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.notes||'')}</td>
                 <td style="display:flex;gap:5px">
                     <button class="fin-act-btn" onclick="openFinProjExpForm('${r.id}')" title="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -7896,8 +7913,19 @@ function _renderProjExp(pc) {
         </tbody><tfoot><tr>
             <td colspan="5"><strong>Total (filtered)</strong></td>
             <td class="fin-num" style="color:var(--red)"><strong>${iqd(total)}</strong></td>
-            <td colspan="3"></td>
+            <td colspan="4"></td>
         </tr></tfoot></table></div></div>`;
+}
+
+function fpeSetAccom(val) {
+    document.querySelectorAll('#fpe-accom-group .fpe-btn-group-opt').forEach(b => {
+        b.classList.toggle('active', b.dataset.val === val);
+    });
+}
+
+function _fpeGetAccom() {
+    const active = document.querySelector('#fpe-accom-group .fpe-btn-group-opt.active');
+    return active ? active.dataset.val : 'Returned Home';
 }
 
 function _fpeRenderTags() {
@@ -7969,10 +7997,12 @@ function openFinProjExpForm(id) {
         document.getElementById('fpe-date').value   = r?.activity_date || r?.expense_date || '';
         document.getElementById('fpe-notes').value  = r?.notes         || '';
         try { _fpeSelectedEmpIds = JSON.parse(r?.employee_ids || '[]'); } catch(_) { _fpeSelectedEmpIds = []; }
+        fpeSetAccom(r?.accommodation || 'Returned Home');
     } else {
         ['fpe-proj','fpe-cat','fpe-desc','fpe-site','fpe-amount','fpe-notes'].forEach(fid => document.getElementById(fid).value = '');
         document.getElementById('fpe-date').value = new Date().toISOString().slice(0,10);
         _fpeSelectedEmpIds = [];
+        fpeSetAccom('Returned Home');
     }
     _fpeRenderTags();
     openFinModal('fin-projexp-modal');
@@ -7994,7 +8024,7 @@ async function saveFinProjExp() {
     const payload = { project_name: proj, description: desc, category: document.getElementById('fpe-cat').value||null,
         amount: amt, expense_date: dateVal||null, activity_date: dateVal||null,
         month: dateObj.getMonth()+1, year: dateObj.getFullYear(),
-        site_id: siteId, employee_ids: empIds,
+        site_id: siteId, employee_ids: empIds, accommodation: _fpeGetAccom(),
         notes: document.getElementById('fpe-notes').value.trim()||null, added_by: currentUser?.full_name||'' };
     try {
         if (_finProjExpEditId) {
