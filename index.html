@@ -2381,10 +2381,7 @@
       </div>
       <div class="fin-field span2">
         <label>Accommodation</label>
-        <div id="accommodation-toggle" style="display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;">
-          <button type="button" id="acc-home" onclick="selectAccommodation('Returned Home')" style="flex:1;padding:12px;background:#3b5bdb;color:white;border:none;cursor:pointer;">Returned Home</button>
-          <button type="button" id="acc-hotel" onclick="selectAccommodation('Hotel')" style="flex:1;padding:12px;background:#f1f3f5;color:#333;border:none;cursor:pointer;">Hotel</button>
-        </div>
+        <select id="fpe-accom"><option value="Returned Home">Returned Home</option><option value="Hotel">Hotel</option></select>
       </div>
       <div class="fin-field span2"><label>Notes</label><textarea id="fpe-notes" placeholder="Optional…"></textarea></div>
     </div>
@@ -7917,13 +7914,6 @@ function _renderProjExp(pc) {
         </tr></tfoot></table></div></div>`;
 }
 
-function selectAccommodation(val) {
-    window._selectedAccommodation = val;
-    document.getElementById('acc-home').style.background = val === 'Returned Home' ? '#3b5bdb' : '#f1f3f5';
-    document.getElementById('acc-home').style.color = val === 'Returned Home' ? 'white' : '#333';
-    document.getElementById('acc-hotel').style.background = val === 'Hotel' ? '#3b5bdb' : '#f1f3f5';
-    document.getElementById('acc-hotel').style.color = val === 'Hotel' ? 'white' : '#333';
-}
 
 function _fpeRenderTags() {
     const tags = document.getElementById('fpe-emp-tags');
@@ -7994,13 +7984,12 @@ function openFinProjExpForm(id) {
         document.getElementById('fpe-date').value   = r?.activity_date || r?.expense_date || '';
         document.getElementById('fpe-notes').value  = r?.notes         || '';
         try { _fpeSelectedEmpIds = JSON.parse(r?.employee_ids || '[]'); } catch(_) { _fpeSelectedEmpIds = []; }
-        selectAccommodation(r?.accommodation || 'Returned Home');
+        document.getElementById('fpe-accom').value = r?.accommodation || 'Returned Home';
     } else {
         ['fpe-proj','fpe-cat','fpe-desc','fpe-site','fpe-amount','fpe-notes'].forEach(fid => document.getElementById(fid).value = '');
         document.getElementById('fpe-date').value = new Date().toISOString().slice(0,10);
+        document.getElementById('fpe-accom').value = 'Returned Home';
         _fpeSelectedEmpIds = [];
-        window._selectedAccommodation = 'Returned Home';
-        selectAccommodation('Returned Home');
     }
     _fpeRenderTags();
     openFinModal('fin-projexp-modal');
@@ -8022,7 +8011,7 @@ async function saveFinProjExp() {
     const payload = { project_name: proj, description: desc, category: document.getElementById('fpe-cat').value||null,
         amount: amt, expense_date: dateVal||null, activity_date: dateVal||null,
         month: dateObj.getMonth()+1, year: dateObj.getFullYear(),
-        site_id: siteId, employee_ids: empIds, accommodation: window._selectedAccommodation || 'Returned Home',
+        site_id: siteId, employee_ids: empIds, accommodation: document.getElementById('fpe-accom').value || 'Returned Home',
         notes: document.getElementById('fpe-notes').value.trim()||null, added_by: currentUser?.full_name||'' };
     try {
         if (_finProjExpEditId) {
