@@ -374,6 +374,18 @@
         }
         .fin-field input:focus,.fin-field select:focus,.fin-field textarea:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
         .fin-field textarea { resize:vertical; min-height:65px; }
+        /* Expense Employees multi-select */
+        .fpe-multiselect { position:relative; min-height:38px; padding:5px 10px; border:1.5px solid var(--slate-200); border-radius:var(--radius-sm); background:var(--slate-50); cursor:pointer; box-sizing:border-box; }
+        .fpe-multiselect.open { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+        .fpe-emp-tags { display:flex; flex-wrap:wrap; gap:4px; min-height:24px; align-items:center; }
+        .fpe-emp-placeholder { color:var(--slate-400); font-size:13px; line-height:24px; }
+        .fpe-emp-pill { display:inline-flex; align-items:center; gap:4px; background:var(--accent); color:#fff; border-radius:12px; padding:2px 8px 2px 10px; font-size:12px; font-weight:500; }
+        .fpe-emp-pill-x { cursor:pointer; font-size:15px; line-height:1; opacity:.8; margin-left:2px; }
+        .fpe-emp-pill-x:hover { opacity:1; }
+        .fpe-emp-dropdown { position:absolute; top:calc(100% + 4px); left:0; right:0; background:#fff; border:1.5px solid var(--slate-200); border-radius:var(--radius-sm); box-shadow:0 4px 16px rgba(0,0,0,.12); z-index:300; max-height:200px; overflow-y:auto; padding:4px 0; }
+        .fpe-emp-item { display:flex; align-items:center; gap:8px; padding:7px 13px; cursor:pointer; font-size:13px; user-select:none; }
+        .fpe-emp-item:hover { background:var(--slate-50); }
+        .fpe-emp-item input[type=checkbox] { width:15px; height:15px; flex-shrink:0; cursor:pointer; accent-color:var(--accent); }
         /* Active badge */
         .fin-badge-active   { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; background:#dcfce7; color:#166534; }
         .fin-badge-inactive { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; background:var(--slate-100); color:var(--slate-500); }
@@ -2336,7 +2348,7 @@
 
 <!-- Finance: Project Expense Modal -->
 <div class="modal-overlay" id="fin-projexp-modal" onclick="closeFinModal('fin-projexp-modal',event)">
-  <div class="modal-card" style="max-width:540px">
+  <div class="modal-card" style="max-width:580px">
     <div class="modal-title" id="fin-projexp-modal-title">Add Project Expense</div>
     <div class="fin-form-grid" style="margin-top:16px">
       <div class="fin-field"><label>Project *</label>
@@ -2351,8 +2363,16 @@
           <option>Accommodation</option><option>Food</option><option>Maintenance</option><option>Other</option>
         </select></div>
       <div class="fin-field span2"><label>Description *</label><input type="text" id="fpe-desc" placeholder="Description…" maxlength="200"></div>
+      <div class="fin-field"><label>Site ID</label><input type="text" id="fpe-site" placeholder="Site ID…" maxlength="100"></div>
       <div class="fin-field"><label>Amount (IQD) *</label><input type="number" id="fpe-amount" min="0" placeholder="0"></div>
-      <div class="fin-field"><label>Date</label><input type="date" id="fpe-date"></div>
+      <div class="fin-field"><label>Activity Date</label><input type="date" id="fpe-date"></div>
+      <div class="fin-field span2">
+        <label>Employees</label>
+        <div class="fpe-multiselect" id="fpe-emp-wrap" onclick="toggleFpeEmpDropdown(event)">
+          <div class="fpe-emp-tags" id="fpe-emp-tags"><span class="fpe-emp-placeholder" id="fpe-emp-placeholder">Select employees…</span></div>
+          <div class="fpe-emp-dropdown" id="fpe-emp-dropdown" style="display:none" onclick="event.stopPropagation()"></div>
+        </div>
+      </div>
       <div class="fin-field span2"><label>Notes</label><textarea id="fpe-notes" placeholder="Optional…"></textarea></div>
     </div>
     <div id="fin-projexp-err" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
@@ -6179,6 +6199,7 @@ function _bgSecRefresh(proj, sec) {
 let _finRevEditId     = null;
 let _finGenExpEditId  = null;
 let _finProjExpEditId = null;
+let _fpeSelectedEmpIds = [];
 let _finDelConfirmFn  = null;
 
 // ── Formatters ────────────────────────────────
@@ -7848,26 +7869,91 @@ function _renderProjExp(pc) {
             <button class="btn btn-accent" onclick="openFinProjExpForm(null)">+ Add Expense</button>
         </div>
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
-            <th>Date</th><th>Project</th><th>Description</th><th>Category</th><th class="fin-num">Amount (IQD)</th><th>Notes</th><th>Actions</th>
+            <th>Date</th><th>Project</th><th>Description</th><th>Site ID</th><th>Category</th><th class="fin-num">Amount (IQD)</th><th>Employees</th><th>Notes</th><th>Actions</th>
         </tr></thead><tbody>
-        ${rows.length === 0 ? `<tr><td colspan="7" class="al-empty">No project expenses.</td></tr>`
-            : rows.map(r => `<tr>
-                <td style="white-space:nowrap">${esc(r.expense_date||'')}</td>
+        ${rows.length === 0 ? `<tr><td colspan="9" class="al-empty">No project expenses.</td></tr>`
+            : rows.map(r => {
+                let empNames = '';
+                try {
+                    const ids = JSON.parse(r.employee_ids || '[]');
+                    empNames = ids.map(id => { const m = _finTeam.find(x => x.id === id); return m ? esc(m.full_name) : ''; }).filter(Boolean)
+                        .map(n => `<span style="display:inline-block;background:var(--accent);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:500;margin:1px 2px">${n}</span>`).join('');
+                } catch(_) {}
+                return `<tr>
+                <td style="white-space:nowrap">${esc(r.activity_date||r.expense_date||'')}</td>
                 <td>${esc(r.project_name||'')}</td>
                 <td>${esc(r.description||'')}</td>
+                <td style="white-space:nowrap">${esc(r.site_id||'')}</td>
                 <td>${esc(r.category||'')}</td>
                 <td class="fin-num" style="color:var(--red)">${iqd(r.amount)}</td>
-                <td style="color:var(--slate-500);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.notes||'')}</td>
+                <td style="max-width:180px">${empNames||'<span style="color:var(--slate-400)">—</span>'}</td>
+                <td style="color:var(--slate-500);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.notes||'')}</td>
                 <td style="display:flex;gap:5px">
                     <button class="fin-act-btn" onclick="openFinProjExpForm('${r.id}')" title="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                     <button class="fin-act-btn del" onclick="finDelConfirm('Delete expense?',()=>deleteFinProjExp('${r.id}'))" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
-                </td></tr>`).join('')}
+                </td></tr>`;
+            }).join('')}
         </tbody><tfoot><tr>
-            <td colspan="4"><strong>Total (filtered)</strong></td>
+            <td colspan="5"><strong>Total (filtered)</strong></td>
             <td class="fin-num" style="color:var(--red)"><strong>${iqd(total)}</strong></td>
-            <td colspan="2"></td>
+            <td colspan="3"></td>
         </tr></tfoot></table></div></div>`;
 }
+
+function _fpeRenderTags() {
+    const tags = document.getElementById('fpe-emp-tags');
+    const ph   = document.getElementById('fpe-emp-placeholder');
+    if (!tags) return;
+    const pills = _fpeSelectedEmpIds.map(id => {
+        const m = _finTeam.find(x => x.id === id);
+        if (!m) return '';
+        return `<span class="fpe-emp-pill">${esc(m.full_name)}<span class="fpe-emp-pill-x" onclick="event.stopPropagation();_fpeToggleEmp('${id}')">×</span></span>`;
+    }).join('');
+    tags.innerHTML = pills || '';
+    if (ph) ph.style.display = _fpeSelectedEmpIds.length ? 'none' : '';
+    if (!pills && !tags.querySelector('.fpe-emp-placeholder')) {
+        tags.innerHTML = '<span class="fpe-emp-placeholder" id="fpe-emp-placeholder">Select employees…</span>';
+    }
+    const dd = document.getElementById('fpe-emp-dropdown');
+    if (dd) dd.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        cb.checked = _fpeSelectedEmpIds.includes(cb.dataset.id);
+    });
+}
+
+function _fpeToggleEmp(id) {
+    const idx = _fpeSelectedEmpIds.indexOf(id);
+    if (idx >= 0) _fpeSelectedEmpIds.splice(idx, 1);
+    else _fpeSelectedEmpIds.push(id);
+    _fpeRenderTags();
+}
+
+function _fpePopulateDropdown() {
+    const dd = document.getElementById('fpe-emp-dropdown');
+    if (!dd) return;
+    const active = _finTeam.filter(m => m.is_active !== false);
+    dd.innerHTML = active.length === 0
+        ? '<div style="padding:10px 13px;font-size:13px;color:var(--slate-400)">No team members found.</div>'
+        : active.map(m => `<label class="fpe-emp-item"><input type="checkbox" data-id="${m.id}" ${_fpeSelectedEmpIds.includes(m.id)?'checked':''}
+            onchange="_fpeToggleEmp('${m.id}')">${esc(m.full_name)}</label>`).join('');
+}
+
+function toggleFpeEmpDropdown(e) {
+    const wrap = document.getElementById('fpe-emp-wrap');
+    const dd   = document.getElementById('fpe-emp-dropdown');
+    if (!wrap || !dd) return;
+    const isOpen = dd.style.display !== 'none';
+    if (isOpen) { dd.style.display = 'none'; wrap.classList.remove('open'); }
+    else { _fpePopulateDropdown(); dd.style.display = ''; wrap.classList.add('open'); }
+}
+
+document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('fpe-emp-wrap');
+    const dd   = document.getElementById('fpe-emp-dropdown');
+    if (wrap && dd && !wrap.contains(e.target)) {
+        dd.style.display = 'none';
+        wrap.classList.remove('open');
+    }
+});
 
 function openFinProjExpForm(id) {
     _finProjExpEditId = id;
@@ -7875,16 +7961,20 @@ function openFinProjExpForm(id) {
     document.getElementById('fin-projexp-err').style.display = 'none';
     if (id) {
         const r = _finProjExp.find(x => x.id === id);
-        document.getElementById('fpe-proj').value   = r?.project_name || '';
-        document.getElementById('fpe-cat').value    = r?.category     || '';
-        document.getElementById('fpe-desc').value   = r?.description  || '';
-        document.getElementById('fpe-amount').value = r?.amount       || '';
-        document.getElementById('fpe-date').value   = r?.expense_date || '';
-        document.getElementById('fpe-notes').value  = r?.notes        || '';
+        document.getElementById('fpe-proj').value   = r?.project_name  || '';
+        document.getElementById('fpe-cat').value    = r?.category      || '';
+        document.getElementById('fpe-desc').value   = r?.description   || '';
+        document.getElementById('fpe-site').value   = r?.site_id       || '';
+        document.getElementById('fpe-amount').value = r?.amount        || '';
+        document.getElementById('fpe-date').value   = r?.activity_date || r?.expense_date || '';
+        document.getElementById('fpe-notes').value  = r?.notes         || '';
+        try { _fpeSelectedEmpIds = JSON.parse(r?.employee_ids || '[]'); } catch(_) { _fpeSelectedEmpIds = []; }
     } else {
-        ['fpe-proj','fpe-cat','fpe-desc','fpe-amount','fpe-notes'].forEach(id => document.getElementById(id).value = '');
+        ['fpe-proj','fpe-cat','fpe-desc','fpe-site','fpe-amount','fpe-notes'].forEach(fid => document.getElementById(fid).value = '');
         document.getElementById('fpe-date').value = new Date().toISOString().slice(0,10);
+        _fpeSelectedEmpIds = [];
     }
+    _fpeRenderTags();
     openFinModal('fin-projexp-modal');
     setTimeout(() => document.getElementById('fpe-proj').focus(), 60);
 }
@@ -7899,8 +7989,12 @@ async function saveFinProjExp() {
     if (!amt || amt < 0) { errEl.textContent = 'Valid amount required.'; errEl.style.display = ''; return; }
     const dateVal = document.getElementById('fpe-date').value;
     const dateObj = dateVal ? new Date(dateVal) : new Date();
+    const siteId  = document.getElementById('fpe-site').value.trim() || null;
+    const empIds  = _fpeSelectedEmpIds.length ? JSON.stringify(_fpeSelectedEmpIds) : null;
     const payload = { project_name: proj, description: desc, category: document.getElementById('fpe-cat').value||null,
-        amount: amt, expense_date: dateVal||null, month: dateObj.getMonth()+1, year: dateObj.getFullYear(),
+        amount: amt, expense_date: dateVal||null, activity_date: dateVal||null,
+        month: dateObj.getMonth()+1, year: dateObj.getFullYear(),
+        site_id: siteId, employee_ids: empIds,
         notes: document.getElementById('fpe-notes').value.trim()||null, added_by: currentUser?.full_name||'' };
     try {
         if (_finProjExpEditId) {
