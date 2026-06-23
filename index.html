@@ -2382,8 +2382,8 @@
       <div class="fin-field span2">
         <label>Accommodation</label>
         <div class="fpe-btn-group" id="fpe-accom-group">
-          <button type="button" class="fpe-btn-group-opt active" data-val="Returned Home" onclick="fpeSetAccom('Returned Home')">Returned Home</button>
-          <button type="button" class="fpe-btn-group-opt" data-val="Hotel" onclick="fpeSetAccom('Hotel')">Hotel</button>
+          <button type="button" class="fpe-btn-group-opt active" data-val="Returned Home">Returned Home</button>
+          <button type="button" class="fpe-btn-group-opt" data-val="Hotel">Hotel</button>
         </div>
       </div>
       <div class="fin-field span2"><label>Notes</label><textarea id="fpe-notes" placeholder="Optional…"></textarea></div>
@@ -6213,6 +6213,7 @@ let _finRevEditId     = null;
 let _finGenExpEditId  = null;
 let _finProjExpEditId = null;
 let _fpeSelectedEmpIds = [];
+let _fpeAccom = 'Returned Home';
 let _finDelConfirmFn  = null;
 
 // ── Formatters ────────────────────────────────
@@ -7918,15 +7919,20 @@ function _renderProjExp(pc) {
 }
 
 function fpeSetAccom(val) {
+    _fpeAccom = val;
     document.querySelectorAll('#fpe-accom-group .fpe-btn-group-opt').forEach(b => {
         b.classList.toggle('active', b.dataset.val === val);
     });
 }
 
 function _fpeGetAccom() {
-    const active = document.querySelector('#fpe-accom-group .fpe-btn-group-opt.active');
-    return active ? active.dataset.val : 'Returned Home';
+    return _fpeAccom;
 }
+
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('#fpe-accom-group .fpe-btn-group-opt');
+    if (btn && btn.dataset.val) fpeSetAccom(btn.dataset.val);
+});
 
 function _fpeRenderTags() {
     const tags = document.getElementById('fpe-emp-tags');
