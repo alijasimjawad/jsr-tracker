@@ -8121,16 +8121,28 @@ function _renderReport(pc) {
     const totalSalaryBudget   = _finTeam.filter(t => t.is_active).reduce((s, t) => s + (+t.monthly_salary || 0), 0);
     const activeEmployeeCount = _finTeam.filter(t => t.is_active).length;
     const totalGenExp         = _finGenExp.filter(r => r.month === m && r.year === y).reduce((s, r) => s + (+r.amount || 0), 0);
-    const companyNet          = totalRevenue - totalSalaryBudget - totalGenExp;
+
+    // Project expenses by project for this month (using activity_date, fall back to month/year)
+    const projExpMap = {};
+    _finProjExp.filter(r => {
+        if (r.activity_date) { const d = new Date(r.activity_date); return d.getMonth()+1 === m && d.getFullYear() === y; }
+        return r.month === m && r.year === y;
+    }).forEach(r => {
+        const key = r.project_name || '__unassigned__';
+        projExpMap[key] = (projExpMap[key] || 0) + (+r.amount || 0);
+    });
+    const totalProjExp = Object.values(projExpMap).reduce((s, v) => s + v, 0);
+    const companyNet   = totalRevenue - totalSalaryBudget - totalGenExp - totalProjExp;
 
     // Per-project computed rows
     const projRows = activeProjs.map(proj => {
         const revenue    = projRevMap[proj] || 0;
         const weight     = totalRevenue > 0 ? revenue / totalRevenue : 0;
         const salaryCost = Math.round(totalSalaryBudget * weight);
-        const netProfit  = revenue - salaryCost;
+        const projExp    = projExpMap[proj] || 0;
+        const netProfit  = revenue - salaryCost - projExp;
         const margin     = revenue > 0 ? (netProfit / revenue * 100) : 0;
-        return { proj, revenue, weight, salaryCost, netProfit, margin };
+        return { proj, revenue, weight, salaryCost, projExp, netProfit, margin };
     });
 
     const yearsOpts  = _yearOptions(_repYear);
@@ -8161,7 +8173,7 @@ function _renderReport(pc) {
             : `
 
         <!-- ── Summary Cards ── -->
-        <div class="fin-kpi-row">
+        <div class="fin-kpi-row" style="grid-template-columns:repeat(5,1fr)">
             <div class="fin-kpi-card">
                 <div class="fin-kpi-label">Total Revenue</div>
                 <div class="fin-kpi-value fin-kpi-pos">${iqd(totalRevenue)}</div>
@@ -8178,9 +8190,14 @@ function _renderReport(pc) {
                 <div class="fin-kpi-sub">Shared overhead</div>
             </div>
             <div class="fin-kpi-card">
+                <div class="fin-kpi-label">Project Expenses</div>
+                <div class="fin-kpi-value fin-kpi-neg">${iqd(totalProjExp)}</div>
+                <div class="fin-kpi-sub">Direct project costs</div>
+            </div>
+            <div class="fin-kpi-card">
                 <div class="fin-kpi-label">Net Profit</div>
                 <div class="fin-kpi-value ${companyNet >= 0 ? 'fin-kpi-pos' : 'fin-kpi-neg'}">${iqd(companyNet)}</div>
-                <div class="fin-kpi-sub">Rev − Salary − Gen. Exp.</div>
+                <div class="fin-kpi-sub">Rev − Salary − Gen. Exp. − Proj. Exp.</div>
             </div>
         </div>
 
@@ -8241,6 +8258,7 @@ function _renderReport(pc) {
             <th>Project</th>
             <th class="fin-num">Revenue (IQD)</th>
             <th class="fin-num">Salary Cost (IQD)</th>
+            <th class="fin-num">Project Expenses (IQD)</th>
             <th class="fin-num">Net Profit (IQD)</th>
             <th class="fin-num">Margin %</th>
         </tr></thead><tbody>
@@ -8248,6 +8266,7 @@ function _renderReport(pc) {
             <td><strong>${esc(r.proj)}</strong></td>
             <td class="fin-num" style="color:#16a34a">${iqd(r.revenue)}</td>
             <td class="fin-num" style="color:var(--warning)">${iqd(r.salaryCost)}</td>
+            <td class="fin-num fin-kpi-neg">${iqd(r.projExp)}</td>
             <td class="fin-num ${r.netProfit >= 0 ? 'fin-profit-pos' : 'fin-profit-neg'}">${iqd(r.netProfit)}</td>
             <td class="fin-num ${r.margin >= 0 ? 'fin-profit-pos' : 'fin-profit-neg'}">${pct(r.margin)}</td>
         </tr>`).join('')}
@@ -8255,6 +8274,7 @@ function _renderReport(pc) {
             <td><strong>TOTAL</strong></td>
             <td class="fin-num"><strong style="color:#16a34a">${iqd(totalRevenue)}</strong></td>
             <td class="fin-num"><strong style="color:var(--warning)">${iqd(projRows.reduce((s,r)=>s+r.salaryCost,0))}</strong></td>
+            <td class="fin-num fin-kpi-neg"><strong>${iqd(totalProjExp)}</strong></td>
             ${(()=>{ const tn=projRows.reduce((s,r)=>s+r.netProfit,0); const tm=totalRevenue>0?(tn/totalRevenue*100):0;
               return `<td class="fin-num ${tn>=0?'fin-profit-pos':'fin-profit-neg'}"><strong>${iqd(tn)}</strong></td>
                       <td class="fin-num ${tm>=0?'fin-profit-pos':'fin-profit-neg'}"><strong>${pct(tm)}</strong></td>`; })()}
@@ -8264,7 +8284,33 @@ function _renderReport(pc) {
         ${repSection('Net Profit by Project')}
         <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
             <div style="position:relative;height:240px"><canvas id="fin-rep-chart"></canvas></div>
-        </div>`}
+        </div>
+
+        <!-- ── Company Summary ── -->
+        ${repSection('Company Summary')}
+        <div class="fin-table-wrap">
+        <table class="fin-table fin-report-table" style="max-width:480px"><tbody>
+            <tr>
+                <td>Total Revenue</td>
+                <td class="fin-num fin-profit-pos"><strong>${iqd(totalRevenue)}</strong></td>
+            </tr>
+            <tr>
+                <td style="color:var(--slate-500)">− Total Salary Cost</td>
+                <td class="fin-num" style="color:var(--warning)"><strong>${iqd(totalSalaryBudget)}</strong></td>
+            </tr>
+            <tr>
+                <td style="color:var(--slate-500)">− General Expenses</td>
+                <td class="fin-num fin-kpi-neg"><strong>${iqd(totalGenExp)}</strong></td>
+            </tr>
+            <tr>
+                <td style="color:var(--slate-500)">− Project Expenses</td>
+                <td class="fin-num fin-kpi-neg"><strong>${iqd(totalProjExp)}</strong></td>
+            </tr>
+            <tr style="border-top:2px solid var(--border)">
+                <td><strong>Net Profit / Loss</strong></td>
+                <td class="fin-num ${companyNet>=0?'fin-profit-pos':'fin-profit-neg'}"><strong style="font-size:15px">${iqd(companyNet)}</strong></td>
+            </tr>
+        </tbody></table></div>`}
     </div>`;
 
     if (projRows.length > 0) {
@@ -8301,13 +8347,19 @@ function exportFinReport(m, y) {
     const totalRevenue      = activeProjs.reduce((s, p) => s + (projRevMap[p] || 0), 0);
     const totalSalaryBudget = _finTeam.filter(t => t.is_active).reduce((s, t) => s + (+t.monthly_salary || 0), 0);
     const totalGenExp       = _finGenExp.filter(r => r.month === m && r.year === y).reduce((s, r) => s + (+r.amount || 0), 0);
-    const companyNet        = totalRevenue - totalSalaryBudget - totalGenExp;
+    const projExpMap2 = {};
+    _finProjExp.filter(r => { if (r.activity_date) { const d=new Date(r.activity_date); return d.getMonth()+1===m&&d.getFullYear()===y; } return r.month===m&&r.year===y; })
+        .forEach(r => { const k=r.project_name||'__unassigned__'; projExpMap2[k]=(projExpMap2[k]||0)+(+r.amount||0); });
+    const totalProjExp2 = Object.values(projExpMap2).reduce((s,v)=>s+v,0);
+    const companyNet    = totalRevenue - totalSalaryBudget - totalGenExp - totalProjExp2;
 
     const projRows = activeProjs.map(proj => {
         const revenue    = projRevMap[proj] || 0;
         const weight     = totalRevenue > 0 ? revenue / totalRevenue : 0;
         const salaryCost = Math.round(totalSalaryBudget * weight);
-        return { proj, revenue, weight, salaryCost, netProfit: revenue - salaryCost, margin: revenue > 0 ? ((revenue - salaryCost) / revenue * 100) : 0 };
+        const projExp    = projExpMap2[proj] || 0;
+        const netProfit  = revenue - salaryCost - projExp;
+        return { proj, revenue, weight, salaryCost, projExp, netProfit, margin: revenue > 0 ? (netProfit/revenue*100) : 0 };
     });
     const pct = v => (v.toFixed(1) + '%');
     const rows = [];
@@ -8321,6 +8373,7 @@ function exportFinReport(m, y) {
     rows.push(['Total Revenue (IQD)', totalRevenue]);
     rows.push(['Total Salary (IQD)',  totalSalaryBudget]);
     rows.push(['General Expenses (IQD)', totalGenExp]);
+    rows.push(['Project Expenses (IQD)', totalProjExp2]);
     rows.push(['Net Profit (IQD)', companyNet]);
     rows.push([]);
 
@@ -8340,10 +8393,10 @@ function exportFinReport(m, y) {
 
     // P&L
     rows.push(['PER-PROJECT P&L']);
-    rows.push(['Project', 'Revenue (IQD)', 'Salary Cost (IQD)', 'Net Profit (IQD)', 'Margin %']);
-    projRows.forEach(r => rows.push([r.proj, r.revenue, r.salaryCost, r.netProfit, pct(r.margin)]));
+    rows.push(['Project', 'Revenue (IQD)', 'Salary Cost (IQD)', 'Project Expenses (IQD)', 'Net Profit (IQD)', 'Margin %']);
+    projRows.forEach(r => rows.push([r.proj, r.revenue, r.salaryCost, r.projExp, r.netProfit, pct(r.margin)]));
     const tn = projRows.reduce((s, r) => s + r.netProfit, 0);
-    rows.push(['TOTAL', totalRevenue, projRows.reduce((s,r)=>s+r.salaryCost,0), tn, pct(totalRevenue > 0 ? tn/totalRevenue*100 : 0)]);
+    rows.push(['TOTAL', totalRevenue, projRows.reduce((s,r)=>s+r.salaryCost,0), totalProjExp2, tn, pct(totalRevenue > 0 ? tn/totalRevenue*100 : 0)]);
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rows);
