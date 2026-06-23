@@ -6457,6 +6457,48 @@ function _renderFinDashboard(pc) {
             </div>
         </div>
 
+        <!-- Project Expenses Detail -->
+        <div class="fin-panel" style="margin-top:16px">
+            <div class="fin-panel-title">Project Expenses — ${mLabel}</div>
+            ${projExp.length===0
+                ? `<div style="color:var(--slate-400);font-size:13px;text-align:center;padding:20px">No project expenses this month</div>`
+                : `<div style="overflow-x:auto"><table class="fin-table" style="font-size:12px;min-width:700px">
+                <thead><tr>
+                    <th style="text-align:left;font-weight:600">Description</th>
+                    <th style="text-align:left;font-weight:600">Project</th>
+                    <th style="text-align:left;font-weight:600">Category</th>
+                    <th style="text-align:left;font-weight:600">Employee(s)</th>
+                    <th style="text-align:left;font-weight:600">Site ID</th>
+                    <th style="text-align:left;font-weight:600">Accommodation</th>
+                    <th class="fin-num" style="font-weight:600">Amount (IQD)</th>
+                </tr></thead>
+                <tbody>
+                ${projExp.map(r => {
+                    let empNames = '—';
+                    try {
+                        const ids = JSON.parse(r.employee_ids || '[]');
+                        const names = ids.map(id => { const m = _finTeam.find(x => x.id === id); return m ? m.full_name : null; }).filter(Boolean);
+                        if (names.length) empNames = esc(names.join(', '));
+                    } catch(_) {}
+                    return `<tr>
+                        <td>${esc(r.description||'')}</td>
+                        <td>${esc(r.project_name||'')}</td>
+                        <td>${esc(r.category||'')}</td>
+                        <td>${empNames}</td>
+                        <td>${esc(r.site_id||'—')}</td>
+                        <td>${esc(r.accommodation||'—')}</td>
+                        <td class="fin-num" style="color:var(--red)">${iqd(r.amount)}</td>
+                    </tr>`;
+                }).join('')}
+                </tbody>
+                <tfoot><tr>
+                    <td colspan="6"><strong>Total</strong></td>
+                    <td class="fin-num" style="color:var(--red)"><strong>${iqd(totalProjEx)}</strong></td>
+                </tr></tfoot>
+                </table></div>`
+            }
+        </div>
+
         <!-- 6-Month Trend -->
         <div class="fin-trend-wrap">
             <div class="fin-chart-title" style="font-size:14px">6-Month Financial Trend</div>
