@@ -2370,7 +2370,14 @@
           <option>Materials</option><option>Transport</option><option>Equipment</option>
           <option>Accommodation</option><option>Food</option><option>Maintenance</option><option>Fuel</option><option>Taxi</option><option>Other</option>
         </select></div>
-      <div class="fin-field span2"><label>Description *</label><input type="text" id="fpe-desc" placeholder="Description…" maxlength="200"></div>
+      <div class="fin-field span2">
+        <label>Description *</label>
+        <select id="fpe-desc" onchange="_fpeDescChange()"><option value="">— Select —</option>
+          <option>Delivery</option><option>Installation</option><option>Integration</option>
+          <option>ATP</option><option>Clearance</option><option>Other</option>
+        </select>
+        <input type="text" id="fpe-desc-other" placeholder="Specify description…" maxlength="200" style="margin-top:8px;display:none">
+      </div>
       <div class="fin-field"><label>Site ID</label><input type="text" id="fpe-site" placeholder="Site ID…" maxlength="100"></div>
       <div class="fin-field" id="fpe-accom-wrap" style="display:none">
         <label>Accommodation</label>
@@ -8025,6 +8032,31 @@ document.addEventListener('click', function(e) {
     }
 });
 
+const _FPE_DESC_PRESETS = ['Delivery','Installation','Integration','ATP','Clearance','Other'];
+
+function _fpeDescChange() {
+    const isOther = document.getElementById('fpe-desc').value === 'Other';
+    const otherEl = document.getElementById('fpe-desc-other');
+    otherEl.style.display = isOther ? '' : 'none';
+    if (!isOther) otherEl.value = '';
+}
+
+function _fpeSetDesc(val) {
+    if (!val) {
+        document.getElementById('fpe-desc').value = '';
+        document.getElementById('fpe-desc-other').style.display = 'none';
+        document.getElementById('fpe-desc-other').value = '';
+    } else if (_FPE_DESC_PRESETS.includes(val)) {
+        document.getElementById('fpe-desc').value = val;
+        document.getElementById('fpe-desc-other').style.display = val === 'Other' ? '' : 'none';
+        document.getElementById('fpe-desc-other').value = '';
+    } else {
+        document.getElementById('fpe-desc').value = 'Other';
+        document.getElementById('fpe-desc-other').style.display = '';
+        document.getElementById('fpe-desc-other').value = val;
+    }
+}
+
 function openFinProjExpForm(id) {
     _finProjExpEditId = id;
     document.getElementById('fin-projexp-modal-title').textContent = id ? 'Edit Project Expense' : 'Add Project Expense';
@@ -8033,7 +8065,7 @@ function openFinProjExpForm(id) {
         const r = _finProjExp.find(x => x.id === id);
         document.getElementById('fpe-proj').value   = r?.project_name  || '';
         document.getElementById('fpe-cat').value    = r?.category      || '';
-        document.getElementById('fpe-desc').value   = r?.description   || '';
+        _fpeSetDesc(r?.description || '');
         document.getElementById('fpe-site').value   = r?.site_id       || '';
         document.getElementById('fpe-amount').value = r?.amount        || '';
         document.getElementById('fpe-date').value   = r?.activity_date || r?.expense_date || '';
@@ -8044,7 +8076,8 @@ function openFinProjExpForm(id) {
         document.getElementById('fpe-accom').value = isFood ? (r?.accommodation || '') : '';
         document.getElementById('fpe-amount').readOnly = isFood;
     } else {
-        ['fpe-proj','fpe-cat','fpe-desc','fpe-site','fpe-amount','fpe-notes'].forEach(fid => document.getElementById(fid).value = '');
+        ['fpe-proj','fpe-cat','fpe-site','fpe-amount','fpe-notes'].forEach(fid => document.getElementById(fid).value = '');
+        _fpeSetDesc('');
         document.getElementById('fpe-date').value = new Date().toISOString().slice(0,10);
         document.getElementById('fpe-accom-wrap').style.display = 'none';
         document.getElementById('fpe-accom').value = '';
@@ -8082,11 +8115,13 @@ function _fpeFoodAutoFill(changed) {
 
 async function saveFinProjExp() {
     const errEl = document.getElementById('fin-projexp-err'); errEl.style.display = 'none';
-    const proj = document.getElementById('fpe-proj').value;
-    const desc = document.getElementById('fpe-desc').value.trim();
+    const proj    = document.getElementById('fpe-proj').value;
+    const descSel = document.getElementById('fpe-desc').value;
+    const desc    = descSel === 'Other' ? document.getElementById('fpe-desc-other').value.trim() : descSel;
     const amt  = +document.getElementById('fpe-amount').value;
-    if (!proj)        { errEl.textContent = 'Project required.';     errEl.style.display = ''; return; }
-    if (!desc)        { errEl.textContent = 'Description required.'; errEl.style.display = ''; return; }
+    if (!proj)                            { errEl.textContent = 'Project required.';             errEl.style.display = ''; return; }
+    if (!descSel)                         { errEl.textContent = 'Description required.';         errEl.style.display = ''; return; }
+    if (descSel === 'Other' && !desc)     { errEl.textContent = 'Please specify the description.'; errEl.style.display = ''; return; }
     if (!amt || amt < 0) { errEl.textContent = 'Valid amount required.'; errEl.style.display = ''; return; }
     const accom = document.getElementById('fpe-accom').value;
     if (!accom) { errEl.textContent = 'Accommodation required.'; errEl.style.display = ''; return; }
