@@ -6289,42 +6289,48 @@ function _renderFinDashboard(pc) {
     _finDashCharts = [];
 
     const m = _finDashMonth, y = _finDashYear;
-    const rev     = _finRevenue.filter(r => r.month===m && r.year===y);
-    const projExp = _finProjExp.filter(r => r.month===m && r.year===y);
-    const genExp  = _finGenExp.filter(r  => r.month===m && r.year===y);
-    const wlog    = _finWorkLog.filter(r => r.month===m && r.year===y);
-
+    const rev    = _finRevenue.filter(r => r.month===m && r.year===y);
+    const genExp = _finGenExp.filter(r  => r.month===m && r.year===y);
+    // Filter project expenses by activity_date (matching Monthly Report logic)
+    const projExp = _finProjExp.filter(r => {
+        if (r.activity_date) { const d=new Date(r.activity_date); return d.getMonth()+1===m && d.getFullYear()===y; }
+        return r.month===m && r.year===y;
+    });
+    // Salary = sum of active team members' monthly_salary (matches Monthly Report)
+    const activeTeam  = _finTeam.filter(t => t.is_active !== false);
     const totalRev    = rev.reduce((s,r)=>s+(+r.amount||0),0);
     const totalProjEx = projExp.reduce((s,r)=>s+(+r.amount||0),0);
     const totalGenEx  = genExp.reduce((s,r)=>s+(+r.amount||0),0);
-    const totalSal    = wlog.reduce((s,r)=>s+(+r.total_cost||0),0);
-    const totalExp    = totalProjEx + totalGenEx + totalSal;
+    const totalSal    = activeTeam.reduce((s,t)=>s+(+t.monthly_salary||0),0);
+    const totalExp    = totalSal + totalGenEx + totalProjEx;
     const netProfit   = totalRev - totalExp;
     const margin      = totalRev > 0 ? (netProfit / totalRev * 100) : 0;
 
     const activeProjs = new Set([
-        ...rev.map(r=>r.project_name), ...projExp.map(r=>r.project_name), ...wlog.map(r=>r.project_name)
+        ...rev.map(r=>r.project_name), ...projExp.map(r=>r.project_name)
     ].filter(Boolean));
-    const projCount   = activeProjs.size || 1;
-    const genShare    = totalGenEx / projCount;
+    const projCount = activeProjs.size || 1;
+    const genShare  = totalGenEx / projCount;
+    const totalRevForWeight = rev.reduce((s,r)=>s+(+r.amount||0),0);
 
     const projData = {};
     for (const p of activeProjs) projData[p] = { rev:0, projEx:0, salary:0, genShare };
-    rev.forEach(r  => { if (projData[r.project_name]) projData[r.project_name].rev    += +r.amount||0; });
+    rev.forEach(r   => { if (projData[r.project_name]) projData[r.project_name].rev    += +r.amount||0; });
     projExp.forEach(r=>{ if (projData[r.project_name]) projData[r.project_name].projEx += +r.amount||0; });
-    wlog.forEach(r => { if (projData[r.project_name]) projData[r.project_name].salary  += +r.total_cost||0; });
-
-    const salByMember = {};
-    wlog.forEach(r => { salByMember[r.member_name] = (salByMember[r.member_name]||0) + (+r.total_cost||0); });
+    // Distribute salary by revenue weight (matches Monthly Report)
+    for (const p of activeProjs) {
+        const weight = totalRevForWeight > 0 ? (projData[p].rev / totalRevForWeight) : (1 / projCount);
+        projData[p].salary = Math.round(totalSal * weight);
+    }
 
     const trend = [];
     for (let i=5; i>=0; i--) {
         let tm = m-i, ty = y;
         while (tm<=0) { tm+=12; ty--; }
         const tR  = _finRevenue.filter(r=>r.month===tm&&r.year===ty).reduce((s,r)=>s+(+r.amount||0),0);
-        const tPE = _finProjExp.filter(r=>r.month===tm&&r.year===ty).reduce((s,r)=>s+(+r.amount||0),0);
+        const tPE = _finProjExp.filter(r=>{ if(r.activity_date){const d=new Date(r.activity_date);return d.getMonth()+1===tm&&d.getFullYear()===ty;} return r.month===tm&&r.year===ty; }).reduce((s,r)=>s+(+r.amount||0),0);
         const tGE = _finGenExp.filter(r=>r.month===tm&&r.year===ty).reduce((s,r)=>s+(+r.amount||0),0);
-        const tS  = _finWorkLog.filter(r=>r.month===tm&&r.year===ty).reduce((s,r)=>s+(+r.total_cost||0),0);
+        const tS  = totalSal; // monthly salary budget is constant (active team members)
         trend.push({ label: FIN_MONTHS[tm-1].slice(0,3)+' '+ty, rev:tR, exp:tPE+tGE+tS, profit:tR-tPE-tGE-tS });
     }
 
@@ -6440,14 +6446,14 @@ function _renderFinDashboard(pc) {
             </div>
             <div class="fin-panel">
                 <div class="fin-panel-title">Salary Costs — ${mLabel}</div>
-                ${Object.keys(salByMember).length===0
-                    ? `<div style="color:var(--slate-400);font-size:13px;text-align:center;padding:20px">No work logged this month</div>`
-                    : Object.entries(salByMember).map(([name,cost])=>`<div class="fin-panel-row">
-                        <span style="font-weight:500">${esc(name)}</span>
-                        <span style="font-weight:600">${iqd(cost)}</span>
+                ${activeTeam.length===0
+                    ? `<div style="color:var(--slate-400);font-size:13px;text-align:center;padding:20px">No active team members</div>`
+                    : activeTeam.map(t=>`<div class="fin-panel-row">
+                        <span style="font-weight:500">${esc(t.full_name)}</span>
+                        <span style="font-weight:600">${iqd(+t.monthly_salary||0)}</span>
                       </div>`).join('')
                 }
-                ${Object.keys(salByMember).length>0?`<div class="fin-panel-row" style="font-weight:700;border-top:2px solid var(--slate-200);margin-top:4px"><span>Total</span><span>${iqd(totalSal)}</span></div>`:''}
+                ${activeTeam.length>0?`<div class="fin-panel-row" style="font-weight:700;border-top:2px solid var(--slate-200);margin-top:4px"><span>Total (${activeTeam.length} members)</span><span>${iqd(totalSal)}</span></div>`:''}
             </div>
         </div>
 
