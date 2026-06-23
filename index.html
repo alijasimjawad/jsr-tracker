@@ -2381,7 +2381,7 @@
       </div>
       <div class="fin-field span2">
         <label>Accommodation</label>
-        <select id="fpe-accom"><option value="Returned Home">Returned Home</option><option value="Hotel">Hotel</option></select>
+        <select id="fpe-accom"><option value="">— Select —</option><option value="Returned Home">Returned Home</option><option value="Hotel">Hotel</option></select>
       </div>
       <div class="fin-field span2"><label>Notes</label><textarea id="fpe-notes" placeholder="Optional…"></textarea></div>
     </div>
@@ -7984,11 +7984,11 @@ function openFinProjExpForm(id) {
         document.getElementById('fpe-date').value   = r?.activity_date || r?.expense_date || '';
         document.getElementById('fpe-notes').value  = r?.notes         || '';
         try { _fpeSelectedEmpIds = JSON.parse(r?.employee_ids || '[]'); } catch(_) { _fpeSelectedEmpIds = []; }
-        document.getElementById('fpe-accom').value = r?.accommodation || 'Returned Home';
+        document.getElementById('fpe-accom').value = r?.accommodation || '';
     } else {
         ['fpe-proj','fpe-cat','fpe-desc','fpe-site','fpe-amount','fpe-notes'].forEach(fid => document.getElementById(fid).value = '');
         document.getElementById('fpe-date').value = new Date().toISOString().slice(0,10);
-        document.getElementById('fpe-accom').value = 'Returned Home';
+        document.getElementById('fpe-accom').value = '';
         _fpeSelectedEmpIds = [];
     }
     _fpeRenderTags();
@@ -8004,6 +8004,8 @@ async function saveFinProjExp() {
     if (!proj)        { errEl.textContent = 'Project required.';     errEl.style.display = ''; return; }
     if (!desc)        { errEl.textContent = 'Description required.'; errEl.style.display = ''; return; }
     if (!amt || amt < 0) { errEl.textContent = 'Valid amount required.'; errEl.style.display = ''; return; }
+    const accom = document.getElementById('fpe-accom').value;
+    if (!accom) { errEl.textContent = 'Accommodation required.'; errEl.style.display = ''; return; }
     const dateVal = document.getElementById('fpe-date').value;
     const dateObj = dateVal ? new Date(dateVal) : new Date();
     const siteId  = document.getElementById('fpe-site').value.trim() || null;
@@ -8011,7 +8013,7 @@ async function saveFinProjExp() {
     const payload = { project_name: proj, description: desc, category: document.getElementById('fpe-cat').value||null,
         amount: amt, expense_date: dateVal||null, activity_date: dateVal||null,
         month: dateObj.getMonth()+1, year: dateObj.getFullYear(),
-        site_id: siteId, employee_ids: empIds, accommodation: document.getElementById('fpe-accom').value || 'Returned Home',
+        site_id: siteId, employee_ids: empIds, accommodation: accom,
         notes: document.getElementById('fpe-notes').value.trim()||null, added_by: currentUser?.full_name||'' };
     try {
         if (_finProjExpEditId) {
