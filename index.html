@@ -373,6 +373,8 @@
             font-size:13px; font-family:inherit; color:var(--text-primary); background:var(--slate-50); outline:none; box-sizing:border-box; transition:var(--transition);
         }
         .fin-field input:focus,.fin-field select:focus,.fin-field textarea:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+        .fin-field input[readonly] { background:#e2e8f0; color:var(--slate-500); cursor:not-allowed; }
+        .fin-field input[readonly]:focus { border-color:var(--slate-200); box-shadow:none; background:#e2e8f0; }
         .fin-field textarea { resize:vertical; min-height:65px; }
         /* Expense Employees multi-select */
         .fpe-multiselect { position:relative; min-height:38px; padding:5px 10px; border:1.5px solid var(--slate-200); border-radius:var(--radius-sm); background:var(--slate-50); cursor:pointer; box-sizing:border-box; }
@@ -2370,6 +2372,10 @@
         </select></div>
       <div class="fin-field span2"><label>Description *</label><input type="text" id="fpe-desc" placeholder="Description…" maxlength="200"></div>
       <div class="fin-field"><label>Site ID</label><input type="text" id="fpe-site" placeholder="Site ID…" maxlength="100"></div>
+      <div class="fin-field" id="fpe-accom-wrap" style="display:none">
+        <label>Accommodation</label>
+        <select id="fpe-accom" onchange="_fpeFoodAutoFill('accom')"><option value="">— Select —</option><option value="Returned Home">Returned Home</option><option value="Hotel">Hotel</option></select>
+      </div>
       <div class="fin-field"><label>Amount (IQD) *</label><input type="number" id="fpe-amount" min="0" placeholder="0"></div>
       <div class="fin-field"><label>Activity Date</label><input type="date" id="fpe-date"></div>
       <div class="fin-field span2">
@@ -2378,10 +2384,6 @@
           <div class="fpe-emp-tags" id="fpe-emp-tags"><span class="fpe-emp-placeholder" id="fpe-emp-placeholder">Select employees…</span></div>
           <div class="fpe-emp-dropdown" id="fpe-emp-dropdown" style="display:none" onclick="event.stopPropagation()"></div>
         </div>
-      </div>
-      <div class="fin-field span2" id="fpe-accom-wrap" style="display:none">
-        <label>Accommodation</label>
-        <select id="fpe-accom" onchange="_fpeFoodAutoFill('accom')"><option value="">— Select —</option><option value="Returned Home">Returned Home</option><option value="Hotel">Hotel</option></select>
       </div>
       <div class="fin-field span2"><label>Notes</label><textarea id="fpe-notes" placeholder="Optional…"></textarea></div>
     </div>
@@ -7992,11 +7994,13 @@ function openFinProjExpForm(id) {
         const isFood = (r?.category || '') === 'Food';
         document.getElementById('fpe-accom-wrap').style.display = isFood ? '' : 'none';
         document.getElementById('fpe-accom').value = isFood ? (r?.accommodation || '') : '';
+        document.getElementById('fpe-amount').readOnly = isFood;
     } else {
         ['fpe-proj','fpe-cat','fpe-desc','fpe-site','fpe-amount','fpe-notes'].forEach(fid => document.getElementById(fid).value = '');
         document.getElementById('fpe-date').value = new Date().toISOString().slice(0,10);
         document.getElementById('fpe-accom-wrap').style.display = 'none';
         document.getElementById('fpe-accom').value = '';
+        document.getElementById('fpe-amount').readOnly = false;
         _fpeSelectedEmpIds = [];
     }
     _fpeRenderTags();
@@ -8011,9 +8015,11 @@ function _fpeFoodAutoFill(changed) {
     const amtEl     = document.getElementById('fpe-amount');
     if (cat === 'Food') {
         accomWrap.style.display = '';
+        amtEl.readOnly = true;
         const accom = accomEl.value;
         if (accom === 'Returned Home') amtEl.value = 10000;
         else if (accom === 'Hotel')   amtEl.value = 15000;
+        else                          amtEl.value = '';
         if (changed === 'cat' && _fpeSelectedEmpIds.length > 1) {
             _fpeSelectedEmpIds = [];
             _fpeRenderTags();
@@ -8021,6 +8027,7 @@ function _fpeFoodAutoFill(changed) {
     } else if (changed === 'cat') {
         accomWrap.style.display = 'none';
         accomEl.value = '';
+        amtEl.readOnly = false;
         amtEl.value = 0;
     }
 }
