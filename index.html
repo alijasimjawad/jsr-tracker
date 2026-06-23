@@ -7936,9 +7936,14 @@ function _fpeRenderTags() {
 }
 
 function _fpeToggleEmp(id) {
+    const isFood = document.getElementById('fpe-cat').value === 'Food';
     const idx = _fpeSelectedEmpIds.indexOf(id);
-    if (idx >= 0) _fpeSelectedEmpIds.splice(idx, 1);
-    else _fpeSelectedEmpIds.push(id);
+    if (idx >= 0) {
+        _fpeSelectedEmpIds.splice(idx, 1);
+    } else {
+        if (isFood) _fpeSelectedEmpIds = [id];
+        else _fpeSelectedEmpIds.push(id);
+    }
     _fpeRenderTags();
 }
 
@@ -8003,6 +8008,10 @@ function _fpeFoodAutoFill(changed) {
     if (cat === 'Food') {
         if (accom === 'Returned Home') amtEl.value = 10000;
         else if (accom === 'Hotel')   amtEl.value = 15000;
+        if (changed === 'cat' && _fpeSelectedEmpIds.length > 1) {
+            _fpeSelectedEmpIds = [];
+            _fpeRenderTags();
+        }
     } else if (changed === 'cat') {
         amtEl.value = 0;
     }
