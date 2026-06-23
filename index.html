@@ -2364,7 +2364,7 @@
           <option>TAC Project</option><option>IPT Project</option><option>TASC Project</option><option>General</option>
         </select></div>
       <div class="fin-field"><label>Category</label>
-        <select id="fpe-cat"><option value="">— Select —</option>
+        <select id="fpe-cat" onchange="_fpeFoodAutoFill('cat')"><option value="">— Select —</option>
           <option>Materials</option><option>Transport</option><option>Equipment</option>
           <option>Accommodation</option><option>Food</option><option>Maintenance</option><option>Other</option>
         </select></div>
@@ -2381,7 +2381,7 @@
       </div>
       <div class="fin-field span2">
         <label>Accommodation</label>
-        <select id="fpe-accom"><option value="">— Select —</option><option value="Returned Home">Returned Home</option><option value="Hotel">Hotel</option></select>
+        <select id="fpe-accom" onchange="_fpeFoodAutoFill('accom')"><option value="">— Select —</option><option value="Returned Home">Returned Home</option><option value="Hotel">Hotel</option></select>
       </div>
       <div class="fin-field span2"><label>Notes</label><textarea id="fpe-notes" placeholder="Optional…"></textarea></div>
     </div>
@@ -7994,6 +7994,18 @@ function openFinProjExpForm(id) {
     _fpeRenderTags();
     openFinModal('fin-projexp-modal');
     setTimeout(() => document.getElementById('fpe-proj').focus(), 60);
+}
+
+function _fpeFoodAutoFill(changed) {
+    const cat   = document.getElementById('fpe-cat').value;
+    const accom = document.getElementById('fpe-accom').value;
+    const amtEl = document.getElementById('fpe-amount');
+    if (cat === 'Food') {
+        if (accom === 'Returned Home') amtEl.value = 10000;
+        else if (accom === 'Hotel')   amtEl.value = 15000;
+    } else if (changed === 'cat') {
+        amtEl.value = 0;
+    }
 }
 
 async function saveFinProjExp() {
