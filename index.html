@@ -2842,45 +2842,21 @@
                     <span class="um-perm-note">Ignored for Admin role — admins always have full access</span>
                 </div>
                 <div class="um-perm-cols">
-                    <!-- VIEW column -->
+                    <!-- VIEW column — built dynamically by _umBuildPermUI() -->
                     <div class="um-perm-col">
                         <div class="um-perm-col-head" style="display:flex;align-items:center;justify-content:space-between">
                             View
                             <button class="um-tog-all-btn" onclick="umTogAll('view',true)">All on</button>
                         </div>
-                        <div class="tog-wrap"><span class="tog-label">Dashboard</span><label class="tog-sw"><input type="checkbox" id="ump-view_dashboard"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Zain Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_zain"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Nokia Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_nokia"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Huawei Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_huawei"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">MRC Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_mrc"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Metco Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_metco"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">MFC Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_mfc"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">TAC Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_tac"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">IPT Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_ipt"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">TASC Project</span><label class="tog-sw"><input type="checkbox" id="ump-view_tasc"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Finance Dashboard</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_dashboard"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Team Members</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_team"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Work Log</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_worklog"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Revenue</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_revenue"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">General Expenses</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_genexp"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Project Expenses</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_projexp"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Monthly Report</span><label class="tog-sw"><input type="checkbox" id="ump-view_fin_report"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Activity Log</span><label class="tog-sw"><input type="checkbox" id="ump-view_activity_log"><span class="tog-sl"></span></label></div>
+                        <div id="ump-view-col"><div style="color:var(--slate-400);font-size:12px;padding:10px 0">Loading…</div></div>
                     </div>
-                    <!-- ACTIONS column -->
+                    <!-- ACTIONS column — built dynamically by _umBuildPermUI() -->
                     <div class="um-perm-col">
                         <div class="um-perm-col-head" style="display:flex;align-items:center;justify-content:space-between">
                             Actions
                             <button class="um-tog-all-btn" onclick="umTogAll('actions',true)">All on</button>
                         </div>
-                        <div class="tog-wrap"><span class="tog-label">Add Rows</span><label class="tog-sw"><input type="checkbox" id="ump-add_rows"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Edit Rows</span><label class="tog-sw"><input type="checkbox" id="ump-edit_rows"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Delete Rows</span><label class="tog-sw"><input type="checkbox" id="ump-delete_rows"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Add Columns</span><label class="tog-sw"><input type="checkbox" id="ump-add_columns"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Export to Excel</span><label class="tog-sw"><input type="checkbox" id="ump-export_excel"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Add Section</span><label class="tog-sw"><input type="checkbox" id="ump-add_section"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Rename Section</span><label class="tog-sw"><input type="checkbox" id="ump-rename_section"><span class="tog-sl"></span></label></div>
-                        <div class="tog-wrap"><span class="tog-label">Delete Section</span><label class="tog-sw"><input type="checkbox" id="ump-delete_section"><span class="tog-sl"></span></label></div>
+                        <div id="ump-act-col"></div>
                     </div>
                 </div>
             </div>
@@ -6193,17 +6169,113 @@ async function saveNewUser() {
     logActivity('Add User', `Created user: ${fullName} (${username}), role: ${role}`);
 }
 
-// ── Edit User Modal ────────────────────────────
-const _UM_VIEW_KEYS = [
-    'view_dashboard','view_zain','view_nokia','view_huawei','view_mrc','view_metco',
-    'view_mfc','view_tac','view_ipt','view_tasc','view_fin_dashboard','view_fin_team',
-    'view_fin_worklog','view_fin_revenue','view_fin_genexp','view_fin_projexp',
-    'view_fin_report','view_activity_log'
+// ── Edit User Modal — Dynamic Permissions ─────────────────────
+//
+// Fixed VIEW items (always present regardless of projects in DB)
+const _UM_FIXED_VIEW_TOP = [
+    { key: 'view_dashboard', label: 'Dashboard' },
 ];
-const _UM_ACT_KEYS = ['add_rows','edit_rows','delete_rows','add_columns','export_excel','add_section','rename_section','delete_section'];
+const _UM_FIXED_VIEW_BOTTOM = [
+    // Finance
+    { key: 'view_fin_dashboard', label: 'Finance Dashboard' },
+    { key: 'view_fin_team',      label: 'Team Members' },
+    { key: 'view_fin_worklog',   label: 'Work Log' },
+    { key: 'view_fin_revenue',   label: 'Revenue' },
+    { key: 'view_fin_genexp',    label: 'General Expenses' },
+    { key: 'view_fin_projexp',   label: 'Project Expenses' },
+    { key: 'view_fin_report',    label: 'Monthly Report' },
+    { key: 'view_exp_claims',    label: 'Expense Claims (Admin)' },
+    // HR & People
+    { key: 'view_hr_profiles',   label: 'Employee Profiles' },
+    // Member
+    { key: 'view_my_expenses',   label: 'My Expenses' },
+    // Admin
+    { key: 'view_activity_log',  label: 'Activity Log' },
+];
+
+// Known project → permission key mapping (backward-compatible with existing saved permissions)
+const _KNOWN_PROJ_KEYS = {
+    'Zain Project':   'view_zain',
+    'Nokia Project':  'view_nokia',
+    'Huawei Project': 'view_huawei',
+    'MRC Project':    'view_mrc',
+    'Metco Project':  'view_metco',
+    'MFC Project':    'view_mfc',
+    'TAC Project':    'view_tac',
+    'IPT Project':    'view_ipt',
+    'TASC Project':   'view_tasc',
+};
+
+// Generate a permission key for a project not in the known list
+function _projPermKey(name) {
+    return _KNOWN_PROJ_KEYS[name]
+        || 'view_proj_' + name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+// ACTIONS — static list, easily extended here when new features land
+const _UM_ACT_DEFS = [
+    // Row / column operations (project tables)
+    { key: 'add_rows',           label: 'Add Rows' },
+    { key: 'edit_rows',          label: 'Edit Rows' },
+    { key: 'delete_rows',        label: 'Delete Rows' },
+    { key: 'add_columns',        label: 'Add Columns' },
+    { key: 'export_excel',       label: 'Export to Excel' },
+    // Section management
+    { key: 'add_section',        label: 'Add Section' },
+    { key: 'rename_section',     label: 'Rename Section' },
+    { key: 'delete_section',     label: 'Delete Section' },
+    // Expense claims
+    { key: 'submit_exp_claim',   label: 'Submit Expense Claim' },
+    { key: 'approve_exp_claims', label: 'Approve / Reject Expense Claims' },
+    // Team member management
+    { key: 'add_team_member',    label: 'Add Team Member' },
+    { key: 'edit_team_member',   label: 'Edit Team Member' },
+    { key: 'delete_team_member', label: 'Delete Team Member' },
+];
+
+// Holds the current VIEW definitions after _umBuildPermUI() runs
+let _umCurrentViewDefs = [];
 let _umEditId = null;
 
-function openEditUserModal(uid) {
+// Build (or rebuild) the permissions UI with the given extra project names from DB
+function _umBuildPermUI(dbProjects) {
+    // Ordered project list: known built-ins first (in PROJ_NAMES order), then any extras
+    const knownNames = Object.keys(_KNOWN_PROJ_KEYS);
+    const knownSet   = new Set(knownNames);
+    const extras     = (dbProjects || []).filter(n => !knownSet.has(n)).sort();
+
+    const projectDefs = [...knownNames, ...extras].map(name => ({
+        key:   _projPermKey(name),
+        label: name,
+    }));
+
+    _umCurrentViewDefs = [
+        ..._UM_FIXED_VIEW_TOP,
+        ...projectDefs,
+        ..._UM_FIXED_VIEW_BOTTOM,
+    ];
+
+    // Helper to build toggle HTML
+    const togHtml = ({ key, label }) =>
+        `<div class="tog-wrap"><span class="tog-label">${esc(label)}</span>`+
+        `<label class="tog-sw"><input type="checkbox" id="ump-${key}"><span class="tog-sl"></span></label></div>`;
+
+    // Inject VIEW column — add a small divider before projects and before finance
+    const viewParts = [];
+    viewParts.push(..._UM_FIXED_VIEW_TOP.map(togHtml));
+    if (projectDefs.length) {
+        viewParts.push(`<div style="font-size:10px;font-weight:800;color:var(--slate-400);letter-spacing:.8px;text-transform:uppercase;padding:8px 0 2px">Projects</div>`);
+        viewParts.push(...projectDefs.map(togHtml));
+    }
+    viewParts.push(`<div style="font-size:10px;font-weight:800;color:var(--slate-400);letter-spacing:.8px;text-transform:uppercase;padding:8px 0 2px">Finance &amp; Admin</div>`);
+    viewParts.push(..._UM_FIXED_VIEW_BOTTOM.map(togHtml));
+    document.getElementById('ump-view-col').innerHTML = viewParts.join('');
+
+    // Inject ACTIONS column
+    document.getElementById('ump-act-col').innerHTML = _UM_ACT_DEFS.map(togHtml).join('');
+}
+
+async function openEditUserModal(uid) {
     const u = _umUsers.find(x => x.id === uid);
     if (!u) return;
     _umEditId = uid;
@@ -6213,12 +6285,25 @@ function openEditUserModal(uid) {
     document.getElementById('ume-role').value      = u.role       || 'user';
     document.getElementById('um-edit-subtitle').textContent = u.full_name || u.username;
     document.getElementById('um-edit-error').textContent = '';
-    const perms = u.permissions || {};
-    [..._UM_VIEW_KEYS, ..._UM_ACT_KEYS].forEach(k => {
-        const el = document.getElementById('ump-' + k);
-        if (el) el.checked = perms[k] === true;
-    });
+
+    // Show modal immediately; permissions load in the background
     document.getElementById('um-edit-modal').classList.add('open');
+
+    // Fetch distinct project names from sections table for dynamic VIEW list
+    let dbProjects = [];
+    try {
+        const { data } = await _sb.from('sections').select('project_name').neq('project_name', null);
+        if (data) dbProjects = [...new Set(data.map(r => r.project_name).filter(Boolean))].sort();
+    } catch(_) {}
+
+    _umBuildPermUI(dbProjects);
+
+    // Apply saved permission values to the newly rendered checkboxes
+    const perms = u.permissions || {};
+    [..._umCurrentViewDefs, ..._UM_ACT_DEFS].forEach(({ key }) => {
+        const el = document.getElementById('ump-' + key);
+        if (el) el.checked = perms[key] === true;
+    });
 }
 
 function closeEditUserModal(e) {
@@ -6227,9 +6312,9 @@ function closeEditUserModal(e) {
 }
 
 function umTogAll(group, val) {
-    const keys = group === 'view' ? _UM_VIEW_KEYS : _UM_ACT_KEYS;
-    keys.forEach(k => {
-        const el = document.getElementById('ump-' + k);
+    const defs = group === 'view' ? _umCurrentViewDefs : _UM_ACT_DEFS;
+    defs.forEach(({ key }) => {
+        const el = document.getElementById('ump-' + key);
         if (el) el.checked = val;
     });
 }
@@ -6247,9 +6332,9 @@ async function saveEditUser() {
     if (conflict)  { errEl.textContent = 'Username already taken by another user.'; return; }
 
     const permissions = {};
-    [..._UM_VIEW_KEYS, ..._UM_ACT_KEYS].forEach(k => {
-        const el = document.getElementById('ump-' + k);
-        if (el) permissions[k] = el.checked;
+    [..._umCurrentViewDefs, ..._UM_ACT_DEFS].forEach(({ key }) => {
+        const el = document.getElementById('ump-' + key);
+        if (el) permissions[key] = el.checked;
     });
 
     const update = { full_name: fullName, username, role, permissions };
