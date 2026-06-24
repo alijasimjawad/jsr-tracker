@@ -540,6 +540,48 @@
         .cp-field input:focus { border-color: var(--accent); background: var(--bg-panel); box-shadow: 0 0 0 4px rgba(37,99,235,.1); }
         .cp-success { color: var(--green); font-size: 13px; text-align: center; margin-top: 14px; font-weight: 500; display: none; }
 
+        /* ── My Expenses (member-facing) ─────── */
+        .member-section { display: none; }
+        body.role-user .member-section { display: block !important; }
+        body.role-admin .member-section { display: none !important; }
+        .exp-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+        .exp-badge-pending  { background:#fef3c7; color:#92400e; }
+        .exp-badge-approved { background:#dcfce7; color:#166534; }
+        .exp-badge-rejected { background:#fee2e2; color:#991b1b; }
+        .exp-page { padding:24px 28px; }
+        .exp-table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
+        .exp-table { width:100%; border-collapse:collapse; font-size:13px; min-width:700px; }
+        .exp-table th { background:var(--slate-50); color:var(--slate-600); font-weight:700; padding:10px 14px; text-align:left; border-bottom:1.5px solid var(--border); white-space:nowrap; font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+        .exp-table td { padding:10px 14px; border-bottom:1px solid var(--slate-100); color:var(--text-primary); vertical-align:top; }
+        .exp-table tr:last-child td { border-bottom:none; }
+        .exp-table tr:hover td { background:var(--slate-50); }
+        .exp-rej-box { margin-top:6px; padding:8px 12px; background:#fef2f2; border:1px solid #fca5a5; border-radius:6px; font-size:12px; color:var(--red); line-height:1.4; }
+        .exp-resubmit-btn { margin-top:6px; padding:4px 12px; font-size:12px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; transition:opacity .15s; display:inline-block; }
+        .exp-resubmit-btn:hover { opacity:.88; }
+        /* New Claim modal form */
+        .ec-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; }
+        .ec-form-grid .span2 { grid-column:span 2; }
+        .ec-field label { display:block; font-size:12px; font-weight:600; color:var(--slate-700); margin-bottom:6px; }
+        .ec-field input,.ec-field select { width:100%; padding:9px 12px; border:1.5px solid var(--slate-200); border-radius:var(--radius-sm); font-size:13px; font-family:inherit; color:var(--text-primary); background:var(--slate-50); outline:none; box-sizing:border-box; transition:var(--transition); }
+        .ec-field input:focus,.ec-field select:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+        .ec-extra-row { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end; margin-bottom:8px; }
+        .ec-extra-row label { display:block; font-size:12px; font-weight:600; color:var(--slate-700); margin-bottom:6px; }
+        .ec-extra-row select,.ec-extra-row input { width:100%; padding:9px 12px; border:1.5px solid var(--slate-200); border-radius:var(--radius-sm); font-size:13px; font-family:inherit; color:var(--text-primary); background:var(--slate-50); outline:none; box-sizing:border-box; transition:var(--transition); }
+        .ec-extra-row select:focus,.ec-extra-row input:focus { border-color:var(--accent); background:#fff; }
+        .ec-remove-btn { width:34px; height:38px; border:1.5px solid #fee2e2; background:#fff; color:var(--red); border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .12s; flex-shrink:0; padding:0; }
+        .ec-remove-btn:hover { background:#fee2e2; }
+        .ec-total { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--slate-50); border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:14px; font-weight:700; margin-top:4px; }
+        .ec-total-val { font-size:18px; font-weight:800; color:var(--accent); }
+        /* Admin expense claims */
+        .adm-exp-approve-btn { padding:5px 14px; font-size:12px; font-weight:700; background:#16a34a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; transition:opacity .15s; }
+        .adm-exp-approve-btn:hover { opacity:.88; }
+        .adm-exp-reject-btn  { padding:5px 14px; font-size:12px; font-weight:700; background:var(--red); color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; transition:opacity .15s; }
+        .adm-exp-reject-btn:hover { opacity:.88; }
+        .adm-exp-rej-wrap { display:flex; gap:6px; margin-top:6px; }
+        .adm-exp-rej-inp { flex:1; padding:6px 10px; border:1.5px solid #fca5a5; border-radius:6px; font-size:12px; font-family:inherit; outline:none; }
+        .adm-exp-rej-inp:focus { border-color:var(--red); }
+        .adm-exp-rej-confirm { padding:5px 12px; background:var(--red); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+
         /* ── Global loading overlay ──────────── */
         #loading-overlay {
             display: none; position: fixed; inset: 0; z-index: 99999;
@@ -1990,6 +2032,22 @@
                     </div>
                 </div>
 
+                <!-- MY EXPENSES section (member only) -->
+                <div class="member-section" id="sidebar-my-expenses-section">
+                    <div class="tree-divider"></div>
+                    <div class="tree-section-label" style="display:flex;align-items:center;gap:6px">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                        My Expenses
+                    </div>
+                    <div class="tree-child" id="nav-my-expenses" onclick="showMyExpenses()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                            <span class="tree-child-label">My Claims</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
+                </div>
+
                 <!-- FINANCE section (admin only) -->
                 <div class="admin-only" id="sidebar-fin-section">
                     <div class="tree-divider"></div>
@@ -2043,6 +2101,13 @@
                         <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                             <span class="tree-child-label">Monthly Report</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
+                    <div class="tree-child" id="nav-fin-exp-claims" onclick="showFinExpClaims()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                            <span class="tree-child-label">Expense Claims</span>
                         </span>
                         <span class="tree-child-arr">›</span>
                     </div>
@@ -2398,6 +2463,67 @@
     <div class="modal-actions" style="margin-top:18px">
       <button class="btn btn-ghost" onclick="closeFinModal('fin-projexp-modal')">Cancel</button>
       <button class="btn btn-accent" onclick="saveFinProjExp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- My Expenses: New / Resubmit Claim Modal -->
+<div class="modal-overlay" id="exp-claim-modal" onclick="closeExpClaimModal(event)">
+  <div class="modal-card" style="max-width:620px;max-height:92vh;overflow-y:auto">
+    <div class="modal-title" id="exp-claim-modal-title">New Expense Claim</div>
+    <div class="ec-form-grid" style="margin-top:16px">
+      <div class="ec-field"><label>Project Name *</label>
+        <select id="ec-proj"><option value="">— Select —</option>
+          <option>Zain Project</option><option>Nokia Project</option><option>Huawei Project</option>
+          <option>MRC Project</option><option>Metco Project</option><option>MFC Project</option>
+          <option>TAC Project</option><option>IPT Project</option><option>TASC Project</option><option>General</option>
+        </select>
+      </div>
+      <div class="ec-field"><label>Site ID *</label>
+        <input type="text" id="ec-site" placeholder="e.g. ZN-1234" maxlength="100">
+      </div>
+      <div class="ec-field"><label>Governorate</label>
+        <input type="text" id="ec-gov" placeholder="e.g. Baghdad" maxlength="100">
+      </div>
+      <div class="ec-field"><label>Description *</label>
+        <select id="ec-desc"><option value="">— Select —</option>
+          <option>Delivery</option><option>Installation</option><option>Integration</option>
+          <option>ATP</option><option>Clearance</option><option>Other</option>
+        </select>
+      </div>
+      <div class="ec-field span2"><label>Activity Date *</label>
+        <input type="date" id="ec-date" style="max-width:220px">
+      </div>
+      <div class="ec-field"><label>Transport Amount (IQD)</label>
+        <input type="number" id="ec-transport" min="0" value="0" placeholder="0" oninput="ecCalcTotal()">
+      </div>
+      <div style="display:contents"><!-- spacer --></div>
+      <div class="ec-field"><label>Food Amount (IQD)</label>
+        <input type="number" id="ec-food" min="0" value="0" placeholder="0" oninput="ecCalcTotal()">
+      </div>
+      <div class="ec-field"><label>Accommodation</label>
+        <select id="ec-accom">
+          <option value="">— Select —</option>
+          <option value="Returned Home">Returned Home</option>
+          <option value="Hotel">Hotel</option>
+        </select>
+      </div>
+    </div>
+    <!-- Extra categories -->
+    <div style="margin-top:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--slate-600);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Additional Categories</div>
+      <div id="ec-extra-rows"></div>
+      <button type="button" style="margin-top:4px;padding:7px 16px;font-size:13px;font-family:inherit;font-weight:600;background:var(--slate-100);color:var(--slate-700);border:1.5px solid var(--slate-200);border-radius:var(--radius-sm);cursor:pointer" onclick="ecAddRow()">+ Add Another Category</button>
+    </div>
+    <!-- Total -->
+    <div class="ec-total" style="margin-top:16px">
+      <span style="color:var(--slate-700)">Total Amount</span>
+      <span class="ec-total-val" id="ec-total-display">0 IQD</span>
+    </div>
+    <div id="exp-claim-err" style="color:var(--red);font-size:13px;margin-top:10px;display:none"></div>
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeExpClaimModal()">Cancel</button>
+      <button class="btn btn-accent" id="exp-claim-save-btn" onclick="saveExpClaim()">Submit Claim</button>
     </div>
   </div>
 </div>
@@ -9037,6 +9163,438 @@ document.addEventListener('click', function(e) {
     const wrap = document.getElementById('options-btn')?.closest('.options-wrap');
     if (wrap && !wrap.contains(e.target)) closeOptionsPanel();
 });
+
+// ══════════════════════════════════════════════
+// EXPENSE CLAIMS — MEMBER-FACING
+// ══════════════════════════════════════════════
+
+let _expClaims       = [];
+let _expClaimsLoaded = false;
+let _expClaimsEditId = null;  // id of claim being resubmitted (null = new)
+let _ecExtraRows     = [];    // [{category:'', amount:0}, ...]
+
+async function _loadExpClaims() {
+    const memberId = await _getMyMemberId();
+    if (!memberId) { _expClaims = []; return; }
+    const { data, error } = await _sb.from('expense_claims')
+        .select('*')
+        .eq('member_id', memberId)
+        .order('submitted_at', { ascending: false });
+    if (!error) _expClaims = data || [];
+    _expClaimsLoaded = true;
+}
+
+async function _getMyMemberId() {
+    if (!currentUser) return null;
+    // Try to find the team_member matching the logged-in user by full_name or username
+    if (_finTeam.length === 0) {
+        const { data } = await _sb.from('team_members').select('id,full_name,username').order('full_name');
+        if (data) {
+            _finTeam = data;
+        }
+    }
+    const name = currentUser.full_name || '';
+    const uname = currentUser.username || '';
+    const m = _finTeam.find(t =>
+        (name && t.full_name && t.full_name.trim().toLowerCase() === name.trim().toLowerCase()) ||
+        (uname && t.username && t.username.trim().toLowerCase() === uname.trim().toLowerCase())
+    );
+    return m ? m.id : null;
+}
+
+async function showMyExpenses() {
+    _finNavActive('nav-my-expenses');
+    setTopbar('<span class="bc-cur">My Expenses</span>');
+    const pc = _finSpinner();
+    try {
+        if (_finTeam.length === 0) await _loadFinAll();
+        await _loadExpClaims();
+    } catch(_) {}
+    _renderMyExpenses(pc);
+}
+
+function _renderMyExpenses(pc) {
+    pc = pc || document.getElementById('panel-content');
+    const rows = _expClaims;
+    pc.innerHTML = `<div class="exp-page">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+            <div>
+                <div style="font-size:22px;font-weight:800;color:var(--text-primary)">My Expense Claims</div>
+                <div style="font-size:13px;color:var(--slate-400);margin-top:3px">${rows.length} claim${rows.length !== 1 ? 's' : ''} submitted</div>
+            </div>
+            <button class="btn btn-accent" onclick="openNewClaimModal(null)">+ New Claim</button>
+        </div>
+        <div class="exp-table-wrap">
+            <table class="exp-table">
+                <thead><tr>
+                    <th>Date</th><th>Site ID</th><th>Project</th><th>Description</th>
+                    <th style="text-align:right">Total (IQD)</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+                ${rows.length === 0
+                    ? `<tr><td colspan="6" class="al-empty">No claims yet. Click "+ New Claim" to submit your first expense claim.</td></tr>`
+                    : rows.map(r => {
+                        const badgeCls = r.status === 'approved' ? 'exp-badge-approved'
+                                       : r.status === 'rejected' ? 'exp-badge-rejected'
+                                       : 'exp-badge-pending';
+                        const statusLabel = r.status ? (r.status.charAt(0).toUpperCase() + r.status.slice(1)) : 'Pending';
+                        const rejBox = r.status === 'rejected'
+                            ? `<div class="exp-rej-box"><strong>Reason:</strong> ${esc(r.rejection_reason || 'No reason provided')}</div>
+                               <button class="exp-resubmit-btn" onclick="openNewClaimModal('${r.id}')">Resubmit</button>`
+                            : '';
+                        return `<tr>
+                            <td style="white-space:nowrap">${esc(r.activity_date || '')}</td>
+                            <td>${esc(r.site_id || '—')}</td>
+                            <td>${esc(r.project_name || '—')}</td>
+                            <td>${esc(r.description || '—')}</td>
+                            <td style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600">${iqd(r.total_amount)}</td>
+                            <td><span class="exp-badge ${badgeCls}">${statusLabel}</span>${rejBox}</td>
+                        </tr>`;
+                    }).join('')
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+// ── New Claim / Resubmit modal ────────────────────────────────
+function openNewClaimModal(resubmitId) {
+    _expClaimsEditId = resubmitId || null;
+    _ecExtraRows = [];
+
+    // Reset form
+    document.getElementById('ec-proj').value      = '';
+    document.getElementById('ec-site').value      = '';
+    document.getElementById('ec-gov').value       = '';
+    document.getElementById('ec-desc').value      = '';
+    document.getElementById('ec-date').value      = new Date().toISOString().split('T')[0];
+    document.getElementById('ec-transport').value = '0';
+    document.getElementById('ec-food').value      = '0';
+    document.getElementById('ec-accom').value     = '';
+    document.getElementById('ec-extra-rows').innerHTML = '';
+    document.getElementById('ec-total-display').textContent = '0 IQD';
+    document.getElementById('exp-claim-err').style.display = 'none';
+
+    if (resubmitId) {
+        // Pre-fill from existing claim
+        const c = _expClaims.find(x => x.id === resubmitId);
+        if (c) {
+            document.getElementById('exp-claim-modal-title').textContent = 'Resubmit Expense Claim';
+            document.getElementById('ec-proj').value      = c.project_name || '';
+            document.getElementById('ec-site').value      = c.site_id || '';
+            document.getElementById('ec-gov').value       = c.governorate || '';
+            document.getElementById('ec-desc').value      = c.description || '';
+            document.getElementById('ec-date').value      = c.activity_date || new Date().toISOString().split('T')[0];
+            document.getElementById('ec-transport').value = c.transport_amount || '0';
+            document.getElementById('ec-food').value      = c.food_amount || '0';
+            document.getElementById('ec-accom').value     = c.accommodation || '';
+            try {
+                const extra = JSON.parse(c.extra_categories || '[]');
+                _ecExtraRows = extra.map(x => ({ category: x.category || '', amount: x.amount || 0 }));
+            } catch(_) {}
+            _ecRenderExtraRows();
+        }
+    } else {
+        document.getElementById('exp-claim-modal-title').textContent = 'New Expense Claim';
+    }
+
+    ecCalcTotal();
+    document.getElementById('exp-claim-modal').classList.add('open');
+}
+
+function closeExpClaimModal(e) {
+    if (e && e.target !== document.getElementById('exp-claim-modal')) return;
+    document.getElementById('exp-claim-modal').classList.remove('open');
+}
+
+function ecAddRow() {
+    _ecExtraRows.push({ category: '', amount: 0 });
+    _ecRenderExtraRows();
+}
+
+function ecRemoveRow(idx) {
+    _ecExtraRows.splice(idx, 1);
+    _ecRenderExtraRows();
+    ecCalcTotal();
+}
+
+function _ecRenderExtraRows() {
+    const container = document.getElementById('ec-extra-rows');
+    container.innerHTML = _ecExtraRows.map((row, i) => `
+        <div class="ec-extra-row">
+            <div><label>Category</label>
+                <select onchange="_ecExtraRows[${i}].category=this.value">
+                    <option value="">— Select —</option>
+                    ${['Fuel','Materials','Taxi','Tools','Other'].map(c =>
+                        `<option value="${c}"${row.category===c?' selected':''}>${c}</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div><label>Amount (IQD)</label>
+                <input type="number" min="0" value="${row.amount||0}" placeholder="0"
+                    oninput="_ecExtraRows[${i}].amount=+this.value||0;ecCalcTotal()">
+            </div>
+            <button class="ec-remove-btn" onclick="ecRemoveRow(${i})" title="Remove">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>`
+    ).join('');
+}
+
+function ecCalcTotal() {
+    const transport = +document.getElementById('ec-transport')?.value || 0;
+    const food      = +document.getElementById('ec-food')?.value     || 0;
+    const extras    = _ecExtraRows.reduce((s, r) => s + (+r.amount || 0), 0);
+    const total     = transport + food + extras;
+    const el = document.getElementById('ec-total-display');
+    if (el) el.textContent = total.toLocaleString('en-US') + ' IQD';
+    return total;
+}
+
+async function saveExpClaim() {
+    const errEl = document.getElementById('exp-claim-err');
+    errEl.style.display = 'none';
+
+    const proj      = document.getElementById('ec-proj').value;
+    const siteId    = document.getElementById('ec-site').value.trim();
+    const gov       = document.getElementById('ec-gov').value.trim();
+    const desc      = document.getElementById('ec-desc').value;
+    const dateVal   = document.getElementById('ec-date').value;
+    const transport = +document.getElementById('ec-transport').value || 0;
+    const food      = +document.getElementById('ec-food').value      || 0;
+    const accom     = document.getElementById('ec-accom').value;
+
+    if (!proj)    { errEl.textContent = 'Project name is required.';  errEl.style.display = ''; return; }
+    if (!siteId)  { errEl.textContent = 'Site ID is required.';       errEl.style.display = ''; return; }
+    if (!desc)    { errEl.textContent = 'Description is required.';   errEl.style.display = ''; return; }
+    if (!dateVal) { errEl.textContent = 'Activity date is required.'; errEl.style.display = ''; return; }
+
+    const memberId = await _getMyMemberId();
+    if (!memberId) {
+        errEl.textContent = 'Your profile was not found in Team Members. Please contact an admin.';
+        errEl.style.display = ''; return;
+    }
+
+    // Duplicate check: same member + same site_id + same activity_date (only for new claims)
+    if (!_expClaimsEditId) {
+        const dup = _expClaims.find(c =>
+            c.site_id === siteId &&
+            c.activity_date === dateVal &&
+            c.status !== 'rejected'
+        );
+        if (dup) {
+            errEl.textContent = 'You already have a claim for this site on this date.';
+            errEl.style.display = ''; return;
+        }
+    }
+
+    const total = ecCalcTotal();
+    const payload = {
+        member_id:        memberId,
+        project_name:     proj,
+        site_id:          siteId,
+        governorate:      gov || null,
+        description:      desc,
+        activity_date:    dateVal,
+        transport_amount: transport,
+        food_amount:      food,
+        accommodation:    accom || null,
+        extra_categories: JSON.stringify(_ecExtraRows.filter(r => r.category)),
+        total_amount:     total,
+        status:           'pending',
+        rejection_reason: null,
+        submitted_at:     new Date().toISOString(),
+    };
+
+    const btn = document.getElementById('exp-claim-save-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+        if (_expClaimsEditId) {
+            // Resubmit: update existing claim, reset to pending
+            const { error } = await _sb.from('expense_claims').update(payload).eq('id', _expClaimsEditId);
+            if (error) throw error;
+            const idx = _expClaims.findIndex(x => x.id === _expClaimsEditId);
+            if (idx >= 0) _expClaims[idx] = { ..._expClaims[idx], ...payload };
+            toast('Claim resubmitted', 'ok');
+        } else {
+            const { data, error } = await _sb.from('expense_claims').insert(payload).select('id').single();
+            if (error) throw error;
+            _expClaims.unshift({ id: data.id, ...payload });
+            toast('Claim submitted', 'ok');
+        }
+    } catch(e) {
+        errEl.textContent = e.message;
+        errEl.style.display = '';
+        if (btn) btn.disabled = false;
+        return;
+    }
+
+    if (btn) btn.disabled = false;
+    document.getElementById('exp-claim-modal').classList.remove('open');
+    _renderMyExpenses();
+}
+
+// ══════════════════════════════════════════════
+// EXPENSE CLAIMS — ADMIN VIEW
+// ══════════════════════════════════════════════
+
+let _adminExpClaims = [];
+
+async function showFinExpClaims(force = false) {
+    _finNavActive('nav-fin-exp-claims');
+    setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Expense Claims</span>');
+    const pc = _finSpinner();
+    try {
+        if (_finTeam.length === 0 || force) await _loadFinAll();
+        await _loadAdminExpClaims();
+    } catch(_) {}
+    _renderFinExpClaims(pc);
+}
+
+async function _loadAdminExpClaims() {
+    const { data, error } = await _sb.from('expense_claims')
+        .select('*')
+        .order('submitted_at', { ascending: false });
+    if (!error) _adminExpClaims = data || [];
+}
+
+function _renderFinExpClaims(pc) {
+    pc = pc || document.getElementById('panel-content');
+    const pending  = _adminExpClaims.filter(r => r.status === 'pending');
+    const approved = _adminExpClaims.filter(r => r.status === 'approved');
+    const rejected = _adminExpClaims.filter(r => r.status === 'rejected');
+
+    function memberName(memberId) {
+        const m = _finTeam.find(t => t.id === memberId);
+        return m ? esc(m.full_name || '') : esc(memberId || '—');
+    }
+
+    function claimRow(r, showActions) {
+        const badgeCls = r.status === 'approved' ? 'exp-badge-approved'
+                       : r.status === 'rejected' ? 'exp-badge-rejected'
+                       : 'exp-badge-pending';
+        const statusLabel = r.status ? (r.status.charAt(0).toUpperCase() + r.status.slice(1)) : 'Pending';
+        const actionsHtml = showActions ? `
+            <button class="adm-exp-approve-btn" onclick="approveExpClaim('${r.id}')">Approve</button>
+            <button class="adm-exp-reject-btn" onclick="_showExpRejectInput('${r.id}',this)" style="margin-left:6px">Reject</button>
+            <div class="adm-exp-rej-wrap" id="rej-wrap-${r.id}" style="display:none">
+                <input class="adm-exp-rej-inp" type="text" placeholder="Rejection reason…" id="rej-inp-${r.id}">
+                <button class="adm-exp-rej-confirm" onclick="submitExpReject('${r.id}')">Confirm Reject</button>
+            </div>` : '';
+        const rejectionHtml = r.status === 'rejected' && r.rejection_reason
+            ? `<div style="font-size:11px;color:var(--red);margin-top:4px">${esc(r.rejection_reason)}</div>` : '';
+        return `<tr id="adm-exp-row-${r.id}">
+            <td>${memberName(r.member_id)}</td>
+            <td>${esc(r.project_name||'—')}</td>
+            <td>${esc(r.site_id||'—')}</td>
+            <td style="white-space:nowrap">${esc(r.activity_date||'—')}</td>
+            <td>${esc(r.description||'—')}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600">${iqd(r.total_amount)}</td>
+            <td><span class="exp-badge ${badgeCls}">${statusLabel}</span>${rejectionHtml}</td>
+            <td>${actionsHtml}</td>
+        </tr>`;
+    }
+
+    pc.innerHTML = `<div class="fin-page">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+            <div>
+                <div style="font-size:22px;font-weight:800;color:var(--text-primary)">Expense Claims</div>
+                <div style="font-size:13px;color:var(--slate-400);margin-top:3px">${pending.length} pending · ${approved.length} approved · ${rejected.length} rejected</div>
+            </div>
+            <button class="btn btn-ghost" onclick="showFinExpClaims(true)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
+            </button>
+        </div>
+
+        ${pending.length > 0 ? `
+        <div style="font-size:13px;font-weight:700;color:var(--slate-700);margin-bottom:10px;padding:8px 0;border-bottom:2px solid var(--slate-200)">
+            Pending Claims <span style="font-size:12px;font-weight:600;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;margin-left:6px">${pending.length}</span>
+        </div>
+        <div class="fin-table-wrap" style="margin-bottom:28px">
+            <table class="fin-table"><thead><tr>
+                <th>Member</th><th>Project</th><th>Site ID</th><th>Date</th><th>Description</th>
+                <th style="text-align:right">Total (IQD)</th><th>Status</th><th>Actions</th>
+            </tr></thead><tbody>
+            ${pending.map(r => claimRow(r, true)).join('')}
+            </tbody></table>
+        </div>` : `<div style="padding:20px 0 24px;color:var(--slate-400);font-size:14px">No pending claims.</div>`}
+
+        ${approved.length > 0 || rejected.length > 0 ? `
+        <div style="font-size:13px;font-weight:700;color:var(--slate-700);margin-bottom:10px;padding:8px 0;border-bottom:2px solid var(--slate-200)">All Claims History</div>
+        <div class="fin-table-wrap">
+            <table class="fin-table"><thead><tr>
+                <th>Member</th><th>Project</th><th>Site ID</th><th>Date</th><th>Description</th>
+                <th style="text-align:right">Total (IQD)</th><th>Status</th><th></th>
+            </tr></thead><tbody>
+            ${[...approved, ...rejected].map(r => claimRow(r, false)).join('')}
+            </tbody></table>
+        </div>` : ''}
+    </div>`;
+}
+
+function _showExpRejectInput(id, btn) {
+    const wrap = document.getElementById(`rej-wrap-${id}`);
+    if (wrap) {
+        wrap.style.display = wrap.style.display === 'none' ? 'flex' : 'none';
+        if (wrap.style.display === 'flex') {
+            const inp = document.getElementById(`rej-inp-${id}`);
+            if (inp) setTimeout(() => inp.focus(), 60);
+        }
+    }
+}
+
+async function approveExpClaim(id) {
+    const claim = _adminExpClaims.find(x => x.id === id);
+    if (!claim) return;
+
+    // Insert into project_expenses
+    const dateObj = claim.activity_date ? new Date(claim.activity_date) : new Date();
+    const projExpPayload = {
+        project_name:  claim.project_name,
+        description:   claim.description,
+        category:      'Transport',
+        amount:        claim.total_amount,
+        expense_date:  claim.activity_date || null,
+        activity_date: claim.activity_date || null,
+        month:         dateObj.getMonth() + 1,
+        year:          dateObj.getFullYear(),
+        site_id:       claim.site_id || null,
+        accommodation: claim.accommodation || null,
+        notes:         `Expense claim from ${_finTeam.find(t=>t.id===claim.member_id)?.full_name||'team member'}. Governorate: ${claim.governorate||'—'}`,
+        added_by:      currentUser?.full_name || '',
+    };
+
+    try {
+        const { error: peErr } = await _sb.from('project_expenses').insert(projExpPayload);
+        if (peErr) throw peErr;
+        const { error: clErr } = await _sb.from('expense_claims').update({ status: 'approved', rejection_reason: null }).eq('id', id);
+        if (clErr) throw clErr;
+    } catch(e) { toast(e.message, 'err'); return; }
+
+    const idx = _adminExpClaims.findIndex(x => x.id === id);
+    if (idx >= 0) _adminExpClaims[idx].status = 'approved';
+    _invalidateFin();
+    toast('Claim approved and added to Project Expenses', 'ok');
+    _renderFinExpClaims();
+}
+
+async function submitExpReject(id) {
+    const inp    = document.getElementById(`rej-inp-${id}`);
+    const reason = inp?.value.trim() || '';
+    if (!reason) { if (inp) { inp.style.borderColor='var(--red)'; inp.placeholder='Reason required'; } return; }
+
+    try {
+        const { error } = await _sb.from('expense_claims').update({ status: 'rejected', rejection_reason: reason }).eq('id', id);
+        if (error) throw error;
+    } catch(e) { toast(e.message, 'err'); return; }
+
+    const idx = _adminExpClaims.findIndex(x => x.id === id);
+    if (idx >= 0) { _adminExpClaims[idx].status = 'rejected'; _adminExpClaims[idx].rejection_reason = reason; }
+    toast('Claim rejected', 'ok');
+    _renderFinExpClaims();
+}
 </script>
 </body>
 </html>
