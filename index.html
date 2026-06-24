@@ -129,6 +129,10 @@
         body.role-user .perm-sec-menu .tree-sec-menu-btn { display: flex !important; }
         body.role-user .admin-only        { display: none !important; }
         body.role-admin .admin-only       { display: block !important; }
+        /* Project tree groups and dashboard nav: hidden by default for non-admin.
+           applyPermissions() adds perm-show / perm-section-show to reveal granted items. */
+        body.role-user .tree-group { display: none; }
+        body.role-user #dash-nav   { display: none; }
         /* Permission overrides: granted items visible even inside admin-only */
         body.role-user .perm-section-show { display: block !important; }
         body.role-user .perm-show         { display: flex  !important; }
@@ -542,7 +546,7 @@
 
         /* ── My Expenses (member-facing) ─────── */
         .member-section { display: none; }
-        body.role-user .member-section { display: block !important; }
+        /* Visibility controlled by applyPermissions() → perm-section-show, not auto-shown */
         body.role-admin .member-section { display: none !important; }
         .exp-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; }
         .exp-badge-pending  { background:#fef3c7; color:#92400e; }
@@ -3648,6 +3652,9 @@ function applyPermissions() {
     sv('nav-fin-projexp',     p.view_fin_projexp,     true);
     sv('nav-fin-report',      p.view_fin_report,      true);
 
+    // My Expenses (member-facing sidebar section)
+    sv('sidebar-my-expenses-section', p.view_my_expenses, false);
+
     // Admin — activity log only (user mgmt is always admin-only)
     if (p.view_activity_log) {
         sv('sidebar-admin-section', true, false);
@@ -3656,6 +3663,14 @@ function applyPermissions() {
 
     // Action buttons — only after renderMain populates them
     _applyActionPerms();
+}
+
+// Permission guard — returns true if allowed, shows a toast and returns false if denied.
+function _guardPerm(key) {
+    if (currentUser?.role === 'admin') return true;
+    if (hasPerm(key)) return true;
+    toast('You do not have permission to view this section.', 'err');
+    return false;
 }
 
 function _applyActionPerms() {
@@ -3776,6 +3791,7 @@ function toggleGroup(name) {
 let _dashCharts = [];
 
 async function showDashboard() {
+    if (!_guardPerm('view_dashboard')) return;
     selProj = null; selSec = null;
     dropFilters = {}; searchQuery = ''; chipFilters = new Set(); _secStatFilter = null; ddClose();
     closeSidebar();
@@ -4046,6 +4062,7 @@ function _renderDashboard(pc) {
 
 
 async function selectSection(proj, sec) {
+    if (!_guardPerm('view_' + proj)) return;
     selProj = proj; selSec = sec;
     dropFilters = {}; searchQuery = ''; chipFilters = new Set(); _secStatFilter = null; pageSize = 50; currentPage = 1; ddClose();
     closeSidebar();
@@ -6193,23 +6210,14 @@ const _UM_FIXED_VIEW_BOTTOM = [
     { key: 'view_activity_log',  label: 'Activity Log' },
 ];
 
-// Known project → permission key mapping (backward-compatible with existing saved permissions)
-const _KNOWN_PROJ_KEYS = {
-    'Zain Project':   'view_zain',
-    'Nokia Project':  'view_nokia',
-    'Huawei Project': 'view_huawei',
-    'MRC Project':    'view_mrc',
-    'Metco Project':  'view_metco',
-    'MFC Project':    'view_mfc',
-    'TAC Project':    'view_tac',
-    'IPT Project':    'view_ipt',
-    'TASC Project':   'view_tasc',
-};
-
-// Generate a permission key for a project not in the known list
+// Project permission key: DB stores short keys (e.g. 'zain', 'tac') so
+// 'view_' + name gives the correct backward-compatible key ('view_zain', 'view_tac', …).
 function _projPermKey(name) {
-    return _KNOWN_PROJ_KEYS[name]
-        || 'view_proj_' + name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    return 'view_' + name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+// Label from PROJ_NAMES, falling back to title-casing the raw value.
+function _projPermLabel(name) {
+    return PROJ_NAMES[name] || name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 // ACTIONS — static list, easily extended here when new features land
@@ -6237,17 +6245,18 @@ const _UM_ACT_DEFS = [
 let _umCurrentViewDefs = [];
 let _umEditId = null;
 
-// Build (or rebuild) the permissions UI with the given extra project names from DB
+// Build (or rebuild) the permissions UI.
+// dbProjects = distinct project_name values from the sections table (short keys like 'zain', 'tac').
+// No hardcoded project list — only what's in the DB, deduplicated and sorted.
 function _umBuildPermUI(dbProjects) {
-    // Ordered project list: known built-ins first (in PROJ_NAMES order), then any extras
-    const knownNames = Object.keys(_KNOWN_PROJ_KEYS);
-    const knownSet   = new Set(knownNames);
-    const extras     = (dbProjects || []).filter(n => !knownSet.has(n)).sort();
-
-    const projectDefs = [...knownNames, ...extras].map(name => ({
-        key:   _projPermKey(name),
-        label: name,
-    }));
+    const seen = new Set();
+    const projectDefs = (dbProjects || [])
+        .filter(n => n && !seen.has(n) && seen.add(n))  // deduplicate
+        .sort()
+        .map(name => ({
+            key:   _projPermKey(name),
+            label: _projPermLabel(name),
+        }));
 
     _umCurrentViewDefs = [
         ..._UM_FIXED_VIEW_TOP,
@@ -6488,6 +6497,7 @@ async function _loadFinAll() {
 // FINANCE DASHBOARD
 // ══════════════════════════════════════════════
 async function showFinDashboard(force = false) {
+    if (!_guardPerm('view_fin_dashboard')) return;
     _finNavActive('nav-fin-dashboard');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Dashboard</span>');
     if (_finCacheOk() && !force) {
@@ -6785,6 +6795,7 @@ function _renderFinDashboard(pc) {
 // TEAM MEMBERS
 // ══════════════════════════════════════════════
 async function showFinTeam(force = false) {
+    if (!_guardPerm('view_fin_team')) return;
     _finNavActive('nav-fin-team');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Team Members</span>');
     if (_finCacheOk() && !force) {
@@ -7598,6 +7609,7 @@ async function importTeamBulkAdd() {
 let _wlMonth = _nowM(), _wlYear = _nowY(), _wlWorkDays = 22;
 
 async function showFinWorkLog(force = false) {
+    if (!_guardPerm('view_fin_worklog')) return;
     _finNavActive('nav-fin-worklog');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Work Log</span>');
     if (_finCacheOk() && !force) {
@@ -7826,6 +7838,7 @@ async function _updateRevAmount(id, val) {
 }
 
 async function showFinRevenue(force = false) {
+    if (!_guardPerm('view_fin_revenue')) return;
     _finNavActive('nav-fin-revenue');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Revenue</span>');
     _revFilters = { proj:'', month: _nowM(), year: _nowY() };
@@ -7973,6 +7986,7 @@ async function deleteFinRev(id) {
 let _geFilters = { cat:'', month:0, year:0 };
 
 async function showFinGenExp(force = false) {
+    if (!_guardPerm('view_fin_genexp')) return;
     _finNavActive('nav-fin-genexp');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">General Expenses</span>');
     _geFilters = { cat:'', month: _nowM(), year: _nowY() };
@@ -8100,6 +8114,7 @@ async function deleteFinGenExp(id) {
 let _peFilters = { proj:'', cat:'', month:0, year:0 };
 
 async function showFinProjExp(force = false) {
+    if (!_guardPerm('view_fin_projexp')) return;
     _finNavActive('nav-fin-projexp');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Project Expenses</span>');
     _peFilters = { proj:'', cat:'', month: _nowM(), year: _nowY() };
@@ -8380,6 +8395,7 @@ let _repMonth = _nowM(), _repYear = _nowY();
 let _repCharts = [];
 
 async function showFinReport(force = false) {
+    if (!_guardPerm('view_fin_report')) return;
     _finNavActive('nav-fin-report');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Monthly Report</span>');
     _repCharts.forEach(c => { try { c.destroy(); } catch(_) {} }); _repCharts = [];
@@ -8815,6 +8831,7 @@ function _hrCardHtml(m) {
 
 // ── List page ─────────────────────────────────────────────────────────────────
 async function showHrProfiles(force = false) {
+    if (!_guardPerm('view_hr_profiles')) return;
     _finNavActive('nav-hr-profiles');
     setTopbar('<span class="bc-cur">Employee Profiles</span>');
     if (_finCacheOk() && !force) {
@@ -9288,6 +9305,7 @@ async function _getMyMemberId() {
 }
 
 async function showMyExpenses() {
+    if (!_guardPerm('view_my_expenses')) return;
     _finNavActive('nav-my-expenses');
     setTopbar('<span class="bc-cur">My Expenses</span>');
     const pc = _finSpinner();
@@ -9528,6 +9546,7 @@ async function saveExpClaim() {
 let _adminExpClaims = [];
 
 async function showFinExpClaims(force = false) {
+    if (!_guardPerm('view_exp_claims')) return;
     _finNavActive('nav-fin-exp-claims');
     setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Expense Claims</span>');
     const pc = _finSpinner();
