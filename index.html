@@ -3154,9 +3154,9 @@ function _langStorageKey() {
 }
 
 function setLang(lang, save = true) {
-    if (currentUser?.role?.toLowerCase() !== 'technician') return;
+    window._lang = lang;
     _lang = lang;
-    if (save) localStorage.setItem(_langStorageKey(), lang);
+    if (save) localStorage.setItem('jsr_lang', lang);
 
     // Toggle active chip
     document.getElementById('lang-chip-en')?.classList.toggle('lc-active', lang === 'en');
@@ -3195,10 +3195,8 @@ function setLang(lang, save = true) {
 }
 
 function _loadLangPref() {
-    if (currentUser?.role?.toLowerCase() !== 'technician') return;
-    const saved = localStorage.getItem(_langStorageKey());
-    if (saved === 'ar') setLang('ar', false);
-    else setLang('en', false);
+    const saved = localStorage.getItem('jsr_lang');
+    setLang(saved === 'ar' ? 'ar' : 'en', false);
 }
 
 // ── State ────────────────────────────────────────
@@ -3922,7 +3920,14 @@ function show(id) {
 // ── Role / user display ───────────────────────────
 function applyUserRole() {
     if (!currentUser) return;
+    console.log('[JSR] currentUser.role =', currentUser.role);
     const isAdmin = currentUser.role === 'admin';
+    const isTech  = currentUser.role?.toLowerCase() === 'technician';
+
+    // Show / hide language toggle — must use explicit 'block', not '' (CSS default is none)
+    const langWrap = document.getElementById('lang-toggle-wrap');
+    if (langWrap) langWrap.style.display = isTech ? 'block' : 'none';
+    if (isTech) _loadLangPref();
 
     document.body.classList.toggle('role-admin', isAdmin);
     document.body.classList.toggle('role-user',  !isAdmin);
@@ -3990,11 +3995,6 @@ function applyPermissions() {
         sv('sidebar-admin-section', true, false);
         sv('nav-activity-log',      true, true);
     }
-
-    // Language toggle — technicians only
-    const langWrap = document.getElementById('lang-toggle-wrap');
-    if (langWrap) langWrap.style.display = currentUser?.role?.toLowerCase() === 'technician' ? '' : 'none';
-    _loadLangPref();
 
     // Action buttons — only after renderMain populates them
     _applyActionPerms();
