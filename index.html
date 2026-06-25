@@ -775,24 +775,29 @@
 
         /* ── Dashboard ──────────────────── */
         /* Hero Banner */
-        .dash-hero { background:linear-gradient(135deg,#0f2038 0%,#1a4a8a 100%); border-radius:14px; padding:24px 28px; margin-bottom:20px; display:flex; align-items:center; gap:24px; color:#fff; position:relative; overflow:hidden; }
-        .dash-hero::before { content:''; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 75% 50%,rgba(96,165,250,.2) 0%,transparent 60%); }
+        @keyframes dash-hero-shimmer { 0%{transform:translateX(-100%) skewX(-15deg)} 100%{transform:translateX(500%) skewX(-15deg)} }
+        @keyframes dash-ring-in { from { stroke-dashoffset:238.76; } }
+        @keyframes dash-bar-in  { from { width:0%; } }
+        @keyframes dash-card-in { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+        .dash-hero { background:linear-gradient(135deg,#0f2038 0%,#1a4a8a 100%), radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px); background-size:100% 100%,18px 18px; border-radius:14px; padding:24px 28px; margin-bottom:20px; display:flex; align-items:center; gap:24px; color:#fff; position:relative; overflow:hidden; }
+        .dash-hero::before { content:''; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 75% 50%,rgba(96,165,250,.22) 0%,transparent 60%); z-index:0; }
+        .dash-hero::after  { content:''; position:absolute; top:0; bottom:0; left:-40%; width:25%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.045),transparent); animation:dash-hero-shimmer 9s ease-in-out infinite; pointer-events:none; z-index:0; }
         .dash-hero-left { flex:1; min-width:0; position:relative; z-index:1; }
         .dash-hero-title { font-size:20px; font-weight:900; color:#fff; letter-spacing:-.2px; }
         .dash-hero-sub { font-size:12px; color:rgba(255,255,255,.55); margin-top:4px; margin-bottom:18px; }
         .dash-hero-center { display:flex; gap:0; align-items:center; flex-shrink:0; position:relative; z-index:1; }
-        .dash-hstat { text-align:center; padding:0 18px; }
-        .dash-hstat + .dash-hstat { border-left:1px solid rgba(255,255,255,.12); }
-        .dash-hstat-val { font-size:30px; font-weight:900; line-height:1; }
-        .dash-hstat-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; margin-top:5px; opacity:.65; }
+        .dash-hstat { text-align:center; padding:0 20px; }
+        .dash-hstat + .dash-hstat { border-left:1px solid rgba(255,255,255,.18); }
+        .dash-hstat-val { font-size:34px; font-weight:900; line-height:1; letter-spacing:-1px; }
+        .dash-hstat-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; margin-top:6px; opacity:.6; }
         .hs-white  .dash-hstat-val { color:#fff; }
         .hs-blue   .dash-hstat-val { color:#60a5fa; }
         .hs-green  .dash-hstat-val { color:#34d399; }
         .hs-orange .dash-hstat-val { color:#fbbf24; }
-        .dash-ring-wrap { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:6px; position:relative; z-index:1; padding-left:20px; border-left:1px solid rgba(255,255,255,.12); }
+        .dash-ring-wrap { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:6px; position:relative; z-index:1; padding-left:20px; border-left:1px solid rgba(255,255,255,.18); }
         .dash-ring-lbl { font-size:9px; font-weight:700; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.6px; text-align:center; }
-        @keyframes dash-ring-in { from { stroke-dashoffset:238.76; } }
-        .dash-ring-path { animation:dash-ring-in 1.2s ease forwards; }
+        .dash-ring-path { animation:dash-ring-in 1.2s ease forwards; filter:drop-shadow(0 0 5px rgba(52,211,153,.5)); }
 
         /* Summary chips + refresh row */
         .dash-toprow { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
@@ -807,9 +812,12 @@
         @media (max-width:1100px) { .dash-grid { grid-template-columns:repeat(2,1fr); } }
         @media (max-width:700px)  { .dash-grid { grid-template-columns:1fr; } }
 
+        /* Card entrance animation */
+        .dash-card-anim { opacity:0; animation:dash-card-in .4s ease-out forwards; }
+
         /* Individual section card */
-        .dash-sc { background:#fff; border:1px solid #e5e7eb; border-radius:16px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.06); transition:box-shadow .2s,transform .2s; display:flex; flex-direction:column; }
-        .dash-sc:hover { box-shadow:0 6px 20px rgba(0,0,0,.10); transform:translateY(-2px); }
+        .dash-sc { background:#fff; border:1px solid #e5e7eb; border-radius:16px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.06); transition:all 0.25s ease; display:flex; flex-direction:column; cursor:pointer; }
+        .dash-sc:hover { box-shadow:0 10px 32px var(--card-shadow,rgba(0,0,0,.13)); transform:translateY(-4px); }
 
         .dash-sc-head { padding:16px 16px 12px; }
         .dash-sc-row1 { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
@@ -823,6 +831,10 @@
         .dash-badge-inst     { background:#dbeafe; color:#1d4ed8; }
         .dash-badge-atp-ok   { background:#dcfce7; color:#15803d; }
         .dash-badge-atp-warn { background:#fef3c7; color:#b45309; }
+        .dash-pill { font-size:10px; font-weight:700; padding:3px 9px; border-radius:99px; white-space:nowrap; display:inline-flex; align-items:center; gap:3px; }
+        .dash-pill-complete { background:rgba(22,163,74,.12);  color:#16a34a; }
+        .dash-pill-progress { background:rgba(217,119,6,.12);  color:#d97706; }
+        .dash-pill-none     { background:rgba(100,116,139,.1); color:#64748b; }
 
         .dash-sc-planned { background:#f8fafc; border-top:1px solid #f1f5f9; padding:10px 16px 8px; }
         .dash-sc-slbl { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--slate-400); margin-bottom:6px; }
@@ -843,15 +855,13 @@
         .dash-pm-cnt { font-size:11px; color:var(--slate-500); font-weight:600; }
         .dash-pm-pct { font-size:12px; font-weight:800; min-width:36px; text-align:right; }
         .dash-pm-bar { height:6px; background:var(--slate-100); border-radius:99px; overflow:hidden; }
-        .dash-pm-fill { height:100%; border-radius:99px; }
-        @keyframes dash-bar-in { from { width:0%; } }
-        .dash-pm-fill { animation:dash-bar-in .8s ease forwards; }
+        .dash-pm-fill { height:100%; border-radius:99px; animation:dash-bar-in .8s ease-out forwards; }
         .fill-blue   { background:#3b82f6; }
         .fill-green  { background:#10b981; }
         .fill-red    { background:#ef4444; }
         .fill-orange { background:#f59e0b; }
 
-        .dash-sc-nodata { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:28px 16px; color:var(--slate-400); font-size:12px; text-align:center; }
+        .dash-sc-nodata { display:flex; align-items:center; gap:8px; padding:12px 16px; color:var(--slate-400); font-size:11px; }
 
         /* ── Sidebar brand ───────────────── */
         .sidebar-brand {
@@ -4205,6 +4215,26 @@ async function showDashboard() {
     }
 }
 
+const _PROJ_COLOR = {
+    zain:'#3B82F6', nokia:'#10B981', huawei:'#EF4444',
+    mrc:'#F59E0B',  metco:'#8B5CF6', mfc:'#14B8A6',
+    tac:'#6366F1',  ipt:'#F43F5E',  tasc:'#06B6D4'
+};
+let _dashHeroAnimated = false;
+
+function _projColor(key) { return _PROJ_COLOR[(key||'').toLowerCase()] || '#64748B'; }
+function _hexToRgba(hex, a) {
+    const n = parseInt((hex||'#64748b').replace('#',''), 16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function _darkenHex(hex, f=0.72) {
+    const n = parseInt((hex||'#64748b').replace('#',''), 16);
+    const r = Math.round(((n>>16)&255)*f).toString(16).padStart(2,'0');
+    const g = Math.round(((n>>8)&255)*f).toString(16).padStart(2,'0');
+    const b = Math.round((n&255)*f).toString(16).padStart(2,'0');
+    return `#${r}${g}${b}`;
+}
+
 function _renderDashboard(pc) {
     if (!pc) pc = document.getElementById('panel-content');
 
@@ -4260,9 +4290,10 @@ function _renderDashboard(pc) {
     }
 
     // Single progress metric row + bar
-    function buildPM(name, count, total, cls) {
+    function buildPM(name, count, total, cls, barIdx) {
         const pct      = total > 0 ? count / total * 100 : 0;
         const pctColor = cls==='fill-blue' ? '#3b82f6' : cls==='fill-green' ? '#10b981' : cls==='fill-red' ? '#ef4444' : '#f59e0b';
+        const barDelay = (barIdx || 0) * 100;
         return `<div class="dash-pm">
             <div class="dash-pm-row">
                 <div class="dash-pm-left">${pmIcon(pct)}<span class="dash-pm-name">${name}</span></div>
@@ -4271,27 +4302,30 @@ function _renderDashboard(pc) {
                     <span class="dash-pm-pct" style="color:${pctColor}">${pct.toFixed(1)}%</span>
                 </div>
             </div>
-            <div class="dash-pm-bar"><div class="dash-pm-fill ${cls}" style="width:${pct.toFixed(2)}%"></div></div>
+            <div class="dash-pm-bar"><div class="dash-pm-fill ${cls}" style="width:${pct.toFixed(2)}%;animation-delay:${barDelay}ms"></div></div>
         </div>`;
     }
 
-    // Icon background colour per section type
-    function secBg(key) {
-        return key==='ftk' ? '#2563eb' : key==='tdd' ? '#7c3aed' : key==='addsector' ? '#0891b2' : '#d97706';
-    }
     const SEC_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="20" x2="22" y2="20"/><line x1="12" y1="20" x2="12" y2="4"/><polyline points="7 9 12 4 17 9"/><line x1="7" y1="13" x2="17" y2="13"/></svg>`;
+    const NODATA_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>`;
 
     // Build one section card
-    function buildCard(projKey, projName, secKey, secLbl) {
+    function buildCard(projKey, projName, secKey, secLbl, cardIdx) {
+        const color  = _projColor(projKey);
+        const dark   = _darkenHex(color);
+        const shadow = _hexToRgba(color, 0.15);
+        const delay  = (cardIdx || 0) * 60;
+        const iconBg = `linear-gradient(135deg,${color},${dark})`;
+        const cardBase = `class="dash-sc dash-card-anim" style="border-top:3px solid ${color};--card-shadow:${shadow};animation-delay:${delay}ms"`;
+
         const st = secStats(projKey, secKey);
-        const bg = secBg(secKey);
 
         if (!st || st.total === 0) return `
-        <div class="dash-sc">
+        <div ${cardBase}>
             <div class="dash-sc-head">
                 <div class="dash-sc-row1">
                     <div style="display:flex;align-items:center;gap:10px">
-                        <div class="dash-sc-icon" style="background:${bg}">${SEC_SVG}</div>
+                        <div class="dash-sc-icon" style="background:${iconBg}">${SEC_SVG}</div>
                         <div class="dash-sc-meta">
                             <div class="dash-sc-name">${esc(projName)}</div>
                             <div class="dash-sc-proj">${esc(secLbl)}</div>
@@ -4300,20 +4334,22 @@ function _renderDashboard(pc) {
                     </div>
                 </div>
             </div>
-            <div class="dash-sc-nodata">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:var(--slate-300)"><path d="M9 17H7A5 5 0 0 1 7 7h1m7 10h2a5 5 0 0 0 0-10h-1M12 12v5m0-9v.01"/></svg>
-                No data imported yet
-            </div>
+            <div class="dash-sc-nodata">${NODATA_SVG}<span>No data yet</span></div>
         </div>`;
 
-        const instPct = st.total > 0 ? st.installed    / st.total * 100 : 0;
-        const atpPct  = st.total > 0 ? st.atpAccepted  / st.total * 100 : 0;
+        const instPct = st.total > 0 ? st.installed   / st.total * 100 : 0;
+        const atpPct  = st.total > 0 ? st.atpAccepted / st.total * 100 : 0;
+        const pill = instPct >= 100
+            ? `<span class="dash-pill dash-pill-complete">✓ Complete</span>`
+            : instPct > 0
+                ? `<span class="dash-pill dash-pill-progress">● In Progress</span>`
+                : `<span class="dash-pill dash-pill-none">Not Started</span>`;
         return `
-        <div class="dash-sc">
+        <div ${cardBase}>
             <div class="dash-sc-head">
                 <div class="dash-sc-row1">
                     <div style="display:flex;align-items:center;gap:10px">
-                        <div class="dash-sc-icon" style="background:${bg}">${SEC_SVG}</div>
+                        <div class="dash-sc-icon" style="background:${iconBg}">${SEC_SVG}</div>
                         <div class="dash-sc-meta">
                             <div class="dash-sc-name">${esc(projName)}</div>
                             <div class="dash-sc-proj">${esc(secLbl)}</div>
@@ -4321,6 +4357,7 @@ function _renderDashboard(pc) {
                         </div>
                     </div>
                     <div class="dash-sc-badges">
+                        ${pill}
                         <span class="dash-badge dash-badge-inst">INST ${instPct.toFixed(0)}%</span>
                         <span class="dash-badge ${atpPct >= 50 ? 'dash-badge-atp-ok' : 'dash-badge-atp-warn'}">ATP ${atpPct.toFixed(0)}%</span>
                     </div>
@@ -4333,10 +4370,10 @@ function _renderDashboard(pc) {
             </div>
             <div class="dash-sc-prog">
                 <div class="dash-sc-slbl">Progress</div>
-                ${buildPM('Installed',    st.installed,   st.total, 'fill-blue')}
-                ${buildPM('ATP Accepted', st.atpAccepted, st.total, 'fill-green')}
-                ${buildPM('ATP Rejected', st.atpRejected, st.total, 'fill-red')}
-                ${buildPM('ATP Pending',  st.atpPending,  st.total, 'fill-orange')}
+                ${buildPM('Installed',    st.installed,   st.total, 'fill-blue',   0)}
+                ${buildPM('ATP Accepted', st.atpAccepted, st.total, 'fill-green',  1)}
+                ${buildPM('ATP Rejected', st.atpRejected, st.total, 'fill-red',    2)}
+                ${buildPM('ATP Pending',  st.atpPending,  st.total, 'fill-orange', 3)}
             </div>
         </div>`;
     }
@@ -4356,6 +4393,7 @@ function _renderDashboard(pc) {
     // Accumulate grand totals while building cards (single pass)
     let grandTotal = 0, grandInstalled = 0, grandAccepted = 0, grandRejected = 0;
     const allCards = [];
+    let _cardIdx = 0;
 
     ALL_PROJS.forEach(p => {
         Object.keys(db[p.key] || {}).forEach(secKey => {
@@ -4367,7 +4405,7 @@ function _renderDashboard(pc) {
                 grandAccepted  += st.atpAccepted;
                 grandRejected  += st.atpRejected;
             }
-            allCards.push(buildCard(p.key, p.name, secKey, lbl));
+            allCards.push(buildCard(p.key, p.name, secKey, lbl, _cardIdx++));
         });
     });
 
@@ -4407,14 +4445,14 @@ function _renderDashboard(pc) {
             </div>
         </div>
         <div class="dash-ring-wrap">
-            <div style="position:relative;width:88px;height:88px">
-                <svg width="88" height="88" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="10"/>
-                    <circle class="dash-ring-path" cx="50" cy="50" r="38" fill="none" stroke="#34d399" stroke-width="10"
+            <div style="position:relative;width:96px;height:96px">
+                <svg width="96" height="96" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="9"/>
+                    <circle class="dash-ring-path" cx="50" cy="50" r="38" fill="none" stroke="#34d399" stroke-width="9"
                         stroke-linecap="round" stroke-dasharray="${ringC}" stroke-dashoffset="${ringOffset}"/>
                 </svg>
                 <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px">
-                    <span style="font-size:16px;font-weight:900;color:#34d399;line-height:1">${(atpOverall*100).toFixed(0)}%</span>
+                    <span style="font-size:18px;font-weight:900;color:#34d399;line-height:1">${(atpOverall*100).toFixed(0)}%</span>
                     <span style="font-size:8px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px">ATP</span>
                 </div>
             </div>
@@ -4436,6 +4474,21 @@ function _renderDashboard(pc) {
     </div>
 
     <div class="dash-grid">${allCards.join('')}</div>`;
+
+    // Counter animation — first load only
+    if (!_dashHeroAnimated) {
+        _dashHeroAnimated = true;
+        const valEls  = pc.querySelectorAll('.dash-hstat-val');
+        const targets = [...valEls].map(el => ({ el, target: parseInt((el.textContent||'0').replace(/,/g,'')) || 0 }));
+        targets.forEach(t => { t.el.textContent = '0'; });
+        const t0 = performance.now(), dur = 1200;
+        (function tick(now) {
+            const p = Math.min((now - t0) / dur, 1);
+            const e = 1 - Math.pow(1 - p, 3);
+            targets.forEach(({ el, target }) => { el.textContent = Math.round(e * target).toLocaleString(); });
+            if (p < 1) requestAnimationFrame(tick);
+        })(performance.now());
+    }
 }
 
 
