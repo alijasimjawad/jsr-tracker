@@ -8701,6 +8701,7 @@ async function saveFinProjExp() {
         month: dateObj.getMonth()+1, year: dateObj.getFullYear(),
         site_id: siteId, employee_ids: empIds, accommodation: accom||null,
         notes: document.getElementById('fpe-notes').value.trim()||null, added_by: currentUser?.full_name||'' };
+    if (!_finProjExpEditId) payload.submitted_by = currentUser?.full_name || null;
     try {
         if (_finProjExpEditId) {
             const { error } = await _sb.from('project_expenses').update(payload).eq('id', _finProjExpEditId);
