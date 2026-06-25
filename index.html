@@ -3873,7 +3873,8 @@ async function login() {
             applySectionLabels();
             applyDeletedSections();
             refreshStatusDots();
-            showDashboard();
+            if (currentUser.role?.toLowerCase() === 'technician') showMyExpenses();
+            else showDashboard();
             _loadFinAll().catch(() => {}); // preload finance data in background
         }
     } catch (err) {
@@ -6225,7 +6226,8 @@ async function initApp() {
         applySectionLabels();
         applyDeletedSections();
         refreshStatusDots();
-        showDashboard();
+        if (currentUser?.role?.toLowerCase() === 'technician') showMyExpenses();
+        else showDashboard();
         _loadFinAll().catch(() => {}); // preload finance data in background
     }
 }
