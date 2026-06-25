@@ -10074,15 +10074,19 @@ function _renderFinExpClaims(pc) {
         const badgeCls = r.status === 'approved' ? 'exp-badge-approved' : r.status === 'rejected' ? 'exp-badge-rejected' : 'exp-badge-pending';
         const statusLabel = r.status ? (r.status.charAt(0).toUpperCase() + r.status.slice(1)) : 'Pending';
         const isPending = r.status === 'pending';
+        const delBtn = `<button class="adm-exp-reject-btn" onclick="deleteAdmExpClaim('${r.id}')" style="margin-left:4px" title="Delete claim">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+               </button>`;
         const actionsHtml = isPending
             ? `<button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>
+               ${delBtn}
                <button class="adm-exp-approve-btn" onclick="approveExpClaim('${r.id}')" style="margin-left:4px">Approve</button>
                <button class="adm-exp-reject-btn" onclick="_showExpRejectInput('${r.id}',this)" style="margin-left:4px">Reject</button>
                <div class="adm-exp-rej-wrap" id="rej-wrap-${r.id}" style="display:none">
                    <input class="adm-exp-rej-inp" type="text" placeholder="Rejection reason…" id="rej-inp-${r.id}">
                    <button class="adm-exp-rej-confirm" onclick="submitExpReject('${r.id}')">Confirm Reject</button>
                </div>`
-            : `<button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>`;
+            : `<button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>${delBtn}`;
         const rejHtml = r.status === 'rejected' && r.rejection_reason
             ? `<div style="font-size:11px;color:var(--red);margin-top:3px">${esc(r.rejection_reason)}</div>` : '';
         const reviewedAt = r.reviewed_at ? r.reviewed_at.slice(0,10) : '';
@@ -10181,6 +10185,17 @@ function _renderFinExpClaims(pc) {
     </div>`;
 
     _updatePendingBadge();
+}
+
+function deleteAdmExpClaim(id) {
+    finDelConfirm('Are you sure you want to delete this claim? This cannot be undone.', async () => {
+        closeFinModal('fin-del-modal');
+        const { error } = await _sb.from('expense_claims').delete().eq('id', id);
+        if (error) { toast(error.message, 'err'); return; }
+        _adminExpClaims = _adminExpClaims.filter(x => x.id !== id);
+        toast('Claim deleted', 'ok');
+        _renderFinExpClaims();
+    });
 }
 
 function _showExpRejectInput(id, btn) {
