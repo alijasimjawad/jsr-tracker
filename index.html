@@ -2510,6 +2510,12 @@
       <div class="ec-field span2"><label>Activity Date *</label>
         <input type="date" id="ec-date" style="max-width:220px">
       </div>
+      <div class="ec-field span2"><label>Team Members</label>
+        <div class="fpe-multiselect" id="ec-emp-wrap" onclick="toggleEcEmpDropdown(event)">
+          <div class="fpe-emp-tags" id="ec-emp-tags"><span class="fpe-emp-placeholder" id="ec-emp-placeholder">Select team members…</span></div>
+          <div class="fpe-emp-dropdown" id="ec-emp-dropdown" style="display:none" onclick="event.stopPropagation()"></div>
+        </div>
+      </div>
       <div class="ec-field"><label>Transport Amount (IQD)</label>
         <input type="number" id="ec-transport" min="0" value="0" placeholder="0" oninput="ecCalcTotal()">
       </div>
@@ -9327,8 +9333,9 @@ document.addEventListener('click', function(e) {
 
 let _expClaims       = [];
 let _expClaimsLoaded = false;
-let _expClaimsEditId = null;  // id of claim being resubmitted (null = new)
-let _ecExtraRows     = [];    // [{category:'', amount:0}, ...]
+let _expClaimsEditId    = null;  // id of claim being resubmitted (null = new)
+let _ecExtraRows        = [];    // [{category:'', amount:0}, ...]
+let _ecSelectedEmpIds   = [];    // selected team member ids for the claim form
 
 async function _loadExpClaims() {
     const memberId = await _getMyMemberId();
@@ -9416,6 +9423,60 @@ function _renderMyExpenses(pc) {
     </div>`;
 }
 
+// ── Expense Claim: Team Members multi-select ──────────────────
+function _ecEmpRenderTags() {
+    const tags = document.getElementById('ec-emp-tags');
+    if (!tags) return;
+    if (_ecSelectedEmpIds.length === 0) {
+        tags.innerHTML = '<span class="fpe-emp-placeholder" id="ec-emp-placeholder">Select team members…</span>';
+    } else {
+        tags.innerHTML = _ecSelectedEmpIds.map(id => {
+            const m = _finTeam.find(x => x.id === id);
+            if (!m) return '';
+            return `<span class="fpe-emp-pill">${esc(m.full_name)}<span class="fpe-emp-pill-x" onclick="event.stopPropagation();_ecEmpToggle('${id}')">×</span></span>`;
+        }).join('');
+    }
+    const dd = document.getElementById('ec-emp-dropdown');
+    if (dd) dd.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        cb.checked = _ecSelectedEmpIds.includes(cb.dataset.id);
+    });
+}
+
+function _ecEmpToggle(id) {
+    const idx = _ecSelectedEmpIds.indexOf(id);
+    if (idx >= 0) _ecSelectedEmpIds.splice(idx, 1);
+    else _ecSelectedEmpIds.push(id);
+    _ecEmpRenderTags();
+}
+
+function _ecEmpPopulateDropdown() {
+    const dd = document.getElementById('ec-emp-dropdown');
+    if (!dd) return;
+    const active = _finTeam.filter(m => m.is_active !== false);
+    dd.innerHTML = active.length === 0
+        ? '<div style="padding:10px 13px;font-size:13px;color:var(--slate-400)">No team members found.</div>'
+        : active.map(m => `<label class="fpe-emp-item"><input type="checkbox" data-id="${m.id}" ${_ecSelectedEmpIds.includes(m.id) ? 'checked' : ''}
+            onchange="_ecEmpToggle('${m.id}')">${esc(m.full_name)}</label>`).join('');
+}
+
+function toggleEcEmpDropdown(e) {
+    const wrap = document.getElementById('ec-emp-wrap');
+    const dd   = document.getElementById('ec-emp-dropdown');
+    if (!wrap || !dd) return;
+    const isOpen = dd.style.display !== 'none';
+    if (isOpen) { dd.style.display = 'none'; wrap.classList.remove('open'); }
+    else { _ecEmpPopulateDropdown(); dd.style.display = ''; wrap.classList.add('open'); }
+}
+
+document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('ec-emp-wrap');
+    const dd   = document.getElementById('ec-emp-dropdown');
+    if (wrap && dd && !wrap.contains(e.target)) {
+        dd.style.display = 'none';
+        wrap.classList.remove('open');
+    }
+});
+
 // ── New Claim / Resubmit modal ────────────────────────────────
 function openNewClaimModal(resubmitId) {
     _expClaimsEditId = resubmitId || null;
@@ -9433,6 +9494,8 @@ function openNewClaimModal(resubmitId) {
     document.getElementById('ec-extra-rows').innerHTML = '';
     document.getElementById('ec-total-display').textContent = '0 IQD';
     document.getElementById('exp-claim-err').style.display = 'none';
+    _ecSelectedEmpIds = [];
+    _ecEmpRenderTags();
 
     if (resubmitId) {
         // Pre-fill from existing claim
@@ -9452,6 +9515,8 @@ function openNewClaimModal(resubmitId) {
                 _ecExtraRows = extra.map(x => ({ category: x.category || '', amount: x.amount || 0 }));
             } catch(_) {}
             _ecRenderExtraRows();
+            try { _ecSelectedEmpIds = JSON.parse(c.employee_ids || '[]'); } catch(_) { _ecSelectedEmpIds = []; }
+            _ecEmpRenderTags();
         }
     } else {
         document.getElementById('exp-claim-modal-title').textContent = 'New Expense Claim';
@@ -9559,6 +9624,7 @@ async function saveExpClaim() {
         food_amount:      food,
         accommodation:    accom || null,
         extra_categories: JSON.stringify(_ecExtraRows.filter(r => r.category)),
+        employee_ids:     JSON.stringify(_ecSelectedEmpIds),
         total_amount:     total,
         status:           'pending',
         rejection_reason: null,
