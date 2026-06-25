@@ -10446,7 +10446,19 @@ function showBackupRestore() {
     el.classList.remove('table-mode');
     el.innerHTML = `<div class="fin-page" style="max-width:620px">
         <div style="font-size:22px;font-weight:800;color:var(--text-primary);margin-bottom:6px">Backup &amp; Restore</div>
-        <div style="font-size:13px;color:var(--slate-400);margin-bottom:28px">Export all data to a JSON file, or restore from a previous backup.</div>
+        <div style="font-size:13px;color:var(--slate-400);margin-bottom:20px">Export all data to a JSON file, or restore from a previous backup.</div>
+
+        <div style="background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1.5px solid #93c5fd;border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:flex-start;gap:16px">
+            <div style="font-size:26px;line-height:1;flex-shrink:0">☁️</div>
+            <div style="flex:1">
+                <div style="font-size:15px;font-weight:800;color:#1d4ed8;margin-bottom:6px">Automatic Backup — Active ✅</div>
+                <div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:14px">Your data is automatically backed up every hour to Google Drive (<strong>JSR_Backups</strong> folder). The last 48 backups are kept (2 days of history). Backups run 24/7 on Google's servers regardless of whether your device is on or off.</div>
+                <a href="https://drive.google.com" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:7px;padding:7px 16px;background:#2563eb;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    Open Google Drive Backups
+                </a>
+            </div>
+        </div>
 
         <div style="background:var(--bg-panel);border:1.5px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px">
             <div style="font-size:15px;font-weight:700;margin-bottom:6px">Export Backup</div>
