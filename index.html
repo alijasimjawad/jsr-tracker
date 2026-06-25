@@ -6515,17 +6515,30 @@ function umSearchFilter(q) {
 }
 
 async function openUmAddModal() {
-    const sel = document.getElementById('um-inp-fullname');
-    if (sel) { sel.innerHTML = '<option value="">— Select Team Member —</option>'; sel.value = ''; }
     ['um-inp-username','um-inp-password'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     const role = document.getElementById('um-inp-role'); if (role) role.value = 'user';
     const err = document.getElementById('um-add-error'); if (err) err.textContent = '';
-    try {
-        const { data } = await _sb.from('team_members').select('id,full_name').eq('status','active').order('full_name');
-        _umActiveMembers = data || [];
-        if (sel) sel.innerHTML = '<option value="">— Select Team Member —</option>' +
+
+    // Use preloaded _finTeam if available, otherwise query directly
+    // Active members use is_active boolean, not a 'status' text column
+    if (_finTeam && _finTeam.length > 0) {
+        _umActiveMembers = _finTeam.filter(m => m.is_active !== false).sort((a,b) => (a.full_name||'').localeCompare(b.full_name||''));
+        console.log('[AddUser] team members from _finTeam cache:', _umActiveMembers.length);
+    } else {
+        try {
+            const { data, error } = await _sb.from('team_members').select('id,full_name,is_active').eq('is_active', true).order('full_name');
+            if (error) { console.error('[AddUser] team_members query error:', error); }
+            _umActiveMembers = data || [];
+            console.log('[AddUser] team members fetched from DB:', _umActiveMembers.length, _umActiveMembers);
+        } catch(e) { console.error('[AddUser] fetch exception:', e); _umActiveMembers = []; }
+    }
+
+    const sel = document.getElementById('um-inp-fullname');
+    if (sel) {
+        sel.innerHTML = '<option value="">— Select Team Member —</option>' +
             _umActiveMembers.map(m => `<option value="${esc(m.full_name)}">${esc(m.full_name)}</option>`).join('');
-    } catch(_) { _umActiveMembers = []; }
+        sel.value = '';
+    }
     document.getElementById('um-add-modal').classList.add('open');
 }
 
