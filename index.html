@@ -171,10 +171,9 @@
             font-size:11px; font-weight:700; letter-spacing:.3px;
         }
         .al-badge-add    { background:#dcfce7; color:#166534; }
-        .al-badge-edit   { background:#dbeafe; color:#1e40af; }
+        .al-badge-edit   { background:#fef3c7; color:#92400e; }
         .al-badge-delete { background:#fee2e2; color:#991b1b; }
-        .al-badge-import { background:#fef9c3; color:#854d0e; }
-        .al-badge-section{ background:#f3e8ff; color:#6b21a8; }
+        .al-badge-other  { background:#dbeafe; color:#1e40af; }
         .al-empty { text-align:center; padding:60px 20px; color:var(--slate-400); font-size:14px; }
 
         /* ── User Management ─────────────────── */
@@ -6283,115 +6282,156 @@ async function showActivityLog() {
     renderActivityLog();
 }
 
-let _alData = [];
-let _alUserFilter = '';
-let _alProjFilter = '';
-let _alSiteFilter = '';
-let _alDateFrom   = '';
-let _alDateTo     = '';
+let _alData         = [];
+let _alUserFilter   = '';
+let _alProjFilter   = '';
+let _alSiteFilter   = '';
+let _alDateFrom     = '';
+let _alDateTo       = '';
+let _alActionFilter = '';
+let _alPage         = 1;
+const _AL_PAGE_SIZE = 20;
 
-function renderActivityLog() {
-    const el = document.getElementById('panel-content');
-    if (!el) return;
+function _alBadge(a) {
+    if (!a) return '';
+    const u = a.toLowerCase();
+    const cls = /added|created|approved|submitted/.test(u) ? 'al-badge-add'
+              : /edited|updated|changed|renamed/.test(u)   ? 'al-badge-edit'
+              : /deleted|rejected|cleared|removed/.test(u) ? 'al-badge-delete'
+              : 'al-badge-other';
+    return `<span class="al-badge ${cls}">${esc(a)}</span>`;
+}
 
-    // Build the toolbar once; subsequent calls only refresh the tbody
-    if (!document.getElementById('al-toolbar')) {
-        const users    = [...new Set(_alData.map(r => r.user_full_name).filter(Boolean))].sort();
-        const projects = [...new Set(_alData.map(r => r.project_name).filter(Boolean))].sort();
-
-        el.innerHTML = `
-            <div class="al-toolbar" id="al-toolbar">
-                <select class="al-filter-select" id="al-sel-user" onchange="setAlFilter('user',this.value)">
-                    <option value="">All Users</option>
-                    ${users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('')}
-                </select>
-                <select class="al-filter-select" id="al-sel-proj" onchange="setAlFilter('proj',this.value)">
-                    <option value="">All Projects</option>
-                    ${projects.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}
-                </select>
-                <input type="text"  class="al-filter-input" id="al-inp-site" placeholder="Site ID…"  oninput="setAlFilter('site',this.value)">
-                <input type="date"  class="al-filter-date"  id="al-inp-from" title="Date From" onchange="setAlFilter('from',this.value)">
-                <span class="al-date-sep">to</span>
-                <input type="date"  class="al-filter-date"  id="al-inp-to"   title="Date To"   onchange="setAlFilter('to',this.value)">
-                <div class="al-spacer"></div>
-                <button class="al-clear-btn" onclick="clearActivityLog()">Clear Log</button>
-            </div>
-            <div class="al-table-wrap">
-                <table class="al-table">
-                    <thead><tr>
-                        <th>Date / Time</th>
-                        <th>User</th>
-                        <th>Action</th>
-                        <th>Project</th>
-                        <th>Section</th>
-                        <th>Details</th>
-                    </tr></thead>
-                    <tbody id="al-table-body"></tbody>
-                </table>
-            </div>`;
-    }
-
-    // Filter data using all active filters
-    const dateFrom = _alDateFrom ? (() => { const d = new Date(_alDateFrom); d.setHours(0,0,0,0); return d; })() : null;
-    const dateTo   = _alDateTo   ? (() => { const d = new Date(_alDateTo);   d.setHours(23,59,59,999); return d; })() : null;
+function _alGetFiltered() {
+    const dateFrom  = _alDateFrom ? (() => { const d = new Date(_alDateFrom); d.setHours(0,0,0,0); return d; })() : null;
+    const dateTo    = _alDateTo   ? (() => { const d = new Date(_alDateTo);   d.setHours(23,59,59,999); return d; })() : null;
     const siteLower = _alSiteFilter.toLowerCase();
-
-    const filtered = _alData.filter(r => {
+    return _alData.filter(r => {
         if (_alUserFilter && r.user_full_name !== _alUserFilter) return false;
         if (_alProjFilter && r.project_name   !== _alProjFilter) return false;
         if (siteLower && !(r.details || '').toLowerCase().includes(siteLower)) return false;
         if (dateFrom && new Date(r.created_at) < dateFrom) return false;
         if (dateTo   && new Date(r.created_at) > dateTo)   return false;
+        if (_alActionFilter) {
+            const u = (r.action || '').toLowerCase();
+            if (_alActionFilter === 'add'    && !/added|created|approved|submitted/.test(u)) return false;
+            if (_alActionFilter === 'edit'   && !/edited|updated|changed|renamed/.test(u))   return false;
+            if (_alActionFilter === 'delete' && !/deleted|rejected|cleared|removed/.test(u)) return false;
+            if (_alActionFilter === 'other'  && /added|created|approved|submitted|edited|updated|changed|renamed|deleted|rejected|cleared|removed/.test(u)) return false;
+        }
         return true;
     });
-
-    const actionBadge = (a) => {
-        if (!a) return '';
-        const cls = a === 'Added Row'     ? 'al-badge-add'
-                  : a === 'Edited Row'    ? 'al-badge-edit'
-                  : a === 'Deleted Row'   ? 'al-badge-delete'
-                  : a === 'Imported Data' ? 'al-badge-import'
-                  : 'al-badge-section';
-        return `<span class="al-badge ${cls}">${esc(a)}</span>`;
-    };
-
-    const tbody = document.getElementById('al-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = filtered.length
-        ? filtered.map(r => {
-            const dt = r.created_at ? new Date(r.created_at).toLocaleString() : '—';
-            return `<tr>
-                <td style="white-space:nowrap;color:var(--slate-500);font-size:12px">${esc(dt)}</td>
-                <td>${esc(r.user_full_name || '—')}</td>
-                <td>${actionBadge(r.action)}</td>
-                <td>${esc(r.project_name || '—')}</td>
-                <td>${esc(r.section_name || '—')}</td>
-                <td style="color:var(--slate-500);font-size:12px">${esc(r.details || '—')}</td>
-            </tr>`;
-          }).join('')
-        : `<tr><td colspan="6" class="al-empty">No activity records found.</td></tr>`;
 }
 
+function renderActivityLog() {
+    const el = document.getElementById('panel-content');
+    if (!el) return;
+
+    const users    = [...new Set(_alData.map(r => r.user_full_name).filter(Boolean))].sort();
+    const projects = [...new Set(_alData.map(r => r.project_name).filter(Boolean))].sort();
+    const filtered = _alGetFiltered();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / _AL_PAGE_SIZE));
+    if (_alPage > totalPages) _alPage = totalPages;
+    const pageRows = filtered.slice((_alPage - 1) * _AL_PAGE_SIZE, _alPage * _AL_PAGE_SIZE);
+
+    el.innerHTML = `
+        <div class="al-toolbar" id="al-toolbar">
+            <select class="al-filter-select" id="al-sel-user" onchange="setAlFilter('user',this.value)">
+                <option value="">All Users</option>
+                ${users.map(u => `<option value="${esc(u)}"${_alUserFilter===u?' selected':''}>${esc(u)}</option>`).join('')}
+            </select>
+            <select class="al-filter-select" id="al-sel-proj" onchange="setAlFilter('proj',this.value)">
+                <option value="">All Projects</option>
+                ${projects.map(p => `<option value="${esc(p)}"${_alProjFilter===p?' selected':''}>${esc(p)}</option>`).join('')}
+            </select>
+            <select class="al-filter-select" id="al-sel-action" onchange="setAlFilter('action',this.value)">
+                <option value="">All Actions</option>
+                <option value="add"${_alActionFilter==='add'?' selected':''}>Added</option>
+                <option value="edit"${_alActionFilter==='edit'?' selected':''}>Edited</option>
+                <option value="delete"${_alActionFilter==='delete'?' selected':''}>Deleted</option>
+                <option value="other"${_alActionFilter==='other'?' selected':''}>Other</option>
+            </select>
+            <input type="text"  class="al-filter-input" id="al-inp-site" placeholder="Site ID…" value="${esc(_alSiteFilter)}" oninput="setAlFilter('site',this.value)">
+            <input type="date"  class="al-filter-date"  id="al-inp-from" title="Date From" value="${_alDateFrom}" onchange="setAlFilter('from',this.value)">
+            <span class="al-date-sep">to</span>
+            <input type="date"  class="al-filter-date"  id="al-inp-to"   title="Date To"   value="${_alDateTo}"   onchange="setAlFilter('to',this.value)">
+            <div class="al-spacer"></div>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="exportActivityLog()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export
+            </button>
+            <button class="al-clear-btn" onclick="clearActivityLog()">Clear Log</button>
+        </div>
+        <div class="al-table-wrap">
+            <table class="al-table">
+                <thead><tr>
+                    <th>Date / Time</th><th>User</th><th>Action</th><th>Project</th><th>Section</th><th>Details</th>
+                </tr></thead>
+                <tbody>
+                ${pageRows.length
+                    ? pageRows.map(r => {
+                        const dt = r.created_at ? new Date(r.created_at).toLocaleString() : '—';
+                        return `<tr>
+                            <td style="white-space:nowrap;color:var(--slate-500);font-size:12px">${esc(dt)}</td>
+                            <td>${esc(r.user_full_name || '—')}</td>
+                            <td>${_alBadge(r.action)}</td>
+                            <td>${esc(r.project_name || '—')}</td>
+                            <td>${esc(r.section_name || '—')}</td>
+                            <td style="color:var(--slate-500);font-size:12px">${esc(r.details || '—')}</td>
+                        </tr>`;
+                      }).join('')
+                    : `<tr><td colspan="6" class="al-empty">No activity records found.</td></tr>`}
+                </tbody>
+            </table>
+        </div>
+        ${totalPages > 1 || filtered.length > 0 ? `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:10px 4px;font-size:13px;color:var(--slate-600)">
+            <span>${filtered.length.toLocaleString()} record${filtered.length !== 1 ? 's' : ''}</span>
+            <div style="display:flex;align-items:center;gap:10px">
+                <button class="btn btn-ghost" style="padding:5px 14px;font-size:12px" onclick="_alChangePage(-1)" ${_alPage <= 1 ? 'disabled' : ''}>← Prev</button>
+                <span style="font-weight:600">Page ${_alPage} of ${totalPages}</span>
+                <button class="btn btn-ghost" style="padding:5px 14px;font-size:12px" onclick="_alChangePage(1)" ${_alPage >= totalPages ? 'disabled' : ''}>Next →</button>
+            </div>
+        </div>` : ''}`;
+}
+
+function _alChangePage(delta) { _alPage += delta; renderActivityLog(); }
+
 function setAlFilter(type, val) {
-    if      (type === 'user') _alUserFilter = val;
-    else if (type === 'proj') _alProjFilter = val;
-    else if (type === 'site') _alSiteFilter = val;
-    else if (type === 'from') _alDateFrom   = val;
-    else if (type === 'to')   _alDateTo     = val;
+    if      (type === 'user')   _alUserFilter   = val;
+    else if (type === 'proj')   _alProjFilter   = val;
+    else if (type === 'site')   _alSiteFilter   = val;
+    else if (type === 'from')   _alDateFrom     = val;
+    else if (type === 'to')     _alDateTo       = val;
+    else if (type === 'action') _alActionFilter = val;
+    _alPage = 1;
     renderActivityLog();
+}
+
+function exportActivityLog() {
+    const rows = _alGetFiltered();
+    const headers = ['Date/Time','User','Action','Project','Section','Details'];
+    const data = [headers, ...rows.map(r => [
+        r.created_at ? new Date(r.created_at).toLocaleString() : '',
+        r.user_full_name || '', r.action || '', r.project_name || '', r.section_name || '', r.details || ''
+    ])];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Activity Log');
+    XLSX.writeFile(wb, `activity_log_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
 async function clearActivityLog() {
     if (currentUser?.role !== 'admin') return;
-    if (!confirm('Delete all activity log records? This cannot be undone.')) return;
-    const { error } = await _sb.from('activity_log').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (error) { toast('Clear failed: ' + error.message, 'err'); return; }
-    _alData = [];
-    _alUserFilter = ''; _alProjFilter = ''; _alSiteFilter = ''; _alDateFrom = ''; _alDateTo = '';
-    const ids = ['al-sel-user','al-sel-proj','al-inp-site','al-inp-from','al-inp-to'];
-    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    renderActivityLog();
-    toast('Activity log cleared', 'ok');
+    finDelConfirm('Are you sure you want to clear the entire activity log? This action cannot be undone.', async () => {
+        closeFinModal('fin-del-modal');
+        const { error } = await _sb.from('activity_log').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) { toast('Clear failed: ' + error.message, 'err'); return; }
+        _alData = [];
+        _alUserFilter = ''; _alProjFilter = ''; _alSiteFilter = ''; _alDateFrom = ''; _alDateTo = ''; _alActionFilter = ''; _alPage = 1;
+        renderActivityLog();
+        toast('Activity log cleared', 'ok');
+    });
 }
 // ── User Management ───────────────────────────
 let _umUsers = [];
@@ -8215,12 +8255,12 @@ async function saveFinRevenue() {
             if (error) throw error;
             const idx = _finRevenue.findIndex(x => x.id === _finRevEditId);
             if (idx >= 0) _finRevenue[idx] = { ..._finRevenue[idx], ...payload };
-            logActivity('Edited Revenue', `Edited Revenue: ${proj} ${iqd(amt)}`);
+            logActivity('Edited Revenue', `Edited Revenue: ${proj} ${iqd(amt)}`, proj);
         } else {
             const { data, error } = await _sb.from('revenue').insert(payload).select('id').single();
             if (error) throw error;
             _finRevenue.unshift({ id: data.id, ...payload });
-            logActivity('Added Revenue', `Added Revenue: ${proj} ${iqd(amt)}`);
+            logActivity('Added Revenue', `Added Revenue: ${proj} ${iqd(amt)}`, proj);
         }
     } catch(e) { errEl.textContent = e.message; errEl.style.display = ''; return; }
     closeFinModal('fin-rev-modal');
@@ -8229,11 +8269,13 @@ async function saveFinRevenue() {
 }
 
 async function deleteFinRev(id) {
+    const rec = _finRevenue.find(x => x.id === id);
     const { error } = await _sb.from('revenue').delete().eq('id', id);
     if (error) { toast(error.message, 'err'); return; }
     _finRevenue = _finRevenue.filter(x => x.id !== id);
     closeFinModal('fin-del-modal');
-    logActivity('Deleted Revenue', 'Deleted Revenue entry');
+    const detail = rec ? `Deleted: ${rec.project_name || '—'} — ${iqd(rec.amount || 0)}` : 'Deleted Revenue entry';
+    logActivity('Deleted Revenue', detail, rec?.project_name || null);
     toast('Deleted', 'ok'); _renderRevenue();
 }
 
@@ -8357,11 +8399,13 @@ async function saveFinGenExp() {
 }
 
 async function deleteFinGenExp(id) {
+    const rec = _finGenExp.find(x => x.id === id);
     const { error } = await _sb.from('general_expenses').delete().eq('id', id);
     if (error) { toast(error.message, 'err'); return; }
     _finGenExp = _finGenExp.filter(x => x.id !== id);
     closeFinModal('fin-del-modal');
-    logActivity('Deleted General Expense', 'Deleted General Expense entry');
+    const detail = rec ? `Deleted: ${rec.description || '—'} — ${iqd(rec.amount || 0)}` : 'Deleted General Expense entry';
+    logActivity('Deleted General Expense', detail);
     toast('Deleted', 'ok'); _renderGenExp();
 }
 
@@ -8615,12 +8659,12 @@ async function saveFinProjExp() {
             if (error) throw error;
             const idx = _finProjExp.findIndex(x => x.id === _finProjExpEditId);
             if (idx >= 0) _finProjExp[idx] = { ..._finProjExp[idx], ...payload };
-            logActivity('Edited Project Expense', `Edited: ${proj} - ${desc} ${iqd(amt)}`);
+            logActivity('Edited Project Expense', `Edited: ${proj} - ${desc} ${iqd(amt)}`, proj);
         } else {
             const { data, error } = await _sb.from('project_expenses').insert(payload).select('id').single();
             if (error) throw error;
             _finProjExp.unshift({ id: data.id, ...payload });
-            logActivity('Added Project Expense', `Added: ${proj} - ${desc} ${iqd(amt)}`);
+            logActivity('Added Project Expense', `Added: ${proj} - ${desc} ${iqd(amt)}`, proj);
         }
     } catch(e) { errEl.textContent = e.message; errEl.style.display = ''; return; }
     closeFinModal('fin-projexp-modal');
@@ -8629,11 +8673,13 @@ async function saveFinProjExp() {
 }
 
 async function deleteFinProjExp(id) {
+    const rec = _finProjExp.find(x => x.id === id);
     const { error } = await _sb.from('project_expenses').delete().eq('id', id);
     if (error) { toast(error.message, 'err'); return; }
     _finProjExp = _finProjExp.filter(x => x.id !== id);
     closeFinModal('fin-del-modal');
-    logActivity('Deleted Project Expense', 'Deleted Project Expense entry');
+    const detail = rec ? `Deleted: ${rec.project_name || '—'} — ${rec.description || '—'} — ${iqd(rec.amount || 0)}` : 'Deleted Project Expense entry';
+    logActivity('Deleted Project Expense', detail, rec?.project_name || null);
     toast('Deleted', 'ok'); _renderProjExp();
 }
 
