@@ -8689,8 +8689,9 @@ async function saveFinProjExp() {
     if (!descSel)                         { errEl.textContent = 'Description required.';         errEl.style.display = ''; return; }
     if (descSel === 'Other' && !desc)     { errEl.textContent = 'Please specify the description.'; errEl.style.display = ''; return; }
     if (!amt || amt < 0) { errEl.textContent = 'Valid amount required.'; errEl.style.display = ''; return; }
+    const cat   = document.getElementById('fpe-cat').value;
     const accom = document.getElementById('fpe-accom').value;
-    if (!accom) { errEl.textContent = 'Accommodation required.'; errEl.style.display = ''; return; }
+    if (cat === 'Food' && !accom) { errEl.textContent = 'Accommodation required for Food category.'; errEl.style.display = ''; return; }
     const dateVal = document.getElementById('fpe-date').value;
     const dateObj = dateVal ? new Date(dateVal) : new Date();
     const siteId  = document.getElementById('fpe-site').value.trim() || null;
@@ -8698,7 +8699,7 @@ async function saveFinProjExp() {
     const payload = { project_name: proj, description: desc, category: document.getElementById('fpe-cat').value||null,
         amount: amt, expense_date: dateVal||null, activity_date: dateVal||null,
         month: dateObj.getMonth()+1, year: dateObj.getFullYear(),
-        site_id: siteId, employee_ids: empIds, accommodation: accom,
+        site_id: siteId, employee_ids: empIds, accommodation: accom||null,
         notes: document.getElementById('fpe-notes').value.trim()||null, added_by: currentUser?.full_name||'' };
     try {
         if (_finProjExpEditId) {
