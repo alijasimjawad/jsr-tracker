@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=1200, initial-scale=0.5, maximum-scale=3.0, user-scalable=yes">
     <title>JSR – Network Management</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
@@ -603,6 +603,26 @@
         .ecm-submit-btn:hover { opacity:.92; transform:translateY(-1px); }
         .ecm-submit-btn:active { transform:translateY(0); }
         .ecm-submit-btn:disabled { opacity:.55; cursor:not-allowed; transform:none; box-shadow:none; }
+        /* ── Language / RTL (Technician only) ─────── */
+        body.lang-ar { font-family: 'Tajawal', sans-serif; }
+        body.lang-ar .workspace { direction: ltr; }
+        body.lang-ar .sidebar   { direction: rtl; }
+        body.lang-ar .main-panel { direction: rtl; }
+        body.lang-ar .modal-card { direction: rtl; text-align: right; }
+        body.lang-ar .modal-actions { flex-direction: row-reverse; }
+        body.lang-ar .ecm-total-box { flex-direction: row-reverse; }
+        body.lang-ar .ecm-extra-card { direction: rtl; }
+        body.lang-ar .fpe-emp-pill { direction: rtl; }
+        body.lang-ar .exp-table th,
+        body.lang-ar .exp-table td { text-align: right; }
+        body.lang-ar .exp-table td:last-child { text-align: right; }
+        body.lang-ar .exp-page > div:first-child { flex-direction: row-reverse; }
+        /* Lang toggle pill in fixed top-right */
+        #lang-toggle-wrap { position:fixed; top:10px; right:16px; z-index:9100; display:none; }
+        body.lang-ar #lang-toggle-wrap { left:16px; right:auto; }
+        .lang-toggle-pill { display:inline-flex; border:1.5px solid var(--border); border-radius:20px; overflow:hidden; background:var(--bg-panel); box-shadow:var(--shadow-xs); }
+        .lang-toggle-chip { padding:5px 13px; font-size:11px; font-weight:700; letter-spacing:.5px; border:none; cursor:pointer; background:transparent; color:var(--slate-400); font-family:inherit; transition:background .15s,color .15s; }
+        .lang-toggle-chip.lc-active { background:var(--accent); color:#fff; }
         /* Admin expense claims */
         .adm-exp-approve-btn { padding:5px 14px; font-size:12px; font-weight:700; background:#16a34a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; transition:opacity .15s; }
         .adm-exp-approve-btn:hover { opacity:.88; }
@@ -1701,7 +1721,7 @@
                     <div class="dash-nav-icon">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                     </div>
-                    <span class="dash-nav-label">Dashboard</span>
+                    <span class="dash-nav-label" data-i18n="sidebar.dashboard">Dashboard</span>
                 </div>
 
                 <div class="tree-section-label">Network Scopes</div>
@@ -2080,12 +2100,12 @@
                     <div class="tree-divider"></div>
                     <div class="tree-section-label" style="display:flex;align-items:center;gap:6px">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                        My Expenses
+                        <span data-i18n="sidebar.my_expenses">My Expenses</span>
                     </div>
                     <div class="tree-child" id="nav-my-expenses" onclick="showMyExpenses()">
                         <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                            <span class="tree-child-label">My Claims</span>
+                            <span class="tree-child-label" data-i18n="sidebar.my_claims">My Claims</span>
                         </span>
                         <span class="tree-child-arr">›</span>
                     </div>
@@ -2166,7 +2186,7 @@
                     <div class="tree-child" id="nav-hr-profiles" onclick="showHrProfiles()">
                         <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><rect x="2" y="3" width="20" height="18" rx="3"/><circle cx="9" cy="10" r="2.5"/><path d="M5 18a4 4 0 0 1 8 0"/><line x1="15" y1="9" x2="20" y2="9"/><line x1="15" y1="13" x2="20" y2="13"/><line x1="15" y1="17" x2="18" y2="17"/></svg>
-                            <span class="tree-child-label">Employee Profiles</span>
+                            <span class="tree-child-label" data-i18n="sidebar.emp_profiles">Employee Profiles</span>
                         </span>
                         <span class="tree-child-arr">›</span>
                     </div>
@@ -2515,15 +2535,15 @@
   <div class="modal-card" style="max-width:680px;max-height:92vh;overflow-y:auto;padding:28px 28px 24px">
     <div style="margin-bottom:2px">
       <div class="modal-title" id="exp-claim-modal-title">New Expense Claim</div>
-      <div style="font-size:13px;color:var(--slate-400);margin-top:3px">Fill in the details below and submit for approval.</div>
+      <div style="font-size:13px;color:var(--slate-400);margin-top:3px" data-i18n="modal.subtitle">Fill in the details below and submit for approval.</div>
     </div>
 
     <!-- ── Section 1: Activity Info ── -->
     <div class="ecm-section">
-      <div class="ecm-section-title">Activity Info</div>
+      <div class="ecm-section-title" data-i18n="modal.sec_activity">Activity Info</div>
       <div class="ecm-grid">
         <div class="ecm-field">
-          <label class="ecm-label">Project Name *</label>
+          <label class="ecm-label" data-i18n="modal.proj">Project Name *</label>
           <select class="ecm-select" id="ec-proj">
             <option value="">— Select —</option>
             <option>Zain Project</option><option>Nokia Project</option><option>Huawei Project</option>
@@ -2533,29 +2553,33 @@
           </select>
         </div>
         <div class="ecm-field">
-          <label class="ecm-label">Site ID *</label>
+          <label class="ecm-label" data-i18n="modal.site">Site ID *</label>
           <input class="ecm-input" type="text" id="ec-site" placeholder="e.g. ZN-1234" maxlength="100">
         </div>
         <div class="ecm-field">
-          <label class="ecm-label">Governorate</label>
+          <label class="ecm-label" data-i18n="modal.gov">Governorate</label>
           <input class="ecm-input" type="text" id="ec-gov" placeholder="e.g. Baghdad" maxlength="100">
         </div>
         <div class="ecm-field">
-          <label class="ecm-label">Description *</label>
+          <label class="ecm-label" data-i18n="modal.desc">Description *</label>
           <select class="ecm-select" id="ec-desc">
             <option value="">— Select —</option>
-            <option>Delivery</option><option>Installation</option><option>Integration</option>
-            <option>ATP</option><option>Clearance</option><option>Other</option>
+            <option data-i18n-opt="desc.delivery">Delivery</option>
+            <option data-i18n-opt="desc.installation">Installation</option>
+            <option data-i18n-opt="desc.integration">Integration</option>
+            <option data-i18n-opt="desc.atp">ATP</option>
+            <option data-i18n-opt="desc.clearance">Clearance</option>
+            <option data-i18n-opt="desc.other">Other</option>
           </select>
         </div>
         <div class="ecm-field">
-          <label class="ecm-label">Activity Date *</label>
+          <label class="ecm-label" data-i18n="modal.date">Activity Date *</label>
           <input class="ecm-input" type="date" id="ec-date" style="max-width:220px">
         </div>
         <div class="ecm-field span2">
-          <label class="ecm-label">Team Members</label>
+          <label class="ecm-label" data-i18n="modal.members">Team Members</label>
           <div class="fpe-multiselect" id="ec-emp-wrap" onclick="toggleEcEmpDropdown(event)" style="background:#fff">
-            <div class="fpe-emp-tags" id="ec-emp-tags"><span class="fpe-emp-placeholder" id="ec-emp-placeholder">Select team members…</span></div>
+            <div class="fpe-emp-tags" id="ec-emp-tags"><span class="fpe-emp-placeholder" id="ec-emp-placeholder" data-i18n="modal.members_ph">Select team members…</span></div>
             <div class="fpe-emp-dropdown" id="ec-emp-dropdown" style="display:none" onclick="event.stopPropagation()"></div>
           </div>
         </div>
@@ -2564,22 +2588,22 @@
 
     <!-- ── Section 2: Amounts ── -->
     <div class="ecm-section">
-      <div class="ecm-section-title">Amounts</div>
+      <div class="ecm-section-title" data-i18n="modal.sec_amounts">Amounts</div>
       <div class="ecm-amounts-row">
         <div class="ecm-field">
-          <label class="ecm-label">Transport (IQD)</label>
+          <label class="ecm-label" data-i18n="modal.transport">Transport (IQD)</label>
           <input class="ecm-input" type="number" id="ec-transport" min="0" value="0" placeholder="0" oninput="ecCalcTotal()">
         </div>
         <div class="ecm-field">
-          <label class="ecm-label">Food (IQD)</label>
+          <label class="ecm-label" data-i18n="modal.food">Food (IQD)</label>
           <input class="ecm-input" type="number" id="ec-food" min="0" value="0" placeholder="0" oninput="ecCalcTotal()">
         </div>
         <div class="ecm-field">
-          <label class="ecm-label">Accommodation</label>
+          <label class="ecm-label" data-i18n="modal.accom">Accommodation</label>
           <select class="ecm-select" id="ec-accom">
             <option value="">— Select —</option>
-            <option value="Returned Home">Returned Home</option>
-            <option value="Hotel">Hotel</option>
+            <option value="Returned Home" data-i18n-opt="modal.accom_home">Returned Home</option>
+            <option value="Hotel" data-i18n-opt="modal.accom_hotel">Hotel</option>
           </select>
         </div>
       </div>
@@ -2587,29 +2611,29 @@
 
     <!-- ── Section 3: Additional ── -->
     <div class="ecm-section">
-      <div class="ecm-section-title">Additional</div>
+      <div class="ecm-section-title" data-i18n="modal.sec_additional">Additional</div>
       <div id="ec-extra-rows"></div>
       <button type="button" class="ecm-add-cat-btn" onclick="ecAddRow()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Category
+        <span data-i18n="modal.add_cat">Add Category</span>
       </button>
       <div class="ecm-field" style="margin-top:16px">
-        <label class="ecm-label">Notes</label>
-        <textarea class="ecm-textarea" id="ec-notes" placeholder="Add any additional notes…"></textarea>
+        <label class="ecm-label" data-i18n="modal.notes">Notes</label>
+        <textarea class="ecm-textarea" id="ec-notes" data-i18n-ph="modal.notes_ph" placeholder="Add any additional notes…"></textarea>
       </div>
     </div>
 
     <!-- ── Total ── -->
     <div class="ecm-total-box" style="margin-top:16px">
-      <span class="ecm-total-label">Total Amount</span>
+      <span class="ecm-total-label" data-i18n="modal.total">Total Amount</span>
       <span class="ecm-total-num" id="ec-total-display">0 IQD</span>
     </div>
 
     <div id="exp-claim-err" style="color:var(--red);font-size:13px;margin-top:10px;display:none"></div>
 
     <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
-      <button class="ecm-submit-btn" id="exp-claim-save-btn" onclick="saveExpClaim()">Submit Claim</button>
-      <button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="closeExpClaimModal()">Cancel</button>
+      <button class="ecm-submit-btn" id="exp-claim-save-btn" data-i18n="modal.submit" onclick="saveExpClaim()">Submit Claim</button>
+      <button class="btn btn-ghost" style="width:100%;justify-content:center" data-i18n="modal.cancel" onclick="closeExpClaimModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -2999,10 +3023,186 @@
     </div>
 </div>
 
+<!-- Language Toggle (Technician only) -->
+<div id="lang-toggle-wrap">
+  <div class="lang-toggle-pill">
+    <button class="lang-toggle-chip lc-active" id="lang-chip-en" onclick="setLang('en')">EN</button>
+    <button class="lang-toggle-chip" id="lang-chip-ar" onclick="setLang('ar')">AR</button>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast"><span id="ti"></span><span id="tt"></span></div>
 
 <script>
+// ── Language / i18n ─────────────────────────────
+let _lang = 'en';
+
+const _TRANS = {
+    en: {
+        'sidebar.dashboard':   'Dashboard',
+        'sidebar.my_expenses': 'My Expenses',
+        'sidebar.my_claims':   'My Claims',
+        'sidebar.emp_profiles':'Employee Profiles',
+        'page.title':          'My Expense Claims',
+        'page.new_claim':      '+ New Claim',
+        'page.col_date':       'Date',
+        'page.col_site':       'Site ID',
+        'page.col_proj':       'Project',
+        'page.col_desc':       'Description',
+        'page.col_total':      'Total (IQD)',
+        'page.col_status':     'Status',
+        'page.empty':          'No claims yet. Click "+ New Claim" to submit your first expense claim.',
+        'page.claims_count':   'claim', // singular
+        'status.pending':      'Pending',
+        'status.approved':     'Approved',
+        'status.rejected':     'Rejected',
+        'rej.reason':          'Reason',
+        'btn.edit':            'Edit',
+        'btn.delete':          'Delete',
+        'modal.new_claim':     'New Expense Claim',
+        'modal.edit_claim':    'Edit Expense Claim',
+        'modal.subtitle':      'Fill in the details below and submit for approval.',
+        'modal.sec_activity':  'Activity Info',
+        'modal.sec_amounts':   'Amounts',
+        'modal.sec_additional':'Additional',
+        'modal.proj':          'Project Name *',
+        'modal.site':          'Site ID *',
+        'modal.gov':           'Governorate',
+        'modal.desc':          'Description *',
+        'modal.date':          'Activity Date *',
+        'modal.members':       'Team Members',
+        'modal.members_ph':    'Select team members…',
+        'modal.transport':     'Transport (IQD)',
+        'modal.food':          'Food (IQD)',
+        'modal.accom':         'Accommodation',
+        'modal.accom_home':    'Returned Home',
+        'modal.accom_hotel':   'Hotel',
+        'modal.add_cat':       'Add Category',
+        'modal.notes':         'Notes',
+        'modal.notes_ph':      'Add any additional notes…',
+        'modal.total':         'Total Amount',
+        'modal.submit':        'Submit Claim',
+        'modal.cancel':        'Cancel',
+        'desc.delivery':       'Delivery',
+        'desc.installation':   'Installation',
+        'desc.integration':    'Integration',
+        'desc.atp':            'ATP',
+        'desc.clearance':      'Clearance',
+        'desc.other':          'Other',
+        'extra.category':      'Category',
+        'extra.amount':        'Amount (IQD)',
+    },
+    ar: {
+        'sidebar.dashboard':   'لوحة التحكم',
+        'sidebar.my_expenses': 'مصروفاتي',
+        'sidebar.my_claims':   'مطالباتي',
+        'sidebar.emp_profiles':'ملفات الموظفين',
+        'page.title':          'مطالبات المصروفات',
+        'page.new_claim':      '+ مطالبة جديدة',
+        'page.col_date':       'التاريخ',
+        'page.col_site':       'رقم الموقع',
+        'page.col_proj':       'المشروع',
+        'page.col_desc':       'الوصف',
+        'page.col_total':      'الإجمالي (IQD)',
+        'page.col_status':     'الحالة',
+        'page.empty':          'لا توجد مطالبات بعد. انقر على "+ مطالبة جديدة" لتقديم مطالبتك.',
+        'page.claims_count':   'مطالبة',
+        'status.pending':      'قيد الانتظار',
+        'status.approved':     'موافق عليه',
+        'status.rejected':     'مرفوض',
+        'rej.reason':          'السبب',
+        'btn.edit':            'تعديل',
+        'btn.delete':          'حذف',
+        'modal.new_claim':     'مطالبة مصروفات جديدة',
+        'modal.edit_claim':    'تعديل مطالبة المصروفات',
+        'modal.subtitle':      'أدخل التفاصيل أدناه وقدّم المطالبة للموافقة.',
+        'modal.sec_activity':  'معلومات النشاط',
+        'modal.sec_amounts':   'المبالغ',
+        'modal.sec_additional':'إضافي',
+        'modal.proj':          'اسم المشروع *',
+        'modal.site':          'رقم الموقع *',
+        'modal.gov':           'المحافظة',
+        'modal.desc':          'الوصف *',
+        'modal.date':          'تاريخ النشاط *',
+        'modal.members':       'أعضاء الفريق',
+        'modal.members_ph':    'اختر أعضاء الفريق…',
+        'modal.transport':     'مبلغ النقل (IQD)',
+        'modal.food':          'مبلغ الطعام (IQD)',
+        'modal.accom':         'الإقامة',
+        'modal.accom_home':    'عاد للمنزل',
+        'modal.accom_hotel':   'فندق',
+        'modal.add_cat':       'إضافة فئة',
+        'modal.notes':         'ملاحظات',
+        'modal.notes_ph':      'أضف أي ملاحظات إضافية…',
+        'modal.total':         'المبلغ الإجمالي',
+        'modal.submit':        'تقديم المطالبة',
+        'modal.cancel':        'إلغاء',
+        'desc.delivery':       'تسليم',
+        'desc.installation':   'تركيب',
+        'desc.integration':    'تكامل',
+        'desc.atp':            'ATP',
+        'desc.clearance':      'تخليص',
+        'desc.other':          'أخرى',
+        'extra.category':      'الفئة',
+        'extra.amount':        'المبلغ (IQD)',
+    }
+};
+
+function _t(key) { return _TRANS[_lang]?.[key] ?? _TRANS.en[key] ?? key; }
+
+function _langStorageKey() {
+    return 'lang_' + (currentUser?.username || currentUser?.id || 'default');
+}
+
+function setLang(lang, save = true) {
+    if (currentUser?.role !== 'technician') return;
+    _lang = lang;
+    if (save) localStorage.setItem(_langStorageKey(), lang);
+
+    // Toggle active chip
+    document.getElementById('lang-chip-en')?.classList.toggle('lc-active', lang === 'en');
+    document.getElementById('lang-chip-ar')?.classList.toggle('lc-active', lang === 'ar');
+
+    // Direction + font class
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.body.classList.toggle('lang-ar', lang === 'ar');
+
+    // Update all static data-i18n elements
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        el.textContent = _t(el.getAttribute('data-i18n'));
+    });
+    // Update placeholders
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+        el.placeholder = _t(el.getAttribute('data-i18n-ph'));
+    });
+    // Update select options
+    document.querySelectorAll('[data-i18n-opt]').forEach(el => {
+        el.textContent = _t(el.getAttribute('data-i18n-opt'));
+    });
+
+    // Re-render My Expenses page if visible
+    const pc = document.getElementById('panel-content');
+    if (pc?.querySelector('.exp-page')) _renderMyExpenses(pc);
+
+    // Update modal title if open
+    const modalTitle = document.getElementById('exp-claim-modal-title');
+    if (modalTitle) {
+        modalTitle.textContent = _t(_expClaimsEditId ? 'modal.edit_claim' : 'modal.new_claim');
+    }
+    // Re-render extra rows (labels change)
+    if (_ecExtraRows?.length) _ecRenderExtraRows();
+    // Update team members placeholder
+    _ecEmpRenderTags();
+}
+
+function _loadLangPref() {
+    if (currentUser?.role !== 'technician') return;
+    const saved = localStorage.getItem(_langStorageKey());
+    if (saved === 'ar') setLang('ar', false);
+    else setLang('en', false);
+}
+
 // ── State ────────────────────────────────────────
 let currentUser = null;  // { id, username, role, full_name }
 let selProj = null, selSec = null;
@@ -3691,6 +3891,13 @@ async function login() {
 
 function logout() {
     currentUser = null;
+    _lang = 'en';
+    document.documentElement.dir = 'ltr';
+    document.body.classList.remove('lang-ar');
+    const langWrap = document.getElementById('lang-toggle-wrap');
+    if (langWrap) langWrap.style.display = 'none';
+    document.getElementById('lang-chip-en')?.classList.add('lc-active');
+    document.getElementById('lang-chip-ar')?.classList.remove('lc-active');
     document.body.classList.remove('role-admin', 'role-user');
     localStorage.removeItem(SESSION_KEY);
     document.getElementById('u').value = '';
@@ -3785,6 +3992,11 @@ function applyPermissions() {
         sv('sidebar-admin-section', true, false);
         sv('nav-activity-log',      true, true);
     }
+
+    // Language toggle — technicians only
+    const langWrap = document.getElementById('lang-toggle-wrap');
+    if (langWrap) langWrap.style.display = currentUser?.role === 'technician' ? '' : 'none';
+    _loadLangPref();
 
     // Action buttons — only after renderMain populates them
     _applyActionPerms();
@@ -9445,33 +9657,37 @@ async function showMyExpenses() {
 function _renderMyExpenses(pc) {
     pc = pc || document.getElementById('panel-content');
     const rows = _expClaims;
+    const statusLabel = s => {
+        if (s === 'approved') return _t('status.approved');
+        if (s === 'rejected') return _t('status.rejected');
+        return _t('status.pending');
+    };
     pc.innerHTML = `<div class="exp-page">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
             <div>
-                <div style="font-size:22px;font-weight:800;color:var(--text-primary)">My Expense Claims</div>
-                <div style="font-size:13px;color:var(--slate-400);margin-top:3px">${rows.length} claim${rows.length !== 1 ? 's' : ''} submitted</div>
+                <div style="font-size:22px;font-weight:800;color:var(--text-primary)">${_t('page.title')}</div>
+                <div style="font-size:13px;color:var(--slate-400);margin-top:3px">${rows.length} ${_t('page.claims_count')}${rows.length !== 1 && _lang === 'en' ? 's' : ''} submitted</div>
             </div>
-            <button class="btn btn-accent" onclick="openNewClaimModal(null)">+ New Claim</button>
+            <button class="btn btn-accent" onclick="openNewClaimModal(null)">${_t('page.new_claim')}</button>
         </div>
         <div class="exp-table-wrap">
             <table class="exp-table">
                 <thead><tr>
-                    <th>Date</th><th>Site ID</th><th>Project</th><th>Description</th>
-                    <th style="text-align:right">Total (IQD)</th><th>Status</th>
+                    <th>${_t('page.col_date')}</th><th>${_t('page.col_site')}</th><th>${_t('page.col_proj')}</th><th>${_t('page.col_desc')}</th>
+                    <th style="text-align:right">${_t('page.col_total')}</th><th>${_t('page.col_status')}</th>
                 </tr></thead>
                 <tbody>
                 ${rows.length === 0
-                    ? `<tr><td colspan="6" class="al-empty">No claims yet. Click "+ New Claim" to submit your first expense claim.</td></tr>`
+                    ? `<tr><td colspan="6" class="al-empty">${_t('page.empty')}</td></tr>`
                     : rows.map(r => {
                         const badgeCls = r.status === 'approved' ? 'exp-badge-approved'
                                        : r.status === 'rejected' ? 'exp-badge-rejected'
                                        : 'exp-badge-pending';
-                        const statusLabel = r.status ? (r.status.charAt(0).toUpperCase() + r.status.slice(1)) : 'Pending';
                         const rejBox = r.status === 'rejected'
-                            ? `<div class="exp-rej-box"><strong>Reason:</strong> ${esc(r.rejection_reason || 'No reason provided')}</div>
+                            ? `<div class="exp-rej-box"><strong>${_t('rej.reason')}:</strong> ${esc(r.rejection_reason || '—')}</div>
                                <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-                                   <button class="exp-edit-btn" onclick="openNewClaimModal('${r.id}')">Edit</button>
-                                   <button class="exp-del-btn" onclick="deleteExpClaim('${r.id}')">Delete</button>
+                                   <button class="exp-edit-btn" onclick="openNewClaimModal('${r.id}')">${_t('btn.edit')}</button>
+                                   <button class="exp-del-btn" onclick="deleteExpClaim('${r.id}')">${_t('btn.delete')}</button>
                                </div>`
                             : '';
                         return `<tr>
@@ -9480,7 +9696,7 @@ function _renderMyExpenses(pc) {
                             <td>${esc(r.project_name || '—')}</td>
                             <td>${esc(r.description || '—')}</td>
                             <td style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600">${iqd(r.total_amount)}</td>
-                            <td><span class="exp-badge ${badgeCls}">${statusLabel}</span>${rejBox}</td>
+                            <td><span class="exp-badge ${badgeCls}">${statusLabel(r.status)}</span>${rejBox}</td>
                         </tr>`;
                     }).join('')
                 }
@@ -9508,7 +9724,7 @@ function _ecEmpRenderTags() {
     const tags = document.getElementById('ec-emp-tags');
     if (!tags) return;
     if (_ecSelectedEmpIds.length === 0) {
-        tags.innerHTML = '<span class="fpe-emp-placeholder" id="ec-emp-placeholder">Select team members…</span>';
+        tags.innerHTML = `<span class="fpe-emp-placeholder" id="ec-emp-placeholder">${_t('modal.members_ph')}</span>`;
     } else {
         tags.innerHTML = _ecSelectedEmpIds.map(id => {
             const m = _finTeam.find(x => x.id === id);
@@ -9582,7 +9798,7 @@ function openNewClaimModal(resubmitId) {
         // Pre-fill from existing claim
         const c = _expClaims.find(x => x.id === resubmitId);
         if (c) {
-            document.getElementById('exp-claim-modal-title').textContent = 'Edit Expense Claim';
+            document.getElementById('exp-claim-modal-title').textContent = _t('modal.edit_claim');
             document.getElementById('ec-proj').value      = c.project_name || '';
             document.getElementById('ec-site').value      = c.site_id || '';
             document.getElementById('ec-gov').value       = c.governorate || '';
@@ -9601,7 +9817,7 @@ function openNewClaimModal(resubmitId) {
             document.getElementById('ec-notes').value = c.notes || '';
         }
     } else {
-        document.getElementById('exp-claim-modal-title').textContent = 'New Expense Claim';
+        document.getElementById('exp-claim-modal-title').textContent = _t('modal.new_claim');
     }
 
     ecCalcTotal();
@@ -9629,7 +9845,7 @@ function _ecRenderExtraRows() {
     container.innerHTML = _ecExtraRows.map((row, i) => `
         <div class="ecm-extra-card">
             <div>
-                <div class="ecm-extra-label">Category</div>
+                <div class="ecm-extra-label">${_t('extra.category')}</div>
                 <select class="ecm-select" onchange="_ecExtraRows[${i}].category=this.value">
                     <option value="">— Select —</option>
                     ${['Fuel','Materials','Taxi','Tools','Other'].map(c =>
@@ -9638,7 +9854,7 @@ function _ecRenderExtraRows() {
                 </select>
             </div>
             <div>
-                <div class="ecm-extra-label">Amount (IQD)</div>
+                <div class="ecm-extra-label">${_t('extra.amount')}</div>
                 <input class="ecm-input" type="number" min="0" value="${row.amount||0}" placeholder="0"
                     oninput="_ecExtraRows[${i}].amount=+this.value||0;ecCalcTotal()">
             </div>
