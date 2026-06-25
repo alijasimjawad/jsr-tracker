@@ -578,6 +578,31 @@
         .ec-remove-btn:hover { background:#fee2e2; }
         .ec-total { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--slate-50); border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:14px; font-weight:700; margin-top:4px; }
         .ec-total-val { font-size:18px; font-weight:800; color:var(--accent); }
+        /* ── Premium Expense Claim Modal ─────────────────────── */
+        .ecm-section { background:var(--slate-50); border:1px solid var(--slate-100); border-radius:12px; padding:18px 20px; margin-top:14px; }
+        .ecm-section-title { font-size:10px; font-weight:800; color:var(--slate-400); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; }
+        .ecm-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; }
+        .ecm-grid .span2 { grid-column:span 2; }
+        .ecm-field { display:flex; flex-direction:column; gap:5px; }
+        .ecm-label { font-size:10px; font-weight:800; color:var(--slate-500); text-transform:uppercase; letter-spacing:.7px; }
+        .ecm-input,.ecm-select { width:100%; padding:10px 13px; border:1.5px solid var(--slate-200); border-radius:8px; font-size:13.5px; font-family:inherit; color:var(--text-primary); background:#fff; outline:none; box-sizing:border-box; transition:border-color .15s,box-shadow .15s; box-shadow:0 1px 3px rgba(0,0,0,.05); appearance:none; }
+        .ecm-input:focus,.ecm-select:focus { border-color:var(--accent); box-shadow:0 0 0 4px rgba(37,99,235,.12),0 1px 3px rgba(0,0,0,.04); }
+        .ecm-textarea { width:100%; padding:10px 13px; border:1.5px solid var(--slate-200); border-radius:8px; font-size:13.5px; font-family:inherit; color:var(--text-primary); background:#fff; outline:none; box-sizing:border-box; transition:border-color .15s,box-shadow .15s; box-shadow:0 1px 3px rgba(0,0,0,.05); resize:vertical; min-height:72px; line-height:1.5; }
+        .ecm-textarea:focus { border-color:var(--accent); box-shadow:0 0 0 4px rgba(37,99,235,.12),0 1px 3px rgba(0,0,0,.04); }
+        .ecm-amounts-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+        .ecm-extra-card { display:grid; grid-template-columns:1fr 1fr auto; gap:10px; align-items:end; padding:12px 14px; background:#fff; border:1.5px solid var(--slate-200); border-radius:10px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+        .ecm-extra-label { font-size:10px; font-weight:800; color:var(--slate-500); text-transform:uppercase; letter-spacing:.7px; margin-bottom:5px; }
+        .ecm-remove-btn { width:36px; height:38px; border:1.5px solid #fee2e2; background:#fff; color:var(--red); border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:0; transition:background .12s,border-color .12s; }
+        .ecm-remove-btn:hover { background:#fee2e2; border-color:#fca5a5; }
+        .ecm-add-cat-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; font-size:13px; font-family:inherit; font-weight:700; color:var(--accent); background:transparent; border:1.5px dashed var(--accent); border-radius:8px; cursor:pointer; transition:background .15s; margin-top:4px; }
+        .ecm-add-cat-btn:hover { background:rgba(37,99,235,.06); }
+        .ecm-total-box { display:flex; align-items:center; justify-content:space-between; padding:16px 22px; background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); border:1.5px solid #bfdbfe; border-radius:12px; }
+        .ecm-total-label { font-size:13px; font-weight:700; color:#1e40af; }
+        .ecm-total-num { font-size:24px; font-weight:900; color:#1d4ed8; letter-spacing:-.5px; }
+        .ecm-submit-btn { width:100%; padding:14px; font-size:15px; font-weight:800; font-family:inherit; color:#fff; background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%); border:none; border-radius:12px; cursor:pointer; transition:opacity .15s,transform .1s; letter-spacing:.2px; box-shadow:0 4px 14px rgba(37,99,235,.35); }
+        .ecm-submit-btn:hover { opacity:.92; transform:translateY(-1px); }
+        .ecm-submit-btn:active { transform:translateY(0); }
+        .ecm-submit-btn:disabled { opacity:.55; cursor:not-allowed; transform:none; box-shadow:none; }
         /* Admin expense claims */
         .adm-exp-approve-btn { padding:5px 14px; font-size:12px; font-weight:700; background:#16a34a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; transition:opacity .15s; }
         .adm-exp-approve-btn:hover { opacity:.88; }
@@ -2485,69 +2510,106 @@
   </div>
 </div>
 
-<!-- My Expenses: New / Resubmit Claim Modal -->
+<!-- My Expenses: New / Edit Claim Modal -->
 <div class="modal-overlay" id="exp-claim-modal" onclick="closeExpClaimModal(event)">
-  <div class="modal-card" style="max-width:620px;max-height:92vh;overflow-y:auto">
-    <div class="modal-title" id="exp-claim-modal-title">New Expense Claim</div>
-    <div class="ec-form-grid" style="margin-top:16px">
-      <div class="ec-field"><label>Project Name *</label>
-        <select id="ec-proj"><option value="">— Select —</option>
-          <option>Zain Project</option><option>Nokia Project</option><option>Huawei Project</option>
-          <option>MRC Project</option><option>Metco Project</option><option>MFC Project</option>
-          <option>TAC Project</option><option>IPT Project</option><option>TASC Project</option><option>General</option>
-        </select>
-      </div>
-      <div class="ec-field"><label>Site ID *</label>
-        <input type="text" id="ec-site" placeholder="e.g. ZN-1234" maxlength="100">
-      </div>
-      <div class="ec-field"><label>Governorate</label>
-        <input type="text" id="ec-gov" placeholder="e.g. Baghdad" maxlength="100">
-      </div>
-      <div class="ec-field"><label>Description *</label>
-        <select id="ec-desc"><option value="">— Select —</option>
-          <option>Delivery</option><option>Installation</option><option>Integration</option>
-          <option>ATP</option><option>Clearance</option><option>Other</option>
-        </select>
-      </div>
-      <div class="ec-field span2"><label>Activity Date *</label>
-        <input type="date" id="ec-date" style="max-width:220px">
-      </div>
-      <div class="ec-field span2"><label>Team Members</label>
-        <div class="fpe-multiselect" id="ec-emp-wrap" onclick="toggleEcEmpDropdown(event)">
-          <div class="fpe-emp-tags" id="ec-emp-tags"><span class="fpe-emp-placeholder" id="ec-emp-placeholder">Select team members…</span></div>
-          <div class="fpe-emp-dropdown" id="ec-emp-dropdown" style="display:none" onclick="event.stopPropagation()"></div>
+  <div class="modal-card" style="max-width:680px;max-height:92vh;overflow-y:auto;padding:28px 28px 24px">
+    <div style="margin-bottom:2px">
+      <div class="modal-title" id="exp-claim-modal-title">New Expense Claim</div>
+      <div style="font-size:13px;color:var(--slate-400);margin-top:3px">Fill in the details below and submit for approval.</div>
+    </div>
+
+    <!-- ── Section 1: Activity Info ── -->
+    <div class="ecm-section">
+      <div class="ecm-section-title">Activity Info</div>
+      <div class="ecm-grid">
+        <div class="ecm-field">
+          <label class="ecm-label">Project Name *</label>
+          <select class="ecm-select" id="ec-proj">
+            <option value="">— Select —</option>
+            <option>Zain Project</option><option>Nokia Project</option><option>Huawei Project</option>
+            <option>MRC Project</option><option>Metco Project</option><option>MFC Project</option>
+            <option>TAC Project</option><option>IPT Project</option><option>TASC Project</option>
+            <option>General</option>
+          </select>
+        </div>
+        <div class="ecm-field">
+          <label class="ecm-label">Site ID *</label>
+          <input class="ecm-input" type="text" id="ec-site" placeholder="e.g. ZN-1234" maxlength="100">
+        </div>
+        <div class="ecm-field">
+          <label class="ecm-label">Governorate</label>
+          <input class="ecm-input" type="text" id="ec-gov" placeholder="e.g. Baghdad" maxlength="100">
+        </div>
+        <div class="ecm-field">
+          <label class="ecm-label">Description *</label>
+          <select class="ecm-select" id="ec-desc">
+            <option value="">— Select —</option>
+            <option>Delivery</option><option>Installation</option><option>Integration</option>
+            <option>ATP</option><option>Clearance</option><option>Other</option>
+          </select>
+        </div>
+        <div class="ecm-field">
+          <label class="ecm-label">Activity Date *</label>
+          <input class="ecm-input" type="date" id="ec-date" style="max-width:220px">
+        </div>
+        <div class="ecm-field span2">
+          <label class="ecm-label">Team Members</label>
+          <div class="fpe-multiselect" id="ec-emp-wrap" onclick="toggleEcEmpDropdown(event)" style="background:#fff">
+            <div class="fpe-emp-tags" id="ec-emp-tags"><span class="fpe-emp-placeholder" id="ec-emp-placeholder">Select team members…</span></div>
+            <div class="fpe-emp-dropdown" id="ec-emp-dropdown" style="display:none" onclick="event.stopPropagation()"></div>
+          </div>
         </div>
       </div>
-      <div class="ec-field"><label>Transport Amount (IQD)</label>
-        <input type="number" id="ec-transport" min="0" value="0" placeholder="0" oninput="ecCalcTotal()">
-      </div>
-      <div style="display:contents"><!-- spacer --></div>
-      <div class="ec-field"><label>Food Amount (IQD)</label>
-        <input type="number" id="ec-food" min="0" value="0" placeholder="0" oninput="ecCalcTotal()">
-      </div>
-      <div class="ec-field"><label>Accommodation</label>
-        <select id="ec-accom">
-          <option value="">— Select —</option>
-          <option value="Returned Home">Returned Home</option>
-          <option value="Hotel">Hotel</option>
-        </select>
+    </div>
+
+    <!-- ── Section 2: Amounts ── -->
+    <div class="ecm-section">
+      <div class="ecm-section-title">Amounts</div>
+      <div class="ecm-amounts-row">
+        <div class="ecm-field">
+          <label class="ecm-label">Transport (IQD)</label>
+          <input class="ecm-input" type="number" id="ec-transport" min="0" value="0" placeholder="0" oninput="ecCalcTotal()">
+        </div>
+        <div class="ecm-field">
+          <label class="ecm-label">Food (IQD)</label>
+          <input class="ecm-input" type="number" id="ec-food" min="0" value="0" placeholder="0" oninput="ecCalcTotal()">
+        </div>
+        <div class="ecm-field">
+          <label class="ecm-label">Accommodation</label>
+          <select class="ecm-select" id="ec-accom">
+            <option value="">— Select —</option>
+            <option value="Returned Home">Returned Home</option>
+            <option value="Hotel">Hotel</option>
+          </select>
+        </div>
       </div>
     </div>
-    <!-- Extra categories -->
-    <div style="margin-top:16px">
-      <div style="font-size:12px;font-weight:700;color:var(--slate-600);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Additional Categories</div>
+
+    <!-- ── Section 3: Additional ── -->
+    <div class="ecm-section">
+      <div class="ecm-section-title">Additional</div>
       <div id="ec-extra-rows"></div>
-      <button type="button" style="margin-top:4px;padding:7px 16px;font-size:13px;font-family:inherit;font-weight:600;background:var(--slate-100);color:var(--slate-700);border:1.5px solid var(--slate-200);border-radius:var(--radius-sm);cursor:pointer" onclick="ecAddRow()">+ Add Another Category</button>
+      <button type="button" class="ecm-add-cat-btn" onclick="ecAddRow()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Category
+      </button>
+      <div class="ecm-field" style="margin-top:16px">
+        <label class="ecm-label">Notes</label>
+        <textarea class="ecm-textarea" id="ec-notes" placeholder="Add any additional notes…"></textarea>
+      </div>
     </div>
-    <!-- Total -->
-    <div class="ec-total" style="margin-top:16px">
-      <span style="color:var(--slate-700)">Total Amount</span>
-      <span class="ec-total-val" id="ec-total-display">0 IQD</span>
+
+    <!-- ── Total ── -->
+    <div class="ecm-total-box" style="margin-top:16px">
+      <span class="ecm-total-label">Total Amount</span>
+      <span class="ecm-total-num" id="ec-total-display">0 IQD</span>
     </div>
+
     <div id="exp-claim-err" style="color:var(--red);font-size:13px;margin-top:10px;display:none"></div>
-    <div class="modal-actions" style="margin-top:18px">
-      <button class="btn btn-ghost" onclick="closeExpClaimModal()">Cancel</button>
-      <button class="btn btn-accent" id="exp-claim-save-btn" onclick="saveExpClaim()">Submit Claim</button>
+
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+      <button class="ecm-submit-btn" id="exp-claim-save-btn" onclick="saveExpClaim()">Submit Claim</button>
+      <button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="closeExpClaimModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -9511,6 +9573,7 @@ function openNewClaimModal(resubmitId) {
     document.getElementById('ec-accom').value     = '';
     document.getElementById('ec-extra-rows').innerHTML = '';
     document.getElementById('ec-total-display').textContent = '0 IQD';
+    document.getElementById('ec-notes').value = '';
     document.getElementById('exp-claim-err').style.display = 'none';
     _ecSelectedEmpIds = [];
     _ecEmpRenderTags();
@@ -9535,6 +9598,7 @@ function openNewClaimModal(resubmitId) {
             _ecRenderExtraRows();
             try { _ecSelectedEmpIds = JSON.parse(c.employee_ids || '[]'); } catch(_) { _ecSelectedEmpIds = []; }
             _ecEmpRenderTags();
+            document.getElementById('ec-notes').value = c.notes || '';
         }
     } else {
         document.getElementById('exp-claim-modal-title').textContent = 'New Expense Claim';
@@ -9563,20 +9627,22 @@ function ecRemoveRow(idx) {
 function _ecRenderExtraRows() {
     const container = document.getElementById('ec-extra-rows');
     container.innerHTML = _ecExtraRows.map((row, i) => `
-        <div class="ec-extra-row">
-            <div><label>Category</label>
-                <select onchange="_ecExtraRows[${i}].category=this.value">
+        <div class="ecm-extra-card">
+            <div>
+                <div class="ecm-extra-label">Category</div>
+                <select class="ecm-select" onchange="_ecExtraRows[${i}].category=this.value">
                     <option value="">— Select —</option>
                     ${['Fuel','Materials','Taxi','Tools','Other'].map(c =>
                         `<option value="${c}"${row.category===c?' selected':''}>${c}</option>`
                     ).join('')}
                 </select>
             </div>
-            <div><label>Amount (IQD)</label>
-                <input type="number" min="0" value="${row.amount||0}" placeholder="0"
+            <div>
+                <div class="ecm-extra-label">Amount (IQD)</div>
+                <input class="ecm-input" type="number" min="0" value="${row.amount||0}" placeholder="0"
                     oninput="_ecExtraRows[${i}].amount=+this.value||0;ecCalcTotal()">
             </div>
-            <button class="ec-remove-btn" onclick="ecRemoveRow(${i})" title="Remove">
+            <button class="ecm-remove-btn" onclick="ecRemoveRow(${i})" title="Remove">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>`
@@ -9605,6 +9671,7 @@ async function saveExpClaim() {
     const transport = +document.getElementById('ec-transport').value || 0;
     const food      = +document.getElementById('ec-food').value      || 0;
     const accom     = document.getElementById('ec-accom').value;
+    const notes     = document.getElementById('ec-notes').value.trim();
 
     if (!proj)    { errEl.textContent = 'Project name is required.';  errEl.style.display = ''; return; }
     if (!siteId)  { errEl.textContent = 'Site ID is required.';       errEl.style.display = ''; return; }
@@ -9643,6 +9710,7 @@ async function saveExpClaim() {
         accommodation:    accom || null,
         extra_categories: JSON.stringify(_ecExtraRows.filter(r => r.category)),
         employee_ids:     JSON.stringify(_ecSelectedEmpIds),
+        notes:            notes || null,
         total_amount:     total,
         status:           'pending',
         rejection_reason: null,
