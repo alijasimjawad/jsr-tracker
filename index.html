@@ -359,11 +359,6 @@
         .fin-act-btn { width:28px; height:28px; border:none; border-radius:var(--radius-sm); background:var(--slate-100); color:var(--slate-600); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:var(--transition-fast); }
         .fin-act-btn:hover { background:var(--slate-200); }
         .fin-act-btn.del:hover { background:#fee2e2; color:var(--red); }
-        /* Work log */
-        .wl-table { min-width:900px; }
-        .wl-input { width:60px; padding:5px 8px; border:1.5px solid var(--slate-200); border-radius:var(--radius-sm); font-size:13px; font-family:inherit; text-align:center; background:var(--bg-panel); outline:none; }
-        .wl-input:focus { border-color:var(--accent); }
-        .wl-saving { color:var(--accent); font-size:11px; }
         /* Report */
         .fin-report-table { min-width:800px; }
         .fin-profit-pos { color:#16a34a; font-weight:700; }
@@ -2147,13 +2142,6 @@
                         <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                             <span class="tree-child-label">Team Members</span>
-                        </span>
-                        <span class="tree-child-arr">›</span>
-                    </div>
-                    <div class="tree-child" id="nav-fin-worklog" onclick="showFinWorkLog()">
-                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            <span class="tree-child-label">Work Log</span>
                         </span>
                         <span class="tree-child-arr">›</span>
                     </div>
@@ -4007,13 +3995,12 @@ function applyPermissions() {
     sv('tg-tasc',   p.view_tasc,   false);
 
     // Finance items — show wrapper section if any fin perm is granted
-    const anyFin = p.view_fin_dashboard || p.view_fin_team || p.view_fin_worklog ||
+    const anyFin = p.view_fin_dashboard || p.view_fin_team ||
                    p.view_fin_revenue   || p.view_fin_genexp || p.view_fin_projexp ||
                    p.view_fin_report;
     sv('sidebar-fin-section', anyFin,                false);
     sv('nav-fin-dashboard',   p.view_fin_dashboard,  true);
     sv('nav-fin-team',        p.view_fin_team,        true);
-    sv('nav-fin-worklog',     p.view_fin_worklog,     true);
     sv('nav-fin-revenue',     p.view_fin_revenue,     true);
     sv('nav-fin-genexp',      p.view_fin_genexp,      true);
     sv('nav-fin-projexp',     p.view_fin_projexp,     true);
@@ -6595,7 +6582,6 @@ const _UM_FIXED_VIEW_BOTTOM = [
     // Finance
     { key: 'view_fin_dashboard', label: 'Finance Dashboard' },
     { key: 'view_fin_team',      label: 'Team Members' },
-    { key: 'view_fin_worklog',   label: 'Work Log' },
     { key: 'view_fin_revenue',   label: 'Revenue' },
     { key: 'view_fin_genexp',    label: 'General Expenses' },
     { key: 'view_fin_projexp',   label: 'Project Expenses' },
@@ -6790,7 +6776,6 @@ const FIN_MONTHS   = ['January','February','March','April','May','June',
 
 // ── State ─────────────────────────────────────
 let _finTeam      = [];   // team_members
-let _finWorkLog   = [];   // work_log rows
 let _finRevenue   = [];   // revenue
 let _finGenExp    = [];   // general_expenses
 let _finProjExp   = [];   // project_expenses
@@ -6876,15 +6861,13 @@ function _finSpinner() {
 
 // ── Finance refresh helper ────────────────────
 async function _loadFinAll() {
-    const [t, wl, rv, ge, pe] = await Promise.all([
+    const [t, rv, ge, pe] = await Promise.all([
         _sb.from('team_members').select('*').order('full_name'),
-        _sb.from('work_log').select('*'),
         _sb.from('revenue').select('*').order('invoice_date', { ascending: false }),
         _sb.from('general_expenses').select('*').order('expense_date', { ascending: false }),
         _sb.from('project_expenses').select('*').order('expense_date', { ascending: false })
     ]);
     if (!t.error)  _finTeam    = t.data  || [];
-    if (!wl.error) _finWorkLog = wl.data || [];
     if (!rv.error) _finRevenue = rv.data || [];
     if (!ge.error) _finGenExp  = ge.data || [];
     if (!pe.error) _finProjExp = pe.data || [];
@@ -7607,10 +7590,9 @@ async function confirmDeleteTeamMember() {
         btn.disabled = false; btn.textContent = 'Delete';
         const errEl = document.getElementById('team-del-err');
         const isFk = error.code === '23503' ||
-            (error.message || '').toLowerCase().includes('foreign key') ||
-            (error.message || '').toLowerCase().includes('work_log');
+            (error.message || '').toLowerCase().includes('foreign key');
         errEl.textContent = isFk
-            ? `Cannot delete "${m?.full_name || 'this member'}" because they have work log entries. Please delete their work log entries first, or deactivate them instead.`
+            ? `Cannot delete "${m?.full_name || 'this member'}" because they have related records. Please deactivate them instead.`
             : error.message;
         errEl.style.display = '';
         return;
@@ -8000,130 +7982,6 @@ async function importTeamBulkAdd() {
     );
     if (failures.length) console.warn('Bulk add partial failures:', failures);
     showFinTeam(true);
-}
-
-// ══════════════════════════════════════════════
-// WORK LOG
-// ══════════════════════════════════════════════
-let _wlMonth = _nowM(), _wlYear = _nowY(), _wlWorkDays = 22;
-
-async function showFinWorkLog(force = false) {
-    if (!_guardPerm('view_fin_worklog')) return;
-    _finNavActive('nav-fin-worklog');
-    setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Work Log</span>');
-    if (_finCacheOk() && !force) {
-        const pc = _finPanel();
-        _renderWorkLog(pc);
-        _bgFinRefresh('nav-fin-worklog', () => _renderWorkLog());
-    } else {
-        const pc = _finSpinner();
-        try { await _loadFinAll(); } catch(_) {}
-        _renderWorkLog(pc);
-    }
-}
-
-function _renderWorkLog(pc) {
-    pc = pc || document.getElementById('panel-content');
-    const members = _finTeam.filter(m => m.is_active);
-
-    // Build lookup: { memberId_proj: days_worked }
-    const lookup = {};
-    _finWorkLog.filter(r => r.month === _wlMonth && r.year === _wlYear).forEach(r => {
-        lookup[`${r.member_id}_${r.project_name}`] = r;
-    });
-
-    // Project cost totals
-    const projTotals = {};
-    FIN_PROJECTS.forEach(p => projTotals[p] = 0);
-    Object.values(lookup).forEach(r => {
-        if (projTotals[r.project_name] !== undefined) projTotals[r.project_name] += +(r.total_cost||0);
-    });
-
-    const yearsOpts = [];
-    for (let y = _nowY() - 2; y <= _nowY() + 1; y++) yearsOpts.push(`<option${y===_wlYear?' selected':''}>${y}</option>`);
-
-    pc.innerHTML = `<div class="fin-page">
-        <div class="fin-toolbar">
-            <select class="fin-sel" onchange="_wlMonth=+this.value;_renderWorkLog()">
-                ${FIN_MONTHS.map((m,i)=>`<option value="${i+1}"${i+1===_wlMonth?' selected':''}>${m}</option>`).join('')}
-            </select>
-            <select class="fin-sel" onchange="_wlYear=+this.value;_renderWorkLog()">${yearsOpts.join('')}</select>
-            <label style="font-size:13px;color:var(--slate-600);display:flex;align-items:center;gap:6px">
-                Working days:
-                <input type="number" class="fin-inp" style="width:60px" value="${_wlWorkDays}" min="1" max="31"
-                    onchange="_wlWorkDays=Math.max(1,+this.value);_renderWorkLog()">
-            </label>
-            <div class="fin-spacer"></div>
-            <button class="btn btn-ghost" onclick="showFinWorkLog(true)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
-            </button>
-        </div>
-        ${members.length === 0
-            ? `<div class="al-empty">No active team members. Add members first.</div>`
-            : `<div class="fin-table-wrap"><table class="fin-table wl-table"><thead><tr>
-                <th>Member</th><th class="fin-num">Daily Rate</th>
-                ${FIN_PROJECTS.map(p=>`<th class="fin-num" style="min-width:70px">${esc(p.replace(' Project',''))}</th>`).join('')}
-                <th class="fin-num">Total Days</th><th class="fin-num">Total Cost</th>
-            </tr></thead><tbody>
-            ${members.map(m => {
-                const dailyRate = Math.round(m.monthly_salary / _wlWorkDays);
-                let totalDays = 0, totalCost = 0;
-                const cells = FIN_PROJECTS.map(proj => {
-                    const existing = lookup[`${m.id}_${proj}`];
-                    const days = existing ? +(existing.days_worked||0) : 0;
-                    totalDays += days;
-                    totalCost += days * dailyRate;
-                    return `<td class="fin-num"><input class="wl-input" type="number" min="0" max="${_wlWorkDays}" step="0.5" value="${days||''}" placeholder="0"
-                        onchange="saveWlEntry('${m.id}','${esc(m.full_name)}','${esc(proj)}',this.value,${dailyRate})"></td>`;
-                }).join('');
-                return `<tr>
-                    <td><strong>${esc(m.full_name)}</strong></td>
-                    <td class="fin-num" style="color:var(--slate-500)">${iqd(dailyRate)}</td>
-                    ${cells}
-                    <td class="fin-num" id="wl-days-${m.id}">${totalDays > 0 ? totalDays : '—'}</td>
-                    <td class="fin-num" id="wl-cost-${m.id}">${totalCost > 0 ? iqd(totalCost) : '—'}</td>
-                </tr>`;
-            }).join('')}
-            </tbody><tfoot><tr>
-                <td colspan="2"><strong>Project Totals</strong></td>
-                ${FIN_PROJECTS.map(p => `<td class="fin-num"><strong>${projTotals[p] > 0 ? iqd(projTotals[p]) : '—'}</strong></td>`).join('')}
-                <td colspan="2"></td>
-            </tr></tfoot></table></div>`}
-    </div>`;
-}
-
-async function saveWlEntry(memberId, memberName, projName, daysVal, dailyRate) {
-    const days = parseFloat(daysVal) || 0;
-    const totalCost = Math.round(days * dailyRate);
-
-    // Update totals display row
-    const member = _finTeam.find(m => m.id === memberId);
-    if (member) {
-        let td = 0, tc = 0;
-        const dr = Math.round(member.monthly_salary / _wlWorkDays);
-        _finWorkLog.filter(r => r.member_id === memberId && r.month === _wlMonth && r.year === _wlYear)
-            .forEach(r => { if (r.project_name !== projName) { td += +(r.days_worked||0); tc += +(r.total_cost||0); } });
-        td += days; tc += totalCost;
-        const dEl = document.getElementById(`wl-days-${memberId}`);
-        const cEl = document.getElementById(`wl-cost-${memberId}`);
-        if (dEl) dEl.textContent = td > 0 ? td : '—';
-        if (cEl) cEl.textContent = tc > 0 ? iqd(tc) : '—';
-    }
-
-    // Upsert
-    const existing = _finWorkLog.find(r => r.member_id === memberId && r.project_name === projName && r.month === _wlMonth && r.year === _wlYear);
-    const payload = { member_id: memberId, member_name: memberName, project_name: projName, month: _wlMonth, year: _wlYear,
-        days_worked: days, working_days_in_month: _wlWorkDays, daily_rate: dailyRate, total_cost: totalCost, updated_at: new Date().toISOString() };
-
-    try {
-        if (existing) {
-            await _sb.from('work_log').update(payload).eq('id', existing.id);
-            Object.assign(existing, payload);
-        } else {
-            const { data } = await _sb.from('work_log').insert(payload).select('id').single();
-            if (data) _finWorkLog.push({ id: data.id, ...payload });
-        }
-    } catch(e) { toast('Save error: ' + e.message, 'err'); }
 }
 
 // ══════════════════════════════════════════════
