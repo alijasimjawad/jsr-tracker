@@ -775,20 +775,30 @@
 
         /* ── Dashboard ──────────────────── */
         /* Hero Banner */
-        @keyframes dash-hero-shimmer { 0%{transform:translateX(-100%) skewX(-15deg)} 100%{transform:translateX(500%) skewX(-15deg)} }
-        @keyframes dash-ring-in { from { stroke-dashoffset:238.76; } }
-        @keyframes dash-bar-in  { from { width:0%; } }
-        @keyframes dash-card-in { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes dash-hero-shimmer { 0%{transform:translateX(-200%) skewX(-15deg)} 37.5%{transform:translateX(400%) skewX(-15deg)} 100%{transform:translateX(400%) skewX(-15deg)} }
+        @keyframes dash-ring-in     { from { stroke-dashoffset:238.76; } }
+        @keyframes dash-ring-pulse  { 0%,100%{filter:drop-shadow(0 0 5px rgba(52,211,153,.5))} 50%{filter:drop-shadow(0 0 14px rgba(52,211,153,.9))} }
+        @keyframes dash-bar-in      { from { width:0%; } }
+        @keyframes dash-card-in     { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes dash-spin        { to { transform:rotate(360deg); } }
 
         .dash-hero { background:linear-gradient(135deg,#0f2038 0%,#1a4a8a 100%), radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px); background-size:100% 100%,18px 18px; border-radius:14px; padding:24px 28px; margin-bottom:20px; display:flex; align-items:center; gap:24px; color:#fff; position:relative; overflow:hidden; }
         .dash-hero::before { content:''; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 75% 50%,rgba(96,165,250,.22) 0%,transparent 60%); z-index:0; }
-        .dash-hero::after  { content:''; position:absolute; top:0; bottom:0; left:-40%; width:25%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.045),transparent); animation:dash-hero-shimmer 9s ease-in-out infinite; pointer-events:none; z-index:0; }
+        .dash-hero::after  { content:''; position:absolute; top:0; bottom:0; left:-40%; width:25%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent); animation:dash-hero-shimmer 4s ease-in-out infinite; pointer-events:none; z-index:0; }
         .dash-hero-left { flex:1; min-width:0; position:relative; z-index:1; }
+        .dash-hero-badge { width:48px; height:48px; border-radius:10px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; color:#fff; letter-spacing:-.3px; box-shadow:0 0 20px rgba(59,130,246,.4); flex-shrink:0; }
         .dash-hero-title { font-size:20px; font-weight:900; color:#fff; letter-spacing:-.2px; }
-        .dash-hero-sub { font-size:12px; color:rgba(255,255,255,.55); margin-top:4px; margin-bottom:18px; }
+        .dash-hero-sub { font-size:12px; color:rgba(255,255,255,.55); margin-top:3px; }
+        .dash-lastupd { font-size:11px; color:rgba(255,255,255,.42); margin-top:8px; }
+        .dash-export-btn { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.28); color:#fff; font-size:12px; padding:8px 16px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:all .2s ease; font-family:inherit; font-weight:600; }
+        .dash-export-btn:hover { background:linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.08)); border-color:rgba(255,255,255,.55); box-shadow:0 0 12px rgba(255,255,255,.25); }
+        .dash-refresh-btn { display:inline-flex; align-items:center; gap:6px; background:var(--bg-panel); border:1.5px solid var(--border); color:var(--text-primary); font-size:12px; padding:7px 14px; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:600; transition:all .2s ease; flex-shrink:0; }
+        .dash-refresh-btn:hover { background:var(--slate-50); border-color:var(--accent); box-shadow:0 0 8px rgba(37,99,235,.2); color:var(--accent); }
+        .dash-refresh-spinning { animation:dash-spin .8s linear infinite; display:inline-block; }
         .dash-hero-center { display:flex; gap:0; align-items:center; flex-shrink:0; position:relative; z-index:1; }
         .dash-hstat { text-align:center; padding:0 20px; }
         .dash-hstat + .dash-hstat { border-left:1px solid rgba(255,255,255,.18); }
+        .dash-hstat-icon { display:flex; justify-content:center; margin-bottom:7px; opacity:.7; }
         .dash-hstat-val { font-size:34px; font-weight:900; line-height:1; letter-spacing:-1px; }
         .dash-hstat-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; margin-top:6px; opacity:.6; }
         .hs-white  .dash-hstat-val { color:#fff; }
@@ -798,14 +808,27 @@
         .dash-ring-wrap { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:6px; position:relative; z-index:1; padding-left:20px; border-left:1px solid rgba(255,255,255,.18); }
         .dash-ring-lbl { font-size:9px; font-weight:700; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.6px; text-align:center; }
         .dash-ring-path { animation:dash-ring-in 1.2s ease forwards; filter:drop-shadow(0 0 5px rgba(52,211,153,.5)); }
+        .dash-ring-path.dash-ring-pulsing { animation:dash-ring-in 1.2s ease forwards, dash-ring-pulse 2.5s ease-in-out 1.4s infinite; }
 
         /* Summary chips + refresh row */
         .dash-toprow { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
         .dash-chips { display:flex; gap:8px; flex-wrap:wrap; }
-        .dash-chip { background:var(--bg-panel); border:1px solid var(--border); border-radius:99px; padding:7px 14px; display:flex; align-items:center; gap:7px; white-space:nowrap; }
+        .dash-chip { border-radius:99px; padding:7px 14px; display:flex; align-items:center; gap:7px; white-space:nowrap; transition:all .2s; cursor:default; }
+        .dash-chip-slate { background:rgba(100,116,139,.1);  border:1px solid rgba(100,116,139,.28); }
+        .dash-chip-blue  { background:rgba(59,130,246,.1);   border:1px solid rgba(59,130,246,.28);  }
+        .dash-chip-green { background:rgba(16,185,129,.1);   border:1px solid rgba(16,185,129,.28);  }
+        .dash-chip-amber { background:rgba(245,158,11,.1);   border:1px solid rgba(245,158,11,.28);  }
+        .dash-chip-slate:hover { background:rgba(100,116,139,.2); border-color:rgba(100,116,139,.55); }
+        .dash-chip-blue:hover  { background:rgba(59,130,246,.2);  border-color:rgba(59,130,246,.55);  }
+        .dash-chip-green:hover { background:rgba(16,185,129,.2);  border-color:rgba(16,185,129,.55);  }
+        .dash-chip-amber:hover { background:rgba(245,158,11,.2);  border-color:rgba(245,158,11,.55);  }
         .dash-chip-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-        .dash-chip-val { font-size:13px; font-weight:800; color:var(--text-primary); }
-        .dash-chip-lbl { font-size:12px; font-weight:600; color:var(--slate-500); }
+        .dash-chip-val { font-size:13px; font-weight:800; }
+        .dash-chip-lbl { font-size:12px; font-weight:600; }
+        .dash-chip-slate .dash-chip-val, .dash-chip-slate .dash-chip-lbl { color:#475569; }
+        .dash-chip-blue  .dash-chip-val, .dash-chip-blue  .dash-chip-lbl { color:#1d4ed8; }
+        .dash-chip-green .dash-chip-val, .dash-chip-green .dash-chip-lbl { color:#15803d; }
+        .dash-chip-amber .dash-chip-val, .dash-chip-amber .dash-chip-lbl { color:#b45309; }
 
         /* Cards grid */
         .dash-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
@@ -4222,6 +4245,11 @@ const _PROJ_COLOR = {
 };
 let _dashHeroAnimated = false;
 
+function _fmtLastUpdated() {
+    const d = new Date();
+    return 'Today at ' + d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
+}
+
 function _projColor(key) { return _PROJ_COLOR[(key||'').toLowerCase()] || '#64748B'; }
 function _hexToRgba(hex, a) {
     const n = parseInt((hex||'#64748b').replace('#',''), 16);
@@ -4419,41 +4447,51 @@ function _renderDashboard(pc) {
     pc.innerHTML = `
     <div class="dash-hero">
         <div class="dash-hero-left">
-            <div class="dash-hero-title">JSR Network Tracker</div>
-            <div class="dash-hero-sub">Project delivery tracker across all scopes</div>
-            <button class="btn" style="background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.25);color:#fff;font-size:12px;padding:8px 16px;" onclick="toast('Open a project section to export its data','ok')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+                <div class="dash-hero-badge">JSR</div>
+                <div style="min-width:0">
+                    <div class="dash-hero-title">JSR Network Tracker</div>
+                    <div class="dash-hero-sub">Project delivery tracker across all scopes</div>
+                </div>
+            </div>
+            <button class="dash-export-btn" onclick="toast('Open a project section to export its data','ok')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Export Data
             </button>
+            <div class="dash-lastupd">Last updated: ${_fmtLastUpdated()}</div>
         </div>
         <div class="dash-hero-center">
             <div class="dash-hstat hs-white">
+                <div class="dash-hstat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg></div>
                 <div class="dash-hstat-val">${grandTotal}</div>
                 <div class="dash-hstat-lbl">Total Target</div>
             </div>
             <div class="dash-hstat hs-blue">
+                <div class="dash-hstat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
                 <div class="dash-hstat-val">${grandInstalled}</div>
                 <div class="dash-hstat-lbl">Installed</div>
             </div>
             <div class="dash-hstat hs-green">
+                <div class="dash-hstat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
                 <div class="dash-hstat-val">${grandAccepted}</div>
                 <div class="dash-hstat-lbl">ATP Accepted</div>
             </div>
             <div class="dash-hstat hs-orange">
+                <div class="dash-hstat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
                 <div class="dash-hstat-val">${grandPending}</div>
                 <div class="dash-hstat-lbl">Remaining</div>
             </div>
         </div>
         <div class="dash-ring-wrap">
-            <div style="position:relative;width:96px;height:96px">
-                <svg width="96" height="96" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="9"/>
-                    <circle class="dash-ring-path" cx="50" cy="50" r="38" fill="none" stroke="#34d399" stroke-width="9"
+            <div style="position:relative;width:100px;height:100px">
+                <svg width="100" height="100" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="8"/>
+                    <circle class="dash-ring-path${atpOverall > 0 ? ' dash-ring-pulsing' : ''}" cx="50" cy="50" r="38" fill="none" stroke="#34d399" stroke-width="8"
                         stroke-linecap="round" stroke-dasharray="${ringC}" stroke-dashoffset="${ringOffset}"/>
                 </svg>
-                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px">
-                    <span style="font-size:18px;font-weight:900;color:#34d399;line-height:1">${(atpOverall*100).toFixed(0)}%</span>
-                    <span style="font-size:8px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px">ATP</span>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px">
+                    <span style="font-size:20px;font-weight:900;color:#34d399;line-height:1">${(atpOverall*100).toFixed(0)}%</span>
+                    <span style="font-size:7px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.8px">OVERALL ATP</span>
                 </div>
             </div>
             <div class="dash-ring-lbl">Overall ATP %</div>
@@ -4462,12 +4500,12 @@ function _renderDashboard(pc) {
 
     <div class="dash-toprow">
         <div class="dash-chips">
-            <div class="dash-chip"><div class="dash-chip-dot" style="background:#64748b"></div><span class="dash-chip-val">${grandTotal}</span><span class="dash-chip-lbl">Total Sites</span></div>
-            <div class="dash-chip"><div class="dash-chip-dot" style="background:#3b82f6"></div><span class="dash-chip-val">${grandInstalled}</span><span class="dash-chip-lbl">Installed</span></div>
-            <div class="dash-chip"><div class="dash-chip-dot" style="background:#10b981"></div><span class="dash-chip-val">${grandAccepted}</span><span class="dash-chip-lbl">ATP Accepted</span></div>
-            <div class="dash-chip"><div class="dash-chip-dot" style="background:#f59e0b"></div><span class="dash-chip-val">${grandPending}</span><span class="dash-chip-lbl">ATP Pending</span></div>
+            <div class="dash-chip dash-chip-slate"><div class="dash-chip-dot" style="background:#64748b"></div><span class="dash-chip-val">${grandTotal}</span><span class="dash-chip-lbl">Total Sites</span></div>
+            <div class="dash-chip dash-chip-blue"><div class="dash-chip-dot" style="background:#3b82f6"></div><span class="dash-chip-val">${grandInstalled}</span><span class="dash-chip-lbl">Installed</span></div>
+            <div class="dash-chip dash-chip-green"><div class="dash-chip-dot" style="background:#10b981"></div><span class="dash-chip-val">${grandAccepted}</span><span class="dash-chip-lbl">ATP Accepted</span></div>
+            <div class="dash-chip dash-chip-amber"><div class="dash-chip-dot" style="background:#f59e0b"></div><span class="dash-chip-val">${grandPending}</span><span class="dash-chip-lbl">ATP Pending</span></div>
         </div>
-        <button class="btn btn-ghost" onclick="showDashboard()" style="flex-shrink:0">
+        <button class="dash-refresh-btn" onclick="this.querySelector('svg').classList.add('dash-refresh-spinning');showDashboard()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             Refresh
         </button>
