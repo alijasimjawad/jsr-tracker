@@ -2956,8 +2956,9 @@
         <div class="modal-sub">Create a new account</div>
         <div class="cp-field">
             <label>Full Name</label>
-            <input type="text" id="um-inp-fullname" placeholder="Search active team members…" list="um-fullname-list" oninput="umOnNameInput(this.value)" autocomplete="off">
-            <datalist id="um-fullname-list"></datalist>
+            <select id="um-inp-fullname" onchange="umOnNameChange(this)" style="width:100%;padding:8px 12px;border:1.5px solid var(--slate-200);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg-panel);color:var(--text-primary);outline:none;">
+                <option value="">— Select Team Member —</option>
+            </select>
         </div>
         <div class="cp-field">
             <label>Username</label>
@@ -6514,24 +6515,23 @@ function umSearchFilter(q) {
 }
 
 async function openUmAddModal() {
-    ['um-inp-fullname','um-inp-username','um-inp-password'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.value = '';
-    });
+    const sel = document.getElementById('um-inp-fullname');
+    if (sel) { sel.innerHTML = '<option value="">— Select Team Member —</option>'; sel.value = ''; }
+    ['um-inp-username','um-inp-password'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     const role = document.getElementById('um-inp-role'); if (role) role.value = 'user';
     const err = document.getElementById('um-add-error'); if (err) err.textContent = '';
-    document.getElementById('um-add-modal').classList.add('open');
     try {
         const { data } = await _sb.from('team_members').select('id,full_name').eq('status','active').order('full_name');
         _umActiveMembers = data || [];
-        const dl = document.getElementById('um-fullname-list');
-        if (dl) dl.innerHTML = _umActiveMembers.map(m => `<option value="${esc(m.full_name)}"></option>`).join('');
+        if (sel) sel.innerHTML = '<option value="">— Select Team Member —</option>' +
+            _umActiveMembers.map(m => `<option value="${esc(m.full_name)}">${esc(m.full_name)}</option>`).join('');
     } catch(_) { _umActiveMembers = []; }
-    setTimeout(() => document.getElementById('um-inp-fullname')?.focus(), 80);
+    document.getElementById('um-add-modal').classList.add('open');
 }
 
-function umOnNameInput(val) {
-    const m = _umActiveMembers.find(x => x.full_name === val);
-    if (!m) return;
+function umOnNameChange(sel) {
+    const val = sel.value;
+    if (!val) return;
     const parts = val.trim().split(/\s+/);
     const suggested = (parts.length >= 2
         ? parts[0] + '.' + parts[parts.length - 1]
