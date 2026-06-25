@@ -560,8 +560,10 @@
         .exp-table tr:last-child td { border-bottom:none; }
         .exp-table tr:hover td { background:var(--slate-50); }
         .exp-rej-box { margin-top:6px; padding:8px 12px; background:#fef2f2; border:1px solid #fca5a5; border-radius:6px; font-size:12px; color:var(--red); line-height:1.4; }
-        .exp-resubmit-btn { margin-top:6px; padding:4px 12px; font-size:12px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; transition:opacity .15s; display:inline-block; }
-        .exp-resubmit-btn:hover { opacity:.88; }
+        .exp-edit-btn { padding:4px 12px; font-size:12px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; transition:opacity .15s; }
+        .exp-edit-btn:hover { opacity:.88; }
+        .exp-del-btn  { padding:4px 12px; font-size:12px; font-weight:700; background:var(--red); color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; transition:opacity .15s; }
+        .exp-del-btn:hover { opacity:.88; }
         /* New Claim modal form */
         .ec-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; }
         .ec-form-grid .span2 { grid-column:span 2; }
@@ -9405,7 +9407,10 @@ function _renderMyExpenses(pc) {
                         const statusLabel = r.status ? (r.status.charAt(0).toUpperCase() + r.status.slice(1)) : 'Pending';
                         const rejBox = r.status === 'rejected'
                             ? `<div class="exp-rej-box"><strong>Reason:</strong> ${esc(r.rejection_reason || 'No reason provided')}</div>
-                               <button class="exp-resubmit-btn" onclick="openNewClaimModal('${r.id}')">Resubmit</button>`
+                               <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+                                   <button class="exp-edit-btn" onclick="openNewClaimModal('${r.id}')">Edit</button>
+                                   <button class="exp-del-btn" onclick="deleteExpClaim('${r.id}')">Delete</button>
+                               </div>`
                             : '';
                         return `<tr>
                             <td style="white-space:nowrap">${esc(r.activity_date || '')}</td>
@@ -9421,6 +9426,19 @@ function _renderMyExpenses(pc) {
             </table>
         </div>
     </div>`;
+}
+
+async function deleteExpClaim(id) {
+    finDelConfirm('This will permanently delete your rejected expense claim. This cannot be undone.', async () => {
+        closeFinModal('fin-del-modal');
+        try {
+            const { error } = await _sb.from('expense_claims').delete().eq('id', id);
+            if (error) throw error;
+        } catch(e) { toast(e.message, 'err'); return; }
+        _expClaims = _expClaims.filter(x => x.id !== id);
+        toast('Claim deleted', 'ok');
+        _renderMyExpenses();
+    });
 }
 
 // ── Expense Claim: Team Members multi-select ──────────────────
@@ -9501,7 +9519,7 @@ function openNewClaimModal(resubmitId) {
         // Pre-fill from existing claim
         const c = _expClaims.find(x => x.id === resubmitId);
         if (c) {
-            document.getElementById('exp-claim-modal-title').textContent = 'Resubmit Expense Claim';
+            document.getElementById('exp-claim-modal-title').textContent = 'Edit Expense Claim';
             document.getElementById('ec-proj').value      = c.project_name || '';
             document.getElementById('ec-site').value      = c.site_id || '';
             document.getElementById('ec-gov').value       = c.governorate || '';
