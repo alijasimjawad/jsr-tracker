@@ -10647,7 +10647,7 @@ function handleRestoreFile(input) {
 
 async function _doRestore(backup) {
     const status = document.getElementById('backup-restore-status');
-    const tables = Object.keys(backup.tables).filter(t => _BACKUP_TABLES.includes(t));
+    const tables = Object.keys(backup.tables).filter(t => _BACKUP_TABLES.includes(t) && t !== 'activity_log');
     let totalRestored = 0, errors = [];
     for (const table of tables) {
         const rows = backup.tables[table] || [];
