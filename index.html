@@ -138,43 +138,68 @@
         body.role-user .perm-show         { display: flex  !important; }
 
         /* ── Activity Log ────────────────────── */
-        .al-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+        /* ── Activity Log ───────────────────────────────── */
+        .al-toolbar { background:var(--slate-50); border:1px solid var(--border); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+        .al-filter-wrap { position:relative; display:inline-flex; align-items:center; }
+        .al-filter-icon { position:absolute; left:8px; top:50%; transform:translateY(-50%); color:var(--slate-400); pointer-events:none; flex-shrink:0; }
         .al-filter-select, .al-filter-input, .al-filter-date {
-            padding:7px 12px; border:1.5px solid var(--slate-200); border-radius:var(--radius-sm);
-            font-size:13px; font-family:inherit; color:var(--text-primary);
-            background:var(--bg-panel); outline:none;
+            padding:6px 10px 6px 28px; border:1.5px solid var(--slate-200); border-radius:8px;
+            font-size:12px; font-family:inherit; color:var(--text-primary);
+            background:var(--bg-panel); outline:none; transition:border-color .15s,box-shadow .15s;
         }
         .al-filter-select { cursor:pointer; }
-        .al-filter-input  { width:130px; }
-        .al-filter-date   { cursor:pointer; width:140px; }
-        .al-filter-select:focus, .al-filter-input:focus, .al-filter-date:focus { border-color:var(--accent); }
+        .al-filter-input  { width:120px; }
+        .al-filter-date   { cursor:pointer; width:138px; }
+        .al-filter-select:focus, .al-filter-input:focus, .al-filter-date:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.1); }
         .al-date-sep { font-size:12px; color:var(--slate-400); flex-shrink:0; }
         .al-spacer { flex:1; }
-        .al-clear-btn {
-            padding:7px 14px; border-radius:var(--radius-sm); border:1.5px solid var(--red);
-            background:transparent; color:var(--red); font-size:13px; font-family:inherit;
-            font-weight:600; cursor:pointer; transition:background .15s,color .15s;
-        }
+        .al-clear-btn { padding:6px 13px; border-radius:8px; border:1.5px solid var(--red); background:transparent; color:var(--red); font-size:12px; font-family:inherit; font-weight:600; cursor:pointer; transition:background .15s,color .15s; }
         .al-clear-btn:hover { background:var(--red); color:#fff; }
-        .al-table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
-        .al-table { width:100%; border-collapse:collapse; font-size:13px; min-width:700px; }
-        .al-table th {
-            background:var(--slate-50); color:var(--slate-600); font-weight:700;
-            padding:10px 14px; text-align:left; border-bottom:1.5px solid var(--border);
-            white-space:nowrap; font-size:12px; text-transform:uppercase; letter-spacing:.5px;
-        }
-        .al-table td { padding:10px 14px; border-bottom:1px solid var(--slate-100); color:var(--text-primary); vertical-align:middle; }
+        /* Stat cards */
+        .al-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+        .al-stat-card { background:var(--bg-panel); border:1px solid var(--border); border-left:3px solid; border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:10px; }
+        .al-stat-total  { border-left-color:#94a3b8; }
+        .al-stat-add    { border-left-color:#16a34a; }
+        .al-stat-edit   { border-left-color:#d97706; }
+        .al-stat-del    { border-left-color:#dc2626; }
+        .al-stat-icon { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .al-stat-total .al-stat-icon { background:#f1f5f9; color:#64748b; }
+        .al-stat-add   .al-stat-icon { background:#dcfce7; color:#16a34a; }
+        .al-stat-edit  .al-stat-icon { background:#fef3c7; color:#d97706; }
+        .al-stat-del   .al-stat-icon { background:#fee2e2; color:#dc2626; }
+        .al-stat-num   { font-size:20px; font-weight:800; line-height:1; }
+        .al-stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--slate-500); margin-top:2px; }
+        /* Table */
+        .al-table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+        .al-table { width:100%; border-collapse:collapse; font-size:13px; min-width:740px; }
+        .al-table th { background:var(--slate-50); color:var(--slate-500); font-weight:700; padding:10px 14px; text-align:left; border-bottom:1.5px solid var(--border); white-space:nowrap; font-size:11px; text-transform:uppercase; letter-spacing:.6px; }
+        .al-table td { padding:9px 14px; border-bottom:1px solid var(--slate-100); color:var(--text-primary); vertical-align:middle; }
         .al-table tr:last-child td { border-bottom:none; }
-        .al-table tr:hover td { background:var(--slate-50); }
-        .al-badge {
-            display:inline-block; padding:2px 8px; border-radius:20px;
-            font-size:11px; font-weight:700; letter-spacing:.3px;
-        }
+        .al-data-row { cursor:pointer; transition:background .15s; }
+        .al-data-row:hover td { background:rgba(37,99,235,.04); }
+        .al-data-row.al-row-open td { background:rgba(37,99,235,.05); }
+        /* Avatar */
+        .al-avatar { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; font-size:10px; font-weight:800; color:#fff; flex-shrink:0; margin-right:7px; vertical-align:middle; }
+        /* Chevron */
+        .al-chevron { color:var(--slate-300); font-size:13px; transition:transform .2s ease; display:inline-block; margin-left:6px; }
+        .al-row-open .al-chevron { transform:rotate(90deg); color:var(--accent); }
+        /* Detail expand row */
+        .al-detail-tr { display:none; }
+        .al-detail-tr.al-detail-open { display:table-row; }
+        .al-detail-panel { padding:14px 20px 16px; background:linear-gradient(135deg,#f8fafc,#f1f5f9); border-top:1px dashed var(--slate-200); }
+        .al-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 28px; }
+        .al-detail-label { font-size:10px; font-weight:700; color:var(--slate-400); text-transform:uppercase; letter-spacing:.5px; margin-bottom:2px; }
+        .al-detail-val { font-size:13px; color:var(--text-primary); font-weight:500; word-break:break-word; }
+        /* Badge */
+        .al-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.3px; }
         .al-badge-add    { background:#dcfce7; color:#166534; }
         .al-badge-edit   { background:#fef3c7; color:#92400e; }
         .al-badge-delete { background:#fee2e2; color:#991b1b; }
         .al-badge-other  { background:#dbeafe; color:#1e40af; }
         .al-empty { text-align:center; padding:60px 20px; color:var(--slate-400); font-size:14px; }
+        /* Row animation */
+        @keyframes alRowIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .al-row-anim { opacity:0; animation:alRowIn .2s ease forwards; }
 
         /* ── User Management ─────────────────── */
         .um-page { padding:28px 32px; }
@@ -6290,7 +6315,47 @@ let _alDateFrom     = '';
 let _alDateTo       = '';
 let _alActionFilter = '';
 let _alPage         = 1;
+let _alExpandedRow  = null;
 const _AL_PAGE_SIZE = 20;
+
+function _alUserColor(name) {
+    const colors = ['#3b82f6','#8b5cf6','#ec4899','#f97316','#10b981','#06b6d4','#f59e0b','#ef4444'];
+    let h = 0;
+    for (let i = 0; i < (name||'').length; i++) h = (h * 31 + (name||'').charCodeAt(i)) & 0xfffffff;
+    return colors[h % colors.length];
+}
+
+function _alRelTime(ts) {
+    if (!ts) return '';
+    const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (s < 60)     return 'just now';
+    if (s < 3600)   return `${Math.floor(s/60)}m ago`;
+    if (s < 86400)  return `${Math.floor(s/3600)}h ago`;
+    if (s < 604800) return `${Math.floor(s/86400)}d ago`;
+    return new Date(ts).toLocaleDateString();
+}
+
+function _alToggleRow(id) {
+    const row = document.querySelector(`.al-data-row[data-id="${id}"]`);
+    const det  = document.getElementById(`al-det-${id}`);
+    if (!row || !det) return;
+    const isOpen = row.classList.contains('al-row-open');
+    if (_alExpandedRow && _alExpandedRow !== id) {
+        const prevRow = document.querySelector(`.al-data-row[data-id="${_alExpandedRow}"]`);
+        const prevDet = document.getElementById(`al-det-${_alExpandedRow}`);
+        if (prevRow) prevRow.classList.remove('al-row-open');
+        if (prevDet) prevDet.classList.remove('al-detail-open');
+    }
+    if (isOpen) {
+        row.classList.remove('al-row-open');
+        det.classList.remove('al-detail-open');
+        _alExpandedRow = null;
+    } else {
+        row.classList.add('al-row-open');
+        det.classList.add('al-detail-open');
+        _alExpandedRow = id;
+    }
+}
 
 function _alBadge(a) {
     if (!a) return '';
@@ -6299,7 +6364,11 @@ function _alBadge(a) {
               : /edited|updated|changed|renamed/.test(u)   ? 'al-badge-edit'
               : /deleted|rejected|cleared|removed/.test(u) ? 'al-badge-delete'
               : 'al-badge-other';
-    return `<span class="al-badge ${cls}">${esc(a)}</span>`;
+    const icon = cls === 'al-badge-add'    ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>'
+               : cls === 'al-badge-edit'   ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
+               : cls === 'al-badge-delete' ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>'
+               : '<svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><circle cx="12" cy="12" r="6"/></svg>';
+    return `<span class="al-badge ${cls}">${icon}${esc(a)}</span>`;
 }
 
 function _alGetFiltered() {
@@ -6334,27 +6403,69 @@ function renderActivityLog() {
     if (_alPage > totalPages) _alPage = totalPages;
     const pageRows = filtered.slice((_alPage - 1) * _AL_PAGE_SIZE, _alPage * _AL_PAGE_SIZE);
 
+    const totalCount = filtered.length;
+    const addCount   = filtered.filter(r => /added|created|approved|submitted/.test((r.action||'').toLowerCase())).length;
+    const editCount  = filtered.filter(r => /edited|updated|changed|renamed/.test((r.action||'').toLowerCase())).length;
+    const delCount   = filtered.filter(r => /deleted|rejected|cleared|removed/.test((r.action||'').toLowerCase())).length;
+
     el.innerHTML = `
+        <div class="al-stats">
+            <div class="al-stat-card al-stat-total" style="cursor:pointer" onclick="setAlFilter('action','')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                <div><div style="font-size:20px;font-weight:800;color:var(--text-primary)">${totalCount.toLocaleString()}</div><div style="font-size:11px;color:var(--slate-500);margin-top:1px">Total Events</div></div>
+            </div>
+            <div class="al-stat-card al-stat-add" style="cursor:pointer" onclick="setAlFilter('action','add')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <div><div style="font-size:20px;font-weight:800;color:#16a34a">${addCount.toLocaleString()}</div><div style="font-size:11px;color:var(--slate-500);margin-top:1px">Created</div></div>
+            </div>
+            <div class="al-stat-card al-stat-edit" style="cursor:pointer" onclick="setAlFilter('action','edit')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <div><div style="font-size:20px;font-weight:800;color:#d97706">${editCount.toLocaleString()}</div><div style="font-size:11px;color:var(--slate-500);margin-top:1px">Edited</div></div>
+            </div>
+            <div class="al-stat-card al-stat-del" style="cursor:pointer" onclick="setAlFilter('action','delete')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                <div><div style="font-size:20px;font-weight:800;color:#dc2626">${delCount.toLocaleString()}</div><div style="font-size:11px;color:var(--slate-500);margin-top:1px">Deleted</div></div>
+            </div>
+        </div>
+
         <div class="al-toolbar" id="al-toolbar">
-            <select class="al-filter-select" id="al-sel-user" onchange="setAlFilter('user',this.value)">
-                <option value="">All Users</option>
-                ${users.map(u => `<option value="${esc(u)}"${_alUserFilter===u?' selected':''}>${esc(u)}</option>`).join('')}
-            </select>
-            <select class="al-filter-select" id="al-sel-proj" onchange="setAlFilter('proj',this.value)">
-                <option value="">All Projects</option>
-                ${projects.map(p => `<option value="${esc(p)}"${_alProjFilter===p?' selected':''}>${esc(p)}</option>`).join('')}
-            </select>
-            <select class="al-filter-select" id="al-sel-action" onchange="setAlFilter('action',this.value)">
-                <option value="">All Actions</option>
-                <option value="add"${_alActionFilter==='add'?' selected':''}>Added</option>
-                <option value="edit"${_alActionFilter==='edit'?' selected':''}>Edited</option>
-                <option value="delete"${_alActionFilter==='delete'?' selected':''}>Deleted</option>
-                <option value="other"${_alActionFilter==='other'?' selected':''}>Other</option>
-            </select>
-            <input type="text"  class="al-filter-input" id="al-inp-site" placeholder="Site ID…" value="${esc(_alSiteFilter)}" oninput="setAlFilter('site',this.value)">
-            <input type="date"  class="al-filter-date"  id="al-inp-from" title="Date From" value="${_alDateFrom}" onchange="setAlFilter('from',this.value)">
+            <div class="al-filter-wrap">
+                <svg class="al-filter-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <select class="al-filter-select" id="al-sel-user" onchange="setAlFilter('user',this.value)">
+                    <option value="">All Users</option>
+                    ${users.map(u => `<option value="${esc(u)}"${_alUserFilter===u?' selected':''}>${esc(u)}</option>`).join('')}
+                </select>
+            </div>
+            <div class="al-filter-wrap">
+                <svg class="al-filter-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7h18M6 12h12M9 17h6"/></svg>
+                <select class="al-filter-select" id="al-sel-proj" onchange="setAlFilter('proj',this.value)">
+                    <option value="">All Projects</option>
+                    ${projects.map(p => `<option value="${esc(p)}"${_alProjFilter===p?' selected':''}>${esc(p)}</option>`).join('')}
+                </select>
+            </div>
+            <div class="al-filter-wrap">
+                <svg class="al-filter-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                <select class="al-filter-select" id="al-sel-action" onchange="setAlFilter('action',this.value)">
+                    <option value="">All Actions</option>
+                    <option value="add"${_alActionFilter==='add'?' selected':''}>Added</option>
+                    <option value="edit"${_alActionFilter==='edit'?' selected':''}>Edited</option>
+                    <option value="delete"${_alActionFilter==='delete'?' selected':''}>Deleted</option>
+                    <option value="other"${_alActionFilter==='other'?' selected':''}>Other</option>
+                </select>
+            </div>
+            <div class="al-filter-wrap">
+                <svg class="al-filter-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" class="al-filter-input" id="al-inp-site" placeholder="Site ID…" value="${esc(_alSiteFilter)}" oninput="setAlFilter('site',this.value)">
+            </div>
+            <div class="al-filter-wrap">
+                <svg class="al-filter-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <input type="date" class="al-filter-date" id="al-inp-from" title="Date From" value="${_alDateFrom}" onchange="setAlFilter('from',this.value)">
+            </div>
             <span class="al-date-sep">to</span>
-            <input type="date"  class="al-filter-date"  id="al-inp-to"   title="Date To"   value="${_alDateTo}"   onchange="setAlFilter('to',this.value)">
+            <div class="al-filter-wrap">
+                <svg class="al-filter-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <input type="date" class="al-filter-date" id="al-inp-to" title="Date To" value="${_alDateTo}" onchange="setAlFilter('to',this.value)">
+            </div>
             <div class="al-spacer"></div>
             <button class="btn btn-ghost" style="font-size:12px" onclick="exportActivityLog()">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -6362,25 +6473,51 @@ function renderActivityLog() {
             </button>
             <button class="al-clear-btn" onclick="clearActivityLog()">Clear Log</button>
         </div>
+
         <div class="al-table-wrap">
             <table class="al-table">
                 <thead><tr>
-                    <th>Date / Time</th><th>User</th><th>Action</th><th>Project</th><th>Section</th><th>Details</th>
+                    <th>Date / Time</th><th>User</th><th>Action</th><th>Project</th><th>Section</th><th>Details</th><th style="width:24px"></th>
                 </tr></thead>
                 <tbody>
                 ${pageRows.length
-                    ? pageRows.map(r => {
-                        const dt = r.created_at ? new Date(r.created_at).toLocaleString() : '—';
-                        return `<tr>
-                            <td style="white-space:nowrap;color:var(--slate-500);font-size:12px">${esc(dt)}</td>
-                            <td>${esc(r.user_full_name || '—')}</td>
+                    ? pageRows.map((r, i) => {
+                        const id       = r.id || i;
+                        const dt       = r.created_at ? new Date(r.created_at).toLocaleString() : '—';
+                        const rel      = _alRelTime(r.created_at);
+                        const name     = r.user_full_name || '—';
+                        const initials = name === '—' ? '?' : name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+                        const color    = _alUserColor(name);
+                        return `<tr class="al-data-row al-row-anim" data-id="${id}" style="animation-delay:${i*30}ms" onclick="_alToggleRow('${id}')">
+                            <td style="white-space:nowrap">
+                                <div style="font-size:12px;color:var(--text-primary);font-weight:500">${esc(dt)}</div>
+                                <div style="font-size:11px;color:var(--slate-400);margin-top:2px">${esc(rel)}</div>
+                            </td>
+                            <td style="white-space:nowrap">
+                                <span class="al-avatar" style="background:${color}">${esc(initials)}</span>${esc(name)}
+                            </td>
                             <td>${_alBadge(r.action)}</td>
                             <td>${esc(r.project_name || '—')}</td>
                             <td>${esc(r.section_name || '—')}</td>
-                            <td style="color:var(--slate-500);font-size:12px">${esc(r.details || '—')}</td>
+                            <td style="color:var(--slate-500);font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.details || '—')}</td>
+                            <td style="padding:0 8px"><span class="al-chevron">›</span></td>
+                        </tr>
+                        <tr class="al-detail-tr" id="al-det-${id}">
+                            <td colspan="7" style="padding:0">
+                                <div class="al-detail-panel">
+                                    <div class="al-detail-grid">
+                                        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--slate-400);letter-spacing:.5px">User</div><div style="margin-top:3px;font-size:13px;font-weight:600">${esc(name)}</div></div>
+                                        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--slate-400);letter-spacing:.5px">Action</div><div style="margin-top:3px">${_alBadge(r.action)}</div></div>
+                                        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--slate-400);letter-spacing:.5px">Timestamp</div><div style="margin-top:3px;font-size:13px">${esc(dt)}</div></div>
+                                        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--slate-400);letter-spacing:.5px">Project</div><div style="margin-top:3px;font-size:13px">${esc(r.project_name || '—')}</div></div>
+                                        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--slate-400);letter-spacing:.5px">Section</div><div style="margin-top:3px;font-size:13px">${esc(r.section_name || '—')}</div></div>
+                                        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--slate-400);letter-spacing:.5px">Details</div><div style="margin-top:3px;font-size:12px;color:var(--slate-600);word-break:break-word">${esc(r.details || '—')}</div></div>
+                                    </div>
+                                </div>
+                            </td>
                         </tr>`;
                       }).join('')
-                    : `<tr><td colspan="6" class="al-empty">No activity records found.</td></tr>`}
+                    : `<tr><td colspan="7" class="al-empty">No activity records found.</td></tr>`}
                 </tbody>
             </table>
         </div>
@@ -6428,7 +6565,7 @@ async function clearActivityLog() {
         const { error } = await _sb.from('activity_log').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         if (error) { toast('Clear failed: ' + error.message, 'err'); return; }
         _alData = [];
-        _alUserFilter = ''; _alProjFilter = ''; _alSiteFilter = ''; _alDateFrom = ''; _alDateTo = ''; _alActionFilter = ''; _alPage = 1;
+        _alUserFilter = ''; _alProjFilter = ''; _alSiteFilter = ''; _alDateFrom = ''; _alDateTo = ''; _alActionFilter = ''; _alPage = 1; _alExpandedRow = null;
         renderActivityLog();
         toast('Activity log cleared', 'ok');
     });
