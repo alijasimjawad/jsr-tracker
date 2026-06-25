@@ -585,6 +585,18 @@
         .adm-exp-rej-inp { flex:1; padding:6px 10px; border:1.5px solid #fca5a5; border-radius:6px; font-size:12px; font-family:inherit; outline:none; }
         .adm-exp-rej-inp:focus { border-color:var(--red); }
         .adm-exp-rej-confirm { padding:5px 12px; background:var(--red); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+        .adm-exp-view-btn { padding:5px 12px; font-size:12px; font-weight:600; background:var(--slate-100); color:var(--slate-700); border:1.5px solid var(--slate-200); border-radius:6px; cursor:pointer; font-family:inherit; transition:background .15s; }
+        .adm-exp-view-btn:hover { background:var(--slate-200); }
+        /* Expense Claim Detail Modal */
+        .exp-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 28px; margin-top:18px; }
+        .exp-detail-field { display:flex; flex-direction:column; gap:3px; }
+        .exp-detail-label { font-size:11px; font-weight:700; color:var(--slate-400); text-transform:uppercase; letter-spacing:.5px; }
+        .exp-detail-value { font-size:14px; color:var(--text-primary); font-weight:500; word-break:break-word; }
+        .exp-detail-full { grid-column:span 2; }
+        .exp-detail-sep { grid-column:span 2; height:1px; background:var(--border); margin:6px 0; }
+        .exp-detail-cat-row { display:flex; justify-content:space-between; align-items:center; padding:7px 12px; background:var(--slate-50); border-radius:var(--radius-sm); margin-bottom:4px; font-size:13px; }
+        .exp-detail-total-bar { display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:var(--slate-50); border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:14px; font-weight:700; margin-top:18px; }
+        .exp-detail-total-val { font-size:20px; font-weight:800; color:var(--accent); }
 
         /* ── Global loading overlay ──────────── */
         #loading-overlay {
@@ -2528,6 +2540,49 @@
     <div class="modal-actions" style="margin-top:18px">
       <button class="btn btn-ghost" onclick="closeExpClaimModal()">Cancel</button>
       <button class="btn btn-accent" id="exp-claim-save-btn" onclick="saveExpClaim()">Submit Claim</button>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Claim Detail Modal (Admin) -->
+<div class="modal-overlay" id="exp-detail-modal" onclick="closeExpDetailModal(event)">
+  <div class="modal-card" style="max-width:600px;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div class="modal-title" style="margin-bottom:3px">Expense Claim</div>
+        <div id="edm-member" style="font-size:13px;color:var(--slate-400);font-weight:500"></div>
+      </div>
+      <span id="edm-status-badge" class="exp-badge" style="margin-top:4px"></span>
+    </div>
+    <div class="exp-detail-grid" id="edm-grid"></div>
+    <!-- Additional categories -->
+    <div id="edm-cats-section" style="display:none;margin-top:18px">
+      <div style="font-size:11px;font-weight:700;color:var(--slate-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Additional Categories</div>
+      <div id="edm-cats"></div>
+    </div>
+    <!-- Total -->
+    <div class="exp-detail-total-bar">
+      <span style="color:var(--slate-700)">Total Amount</span>
+      <span class="exp-detail-total-val" id="edm-total">0 IQD</span>
+    </div>
+    <!-- Rejection reason -->
+    <div id="edm-rej-box" style="display:none;margin-top:12px;padding:10px 14px;background:#fee2e2;border-radius:var(--radius-sm)">
+      <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Rejection Reason</div>
+      <div id="edm-rej-reason" style="font-size:13px;color:#7f1d1d"></div>
+    </div>
+    <!-- Approve / Reject actions (pending only) -->
+    <div id="edm-actions" style="display:none;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="adm-exp-approve-btn" onclick="approveExpClaim(_edmCurrentId)">Approve</button>
+        <button class="adm-exp-reject-btn" onclick="_edmShowReject()">Reject</button>
+      </div>
+      <div id="edm-rej-wrap" class="adm-exp-rej-wrap" style="display:none;margin-top:10px">
+        <input class="adm-exp-rej-inp" type="text" id="edm-rej-inp" placeholder="Rejection reason…">
+        <button class="adm-exp-rej-confirm" onclick="_edmConfirmReject()">Confirm</button>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeExpDetailModal()">Close</button>
     </div>
   </div>
 </div>
@@ -9581,12 +9636,14 @@ function _renderFinExpClaims(pc) {
                        : 'exp-badge-pending';
         const statusLabel = r.status ? (r.status.charAt(0).toUpperCase() + r.status.slice(1)) : 'Pending';
         const actionsHtml = showActions ? `
-            <button class="adm-exp-approve-btn" onclick="approveExpClaim('${r.id}')">Approve</button>
+            <button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>
+            <button class="adm-exp-approve-btn" onclick="approveExpClaim('${r.id}')" style="margin-left:6px">Approve</button>
             <button class="adm-exp-reject-btn" onclick="_showExpRejectInput('${r.id}',this)" style="margin-left:6px">Reject</button>
             <div class="adm-exp-rej-wrap" id="rej-wrap-${r.id}" style="display:none">
                 <input class="adm-exp-rej-inp" type="text" placeholder="Rejection reason…" id="rej-inp-${r.id}">
                 <button class="adm-exp-rej-confirm" onclick="submitExpReject('${r.id}')">Confirm Reject</button>
-            </div>` : '';
+            </div>` :
+            `<button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>`;
         const rejectionHtml = r.status === 'rejected' && r.rejection_reason
             ? `<div style="font-size:11px;color:var(--red);margin-top:4px">${esc(r.rejection_reason)}</div>` : '';
         return `<tr id="adm-exp-row-${r.id}">
@@ -9681,6 +9738,8 @@ async function approveExpClaim(id) {
     if (idx >= 0) _adminExpClaims[idx].status = 'approved';
     _invalidateFin();
     toast('Claim approved and added to Project Expenses', 'ok');
+    const dm = document.getElementById('exp-detail-modal');
+    if (dm && dm.classList.contains('open')) dm.classList.remove('open');
     _renderFinExpClaims();
 }
 
@@ -9697,6 +9756,116 @@ async function submitExpReject(id) {
     const idx = _adminExpClaims.findIndex(x => x.id === id);
     if (idx >= 0) { _adminExpClaims[idx].status = 'rejected'; _adminExpClaims[idx].rejection_reason = reason; }
     toast('Claim rejected', 'ok');
+    _renderFinExpClaims();
+}
+
+// ── Expense Claim Detail Modal ────────────────────────────────────────
+let _edmCurrentId = null;
+
+function openExpClaimDetail(id) {
+    const r = _adminExpClaims.find(x => x.id === id);
+    if (!r) return;
+    _edmCurrentId = id;
+
+    const memObj = _finTeam.find(t => t.id === r.member_id);
+    const memberName = memObj ? (memObj.full_name || '') : (r.member_id || '—');
+
+    const statusLabel = r.status ? (r.status.charAt(0).toUpperCase() + r.status.slice(1)) : 'Pending';
+    const badgeCls = r.status === 'approved' ? 'exp-badge-approved'
+                   : r.status === 'rejected'  ? 'exp-badge-rejected'
+                   : 'exp-badge-pending';
+    const badge = document.getElementById('edm-status-badge');
+    badge.className = `exp-badge ${badgeCls}`;
+    badge.textContent = statusLabel;
+    document.getElementById('edm-member').textContent = memberName;
+
+    function df(label, value, full) {
+        return `<div class="exp-detail-field${full ? ' exp-detail-full' : ''}">
+            <span class="exp-detail-label">${label}</span>
+            <span class="exp-detail-value">${value || '—'}</span>
+        </div>`;
+    }
+
+    const projLabel = (typeof PROJ_NAMES !== 'undefined' && PROJ_NAMES[r.project_name])
+        ? PROJ_NAMES[r.project_name] : (r.project_name || '—');
+
+    document.getElementById('edm-grid').innerHTML =
+        df('Project', esc(projLabel)) +
+        df('Site ID', esc(r.site_id)) +
+        df('Governorate', esc(r.governorate)) +
+        df('Description', esc(r.description)) +
+        df('Activity Date', esc(r.activity_date)) +
+        '<div class="exp-detail-sep"></div>' +
+        df('Transport Amount', iqd(r.transport_amount || 0)) +
+        df('Food Amount', iqd(r.food_amount || 0)) +
+        df('Accommodation', esc(r.accommodation || '')) +
+        (r.notes ? df('Notes', esc(r.notes), true) : '');
+
+    let cats = [];
+    try { cats = JSON.parse(r.extra_categories || '[]'); } catch(_) {}
+    const catsSection = document.getElementById('edm-cats-section');
+    if (cats && cats.filter(c => c.category).length > 0) {
+        catsSection.style.display = '';
+        document.getElementById('edm-cats').innerHTML = cats
+            .filter(c => c.category)
+            .map(c => `<div class="exp-detail-cat-row">
+                <span>${esc(c.category)}</span>
+                <span style="font-weight:600;font-variant-numeric:tabular-nums">${iqd(c.amount || 0)}</span>
+            </div>`).join('');
+    } else {
+        catsSection.style.display = 'none';
+    }
+
+    document.getElementById('edm-total').textContent = iqd(r.total_amount || 0);
+
+    const rejBox = document.getElementById('edm-rej-box');
+    if (r.status === 'rejected' && r.rejection_reason) {
+        document.getElementById('edm-rej-reason').textContent = r.rejection_reason;
+        rejBox.style.display = '';
+    } else {
+        rejBox.style.display = 'none';
+    }
+
+    const actionsEl = document.getElementById('edm-actions');
+    actionsEl.style.display = r.status === 'pending' ? '' : 'none';
+    const rejWrap = document.getElementById('edm-rej-wrap');
+    const rejInp  = document.getElementById('edm-rej-inp');
+    rejWrap.style.display = 'none';
+    if (rejInp) rejInp.value = '';
+
+    document.getElementById('exp-detail-modal').classList.add('open');
+}
+
+function closeExpDetailModal(e) {
+    if (e && e.target !== document.getElementById('exp-detail-modal')) return;
+    document.getElementById('exp-detail-modal').classList.remove('open');
+    _edmCurrentId = null;
+}
+
+function _edmShowReject() {
+    const wrap = document.getElementById('edm-rej-wrap');
+    wrap.style.display = wrap.style.display === 'none' ? 'flex' : 'none';
+    if (wrap.style.display === 'flex') {
+        const inp = document.getElementById('edm-rej-inp');
+        if (inp) setTimeout(() => inp.focus(), 60);
+    }
+}
+
+async function _edmConfirmReject() {
+    const inp = document.getElementById('edm-rej-inp');
+    const reason = inp?.value.trim() || '';
+    if (!reason) { if (inp) { inp.style.borderColor='var(--red)'; inp.placeholder='Reason required'; } return; }
+    const id = _edmCurrentId;
+    if (!id) return;
+    try {
+        const { error } = await _sb.from('expense_claims').update({ status: 'rejected', rejection_reason: reason }).eq('id', id);
+        if (error) throw error;
+    } catch(e) { toast(e.message, 'err'); return; }
+    const idx = _adminExpClaims.findIndex(x => x.id === id);
+    if (idx >= 0) { _adminExpClaims[idx].status = 'rejected'; _adminExpClaims[idx].rejection_reason = reason; }
+    toast('Claim rejected', 'ok');
+    document.getElementById('exp-detail-modal').classList.remove('open');
+    _edmCurrentId = null;
     _renderFinExpClaims();
 }
 </script>
