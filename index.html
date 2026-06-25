@@ -10159,12 +10159,26 @@ function openExpClaimDetail(id) {
     const projLabel = (typeof PROJ_NAMES !== 'undefined' && PROJ_NAMES[r.project_name])
         ? PROJ_NAMES[r.project_name] : (r.project_name || '—');
 
+    let empIds = [];
+    try { empIds = JSON.parse(r.employee_ids || '[]'); } catch(_) {}
+    const teamPillsHtml = empIds.length
+        ? empIds.map(eid => {
+            const m = (_finTeam || []).find(t => String(t.id) === String(eid));
+            const name = m ? (m.full_name || '—') : `#${eid}`;
+            return `<span style="display:inline-block;padding:2px 10px;background:var(--slate-100);border:1.5px solid var(--slate-200);border-radius:20px;font-size:12px;font-weight:600;color:var(--slate-700);margin:2px 3px 2px 0">${esc(name)}</span>`;
+        }).join('')
+        : '—';
+
     document.getElementById('edm-grid').innerHTML =
         df('Project', esc(projLabel)) +
         df('Site ID', esc(r.site_id)) +
         df('Governorate', esc(r.governorate)) +
         df('Description', esc(r.description)) +
         df('Activity Date', esc(r.activity_date)) +
+        `<div class="exp-detail-field exp-detail-full">
+            <span class="exp-detail-label">Team Members</span>
+            <span class="exp-detail-value" style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${teamPillsHtml}</span>
+        </div>` +
         '<div class="exp-detail-sep"></div>' +
         df('Transport Amount', iqd(r.transport_amount || 0)) +
         df('Food Amount', iqd(r.food_amount || 0)) +
