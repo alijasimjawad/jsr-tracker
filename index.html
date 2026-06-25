@@ -782,7 +782,7 @@
         @keyframes dash-card-in     { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
         @keyframes dash-spin        { to { transform:rotate(360deg); } }
 
-        .dash-hero { background:linear-gradient(135deg,#0f2038 0%,#1a4a8a 100%), radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px); background-size:100% 100%,18px 18px; border-radius:14px; padding:24px 28px; margin-bottom:20px; display:flex; align-items:center; gap:24px; color:#fff; position:relative; overflow:hidden; }
+        .dash-hero { background:linear-gradient(135deg,#0f2038 0%,#1a4a8a 100%), radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px); background-size:100% 100%,18px 18px; border-radius:14px; padding:32px 28px; margin-bottom:20px; display:flex; align-items:center; gap:24px; color:#fff; position:relative; overflow:hidden; }
         .dash-hero::before { content:''; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 75% 50%,rgba(96,165,250,.22) 0%,transparent 60%); z-index:0; }
         .dash-hero::after  { content:''; position:absolute; top:0; bottom:0; left:-40%; width:25%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent); animation:dash-hero-shimmer 4s ease-in-out infinite; pointer-events:none; z-index:0; }
         .dash-hero-left { flex:1; min-width:0; position:relative; z-index:1; }
@@ -805,7 +805,9 @@
         .hs-blue   .dash-hstat-val { color:#60a5fa; }
         .hs-green  .dash-hstat-val { color:#34d399; }
         .hs-orange .dash-hstat-val { color:#fbbf24; }
-        .dash-ring-wrap { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:6px; position:relative; z-index:1; padding-left:20px; border-left:1px solid rgba(255,255,255,.18); }
+        .dash-ring-wrap { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:10px; position:relative; z-index:1; padding-left:20px; border-left:1px solid rgba(255,255,255,.18); }
+        .dash-banner-refresh-btn { display:inline-flex; align-items:center; gap:5px; background:transparent; border:1px solid rgba(255,255,255,.32); color:rgba(255,255,255,.8); font-size:11px; padding:5px 12px; border-radius:7px; cursor:pointer; font-family:inherit; font-weight:600; transition:all .2s ease; }
+        .dash-banner-refresh-btn:hover { background:rgba(255,255,255,.15); border-color:rgba(255,255,255,.6); box-shadow:0 0 10px rgba(255,255,255,.2); color:#fff; }
         .dash-ring-lbl { font-size:9px; font-weight:700; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.6px; text-align:center; }
         .dash-ring-path { animation:dash-ring-in 1.2s ease forwards; filter:drop-shadow(0 0 5px rgba(52,211,153,.5)); }
         .dash-ring-path.dash-ring-pulsing { animation:dash-ring-in 1.2s ease forwards, dash-ring-pulse 2.5s ease-in-out 1.4s infinite; }
@@ -4483,6 +4485,10 @@ function _renderDashboard(pc) {
             </div>
         </div>
         <div class="dash-ring-wrap">
+            <button class="dash-banner-refresh-btn" onclick="this.querySelector('svg').classList.add('dash-refresh-spinning');showDashboard()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                Refresh
+            </button>
             <div style="position:relative;width:100px;height:100px">
                 <svg width="100" height="100" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
                     <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="8"/>
@@ -4496,19 +4502,6 @@ function _renderDashboard(pc) {
             </div>
             <div class="dash-ring-lbl">Overall ATP %</div>
         </div>
-    </div>
-
-    <div class="dash-toprow">
-        <div class="dash-chips">
-            <div class="dash-chip dash-chip-slate"><div class="dash-chip-dot" style="background:#64748b"></div><span class="dash-chip-val">${grandTotal}</span><span class="dash-chip-lbl">Total Sites</span></div>
-            <div class="dash-chip dash-chip-blue"><div class="dash-chip-dot" style="background:#3b82f6"></div><span class="dash-chip-val">${grandInstalled}</span><span class="dash-chip-lbl">Installed</span></div>
-            <div class="dash-chip dash-chip-green"><div class="dash-chip-dot" style="background:#10b981"></div><span class="dash-chip-val">${grandAccepted}</span><span class="dash-chip-lbl">ATP Accepted</span></div>
-            <div class="dash-chip dash-chip-amber"><div class="dash-chip-dot" style="background:#f59e0b"></div><span class="dash-chip-val">${grandPending}</span><span class="dash-chip-lbl">ATP Pending</span></div>
-        </div>
-        <button class="dash-refresh-btn" onclick="this.querySelector('svg').classList.add('dash-refresh-spinning');showDashboard()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Refresh
-        </button>
     </div>
 
     <div class="dash-grid">${allCards.join('')}</div>`;
