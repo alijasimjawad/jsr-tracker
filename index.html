@@ -2956,7 +2956,8 @@
         <div class="modal-sub">Create a new account</div>
         <div class="cp-field">
             <label>Full Name</label>
-            <input type="text" id="um-inp-fullname" placeholder="e.g. Ahmed Hassan">
+            <input type="text" id="um-inp-fullname" placeholder="Search active team members…" list="um-fullname-list" oninput="umOnNameInput(this.value)" autocomplete="off">
+            <datalist id="um-fullname-list"></datalist>
         </div>
         <div class="cp-field">
             <label>Username</label>
@@ -6399,6 +6400,7 @@ async function clearActivityLog() {
 }
 // ── User Management ───────────────────────────
 let _umUsers = [];
+let _umActiveMembers = [];
 
 async function showUserManagement() {
     if (currentUser?.role !== 'admin') { toast('Admin only', 'err'); return; }
@@ -6511,13 +6513,31 @@ function umSearchFilter(q) {
     });
 }
 
-function openUmAddModal() {
+async function openUmAddModal() {
     ['um-inp-fullname','um-inp-username','um-inp-password'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
     });
     const role = document.getElementById('um-inp-role'); if (role) role.value = 'user';
     const err = document.getElementById('um-add-error'); if (err) err.textContent = '';
     document.getElementById('um-add-modal').classList.add('open');
+    try {
+        const { data } = await _sb.from('team_members').select('id,full_name').eq('status','active').order('full_name');
+        _umActiveMembers = data || [];
+        const dl = document.getElementById('um-fullname-list');
+        if (dl) dl.innerHTML = _umActiveMembers.map(m => `<option value="${esc(m.full_name)}"></option>`).join('');
+    } catch(_) { _umActiveMembers = []; }
+    setTimeout(() => document.getElementById('um-inp-fullname')?.focus(), 80);
+}
+
+function umOnNameInput(val) {
+    const m = _umActiveMembers.find(x => x.full_name === val);
+    if (!m) return;
+    const parts = val.trim().split(/\s+/);
+    const suggested = (parts.length >= 2
+        ? parts[0] + '.' + parts[parts.length - 1]
+        : parts[0]).toLowerCase().replace(/[^a-z0-9.]/g, '');
+    const unEl = document.getElementById('um-inp-username');
+    if (unEl) unEl.value = suggested;
 }
 
 function closeUmAddModal(e) {
