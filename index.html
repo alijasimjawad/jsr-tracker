@@ -633,6 +633,25 @@
         .adm-exp-rej-confirm { padding:5px 12px; background:var(--red); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
         .adm-exp-view-btn { padding:5px 12px; font-size:12px; font-weight:600; background:var(--slate-100); color:var(--slate-700); border:1.5px solid var(--slate-200); border-radius:6px; cursor:pointer; font-family:inherit; transition:background .15s; }
         .adm-exp-view-btn:hover { background:var(--slate-200); }
+        /* Expense Claims — stat cards */
+        .ec-stat-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+        .ec-stat-card { padding:14px 16px; border-radius:12px; border:2px solid transparent; cursor:pointer; transition:border-color .15s,box-shadow .15s; }
+        .ec-stat-card:hover { box-shadow:0 2px 8px rgba(0,0,0,.1); }
+        .ec-stat-card.ec-stat-active { border-color:currentColor !important; box-shadow:0 2px 10px rgba(0,0,0,.13); }
+        .ec-stat-card-num { font-size:26px; font-weight:900; line-height:1; }
+        .ec-stat-card-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; margin-top:4px; opacity:.75; }
+        .ec-stat-all  { background:#f8fafc; color:var(--slate-700); }
+        .ec-stat-pend { background:#fffbeb; color:#92400e; }
+        .ec-stat-appr { background:#f0fdf4; color:#166534; }
+        .ec-stat-rej  { background:#fef2f2; color:#991b1b; }
+        /* Pending badge on sidebar */
+        .pending-badge { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; background:#ef4444; color:#fff; font-size:10px; font-weight:800; border-radius:10px; margin-left:6px; line-height:1; }
+        /* Filters */
+        .ec-filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; align-items:center; }
+        .ec-filter-sel { padding:7px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:12px; font-family:inherit; color:var(--text-primary); background:#fff; outline:none; cursor:pointer; }
+        .ec-filter-sel:focus { border-color:var(--accent); }
+        .ec-search { flex:1; min-width:200px; padding:7px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; color:var(--text-primary); background:#fff; outline:none; }
+        .ec-search:focus { border-color:var(--accent); }
         /* Expense Claim Detail Modal */
         .exp-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 28px; margin-top:18px; }
         .exp-detail-field { display:flex; flex-direction:column; gap:3px; }
@@ -2170,6 +2189,7 @@
                         <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                             <span class="tree-child-label">Expense Claims</span>
+                            <span class="pending-badge" id="exp-claims-pending-badge" style="display:none">0</span>
                         </span>
                         <span class="tree-child-arr">›</span>
                     </div>
@@ -9961,6 +9981,7 @@ async function saveExpClaim() {
 // ══════════════════════════════════════════════
 
 let _adminExpClaims = [];
+let _ecFilters = { member: '', project: '', status: '', month: 0, year: 0, search: '' };
 
 async function showFinExpClaims(force = false) {
     if (!_guardPerm('view_exp_claims')) return;
@@ -9971,6 +9992,9 @@ async function showFinExpClaims(force = false) {
         if (_finTeam.length === 0 || force) await _loadFinAll();
         await _loadAdminExpClaims();
     } catch(_) {}
+    const _now = new Date();
+    _ecFilters.month = _now.getMonth() + 1;
+    _ecFilters.year  = _now.getFullYear();
     _renderFinExpClaims(pc);
 }
 
@@ -9981,33 +10005,87 @@ async function _loadAdminExpClaims() {
     if (!error) _adminExpClaims = data || [];
 }
 
+function _ecGetFiltered() {
+    const f = _ecFilters;
+    return _adminExpClaims.filter(r => {
+        const mn = (_finTeam.find(t => t.id === r.member_id)?.full_name || r.member_id || '').toLowerCase();
+        if (f.member && mn !== f.member.toLowerCase()) return false;
+        if (f.project && r.project_name !== f.project) return false;
+        if (f.status && r.status !== f.status) return false;
+        if (f.month && f.year) {
+            const d = new Date(r.activity_date || r.submitted_at);
+            if (isNaN(d) || d.getMonth()+1 !== f.month || d.getFullYear() !== f.year) return false;
+        }
+        if (f.search) {
+            const q = f.search.toLowerCase();
+            if (![mn, r.site_id||'', r.project_name||'', r.description||''].join(' ').toLowerCase().includes(q)) return false;
+        }
+        return true;
+    });
+}
+
+function _ecSetStatus(status) { _ecFilters.status = status; _renderFinExpClaims(); }
+
+function _updatePendingBadge() {
+    const badge = document.getElementById('exp-claims-pending-badge');
+    if (!badge) return;
+    const count = _adminExpClaims.filter(r => r.status === 'pending').length;
+    badge.textContent = count;
+    badge.style.display = count > 0 ? '' : 'none';
+}
+
+function exportExpClaims() {
+    const rows = _ecGetFiltered();
+    const headers = ['Member','Project','Site ID','Date','Description','Total (IQD)','Status','Approved By','Action Date'];
+    const data = [headers, ...rows.map(r => {
+        const mn = _finTeam.find(t => t.id === r.member_id)?.full_name || r.member_id || '—';
+        return [mn, r.project_name||'', r.site_id||'', r.activity_date||'', r.description||'',
+            r.total_amount||0, r.status||'', r.reviewed_by||'', r.reviewed_at ? r.reviewed_at.slice(0,10) : ''];
+    })];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Expense Claims');
+    XLSX.writeFile(wb, `ExpenseClaims_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 function _renderFinExpClaims(pc) {
     pc = pc || document.getElementById('panel-content');
-    const pending  = _adminExpClaims.filter(r => r.status === 'pending');
-    const approved = _adminExpClaims.filter(r => r.status === 'approved');
-    const rejected = _adminExpClaims.filter(r => r.status === 'rejected');
+    const f = _ecFilters;
 
-    function memberName(memberId) {
-        const m = _finTeam.find(t => t.id === memberId);
-        return m ? esc(m.full_name || '') : esc(memberId || '—');
+    const totalCount    = _adminExpClaims.length;
+    const pendingCount  = _adminExpClaims.filter(r => r.status === 'pending').length;
+    const approvedCount = _adminExpClaims.filter(r => r.status === 'approved').length;
+    const rejectedCount = _adminExpClaims.filter(r => r.status === 'rejected').length;
+
+    const memberNames = [...new Set(_adminExpClaims.map(r => _finTeam.find(t => t.id === r.member_id)?.full_name).filter(Boolean))].sort();
+    const projects    = [...new Set(_adminExpClaims.map(r => r.project_name).filter(Boolean))].sort();
+    const curYear = new Date().getFullYear();
+    const years = [...new Set(_adminExpClaims.map(r => { const d = new Date(r.activity_date || r.submitted_at); return isNaN(d) ? null : d.getFullYear(); }).filter(Boolean))].sort((a,b)=>b-a);
+    if (!years.includes(curYear)) years.unshift(curYear);
+
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    function memberName(mid) {
+        const m = _finTeam.find(t => t.id === mid);
+        return m ? esc(m.full_name || '') : esc(mid || '—');
     }
 
-    function claimRow(r, showActions) {
-        const badgeCls = r.status === 'approved' ? 'exp-badge-approved'
-                       : r.status === 'rejected' ? 'exp-badge-rejected'
-                       : 'exp-badge-pending';
+    function claimRow(r) {
+        const badgeCls = r.status === 'approved' ? 'exp-badge-approved' : r.status === 'rejected' ? 'exp-badge-rejected' : 'exp-badge-pending';
         const statusLabel = r.status ? (r.status.charAt(0).toUpperCase() + r.status.slice(1)) : 'Pending';
-        const actionsHtml = showActions ? `
-            <button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>
-            <button class="adm-exp-approve-btn" onclick="approveExpClaim('${r.id}')" style="margin-left:6px">Approve</button>
-            <button class="adm-exp-reject-btn" onclick="_showExpRejectInput('${r.id}',this)" style="margin-left:6px">Reject</button>
-            <div class="adm-exp-rej-wrap" id="rej-wrap-${r.id}" style="display:none">
-                <input class="adm-exp-rej-inp" type="text" placeholder="Rejection reason…" id="rej-inp-${r.id}">
-                <button class="adm-exp-rej-confirm" onclick="submitExpReject('${r.id}')">Confirm Reject</button>
-            </div>` :
-            `<button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>`;
-        const rejectionHtml = r.status === 'rejected' && r.rejection_reason
-            ? `<div style="font-size:11px;color:var(--red);margin-top:4px">${esc(r.rejection_reason)}</div>` : '';
+        const isPending = r.status === 'pending';
+        const actionsHtml = isPending
+            ? `<button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>
+               <button class="adm-exp-approve-btn" onclick="approveExpClaim('${r.id}')" style="margin-left:4px">Approve</button>
+               <button class="adm-exp-reject-btn" onclick="_showExpRejectInput('${r.id}',this)" style="margin-left:4px">Reject</button>
+               <div class="adm-exp-rej-wrap" id="rej-wrap-${r.id}" style="display:none">
+                   <input class="adm-exp-rej-inp" type="text" placeholder="Rejection reason…" id="rej-inp-${r.id}">
+                   <button class="adm-exp-rej-confirm" onclick="submitExpReject('${r.id}')">Confirm Reject</button>
+               </div>`
+            : `<button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>`;
+        const rejHtml = r.status === 'rejected' && r.rejection_reason
+            ? `<div style="font-size:11px;color:var(--red);margin-top:3px">${esc(r.rejection_reason)}</div>` : '';
+        const reviewedAt = r.reviewed_at ? r.reviewed_at.slice(0,10) : '';
         return `<tr id="adm-exp-row-${r.id}">
             <td>${memberName(r.member_id)}</td>
             <td>${esc(r.project_name||'—')}</td>
@@ -10015,46 +10093,94 @@ function _renderFinExpClaims(pc) {
             <td style="white-space:nowrap">${esc(r.activity_date||'—')}</td>
             <td>${esc(r.description||'—')}</td>
             <td style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600">${iqd(r.total_amount)}</td>
-            <td><span class="exp-badge ${badgeCls}">${statusLabel}</span>${rejectionHtml}</td>
+            <td><span class="exp-badge ${badgeCls}">${statusLabel}</span>${rejHtml}</td>
+            <td style="font-size:12px;color:var(--slate-600)">${r.reviewed_by ? esc(r.reviewed_by) : '<span style="color:var(--slate-400)">—</span>'}</td>
+            <td style="white-space:nowrap;font-size:12px;color:var(--slate-500)">${reviewedAt || '<span style="color:var(--slate-400)">—</span>'}</td>
             <td>${actionsHtml}</td>
         </tr>`;
     }
 
+    const filtered     = _ecGetFiltered();
+    const totalApproved = filtered.filter(r => r.status === 'approved').reduce((s,r) => s + (r.total_amount||0), 0);
+    const hasApproved  = filtered.some(r => r.status === 'approved');
+
     pc.innerHTML = `<div class="fin-page">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-            <div>
-                <div style="font-size:22px;font-weight:800;color:var(--text-primary)">Expense Claims</div>
-                <div style="font-size:13px;color:var(--slate-400);margin-top:3px">${pending.length} pending · ${approved.length} approved · ${rejected.length} rejected</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+            <div style="font-size:22px;font-weight:800;color:var(--text-primary)">Expense Claims</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-ghost" onclick="exportExpClaims()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export Excel
+                </button>
+                <button class="btn btn-ghost" onclick="showFinExpClaims(true)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
+                </button>
             </div>
-            <button class="btn btn-ghost" onclick="showFinExpClaims(true)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
-            </button>
         </div>
 
-        ${pending.length > 0 ? `
-        <div style="font-size:13px;font-weight:700;color:var(--slate-700);margin-bottom:10px;padding:8px 0;border-bottom:2px solid var(--slate-200)">
-            Pending Claims <span style="font-size:12px;font-weight:600;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;margin-left:6px">${pending.length}</span>
+        <div class="ec-stat-cards">
+            <div class="ec-stat-card ec-stat-all${!f.status ? ' ec-stat-active' : ''}" onclick="_ecSetStatus('')">
+                <div class="ec-stat-card-num">${totalCount}</div>
+                <div class="ec-stat-card-label">Total Claims</div>
+            </div>
+            <div class="ec-stat-card ec-stat-pend${f.status==='pending' ? ' ec-stat-active' : ''}" onclick="_ecSetStatus('pending')">
+                <div class="ec-stat-card-num">${pendingCount}</div>
+                <div class="ec-stat-card-label">Pending</div>
+            </div>
+            <div class="ec-stat-card ec-stat-appr${f.status==='approved' ? ' ec-stat-active' : ''}" onclick="_ecSetStatus('approved')">
+                <div class="ec-stat-card-num">${approvedCount}</div>
+                <div class="ec-stat-card-label">Approved</div>
+            </div>
+            <div class="ec-stat-card ec-stat-rej${f.status==='rejected' ? ' ec-stat-active' : ''}" onclick="_ecSetStatus('rejected')">
+                <div class="ec-stat-card-num">${rejectedCount}</div>
+                <div class="ec-stat-card-label">Rejected</div>
+            </div>
         </div>
-        <div class="fin-table-wrap" style="margin-bottom:28px">
-            <table class="fin-table"><thead><tr>
-                <th>Member</th><th>Project</th><th>Site ID</th><th>Date</th><th>Description</th>
-                <th style="text-align:right">Total (IQD)</th><th>Status</th><th>Actions</th>
-            </tr></thead><tbody>
-            ${pending.map(r => claimRow(r, true)).join('')}
-            </tbody></table>
-        </div>` : `<div style="padding:20px 0 24px;color:var(--slate-400);font-size:14px">No pending claims.</div>`}
 
-        ${approved.length > 0 || rejected.length > 0 ? `
-        <div style="font-size:13px;font-weight:700;color:var(--slate-700);margin-bottom:10px;padding:8px 0;border-bottom:2px solid var(--slate-200)">All Claims History</div>
+        <div class="ec-filters">
+            <select class="ec-filter-sel" onchange="_ecFilters.member=this.value;_renderFinExpClaims()">
+                <option value="">All Members</option>
+                ${memberNames.map(n => `<option value="${esc(n)}"${f.member===n?' selected':''}>${esc(n)}</option>`).join('')}
+            </select>
+            <select class="ec-filter-sel" onchange="_ecFilters.project=this.value;_renderFinExpClaims()">
+                <option value="">All Projects</option>
+                ${projects.map(p => `<option value="${esc(p)}"${f.project===p?' selected':''}>${esc(p)}</option>`).join('')}
+            </select>
+            <select class="ec-filter-sel" onchange="_ecFilters.status=this.value;_renderFinExpClaims()">
+                <option value="">All Statuses</option>
+                <option value="pending"${f.status==='pending'?' selected':''}>Pending</option>
+                <option value="approved"${f.status==='approved'?' selected':''}>Approved</option>
+                <option value="rejected"${f.status==='rejected'?' selected':''}>Rejected</option>
+            </select>
+            <select class="ec-filter-sel" onchange="_ecFilters.month=+this.value;_renderFinExpClaims()">
+                <option value="0">All Months</option>
+                ${MONTHS.map((m,i) => `<option value="${i+1}"${f.month===i+1?' selected':''}>${m}</option>`).join('')}
+            </select>
+            <select class="ec-filter-sel" onchange="_ecFilters.year=+this.value;_renderFinExpClaims()">
+                <option value="0">All Years</option>
+                ${years.map(y => `<option value="${y}"${f.year===y?' selected':''}>${y}</option>`).join('')}
+            </select>
+            <input class="ec-search" type="text" placeholder="Search member, site, project, description…" value="${esc(f.search||'')}" oninput="_ecFilters.search=this.value;_renderFinExpClaims()">
+        </div>
+
         <div class="fin-table-wrap">
             <table class="fin-table"><thead><tr>
                 <th>Member</th><th>Project</th><th>Site ID</th><th>Date</th><th>Description</th>
-                <th style="text-align:right">Total (IQD)</th><th>Status</th><th></th>
+                <th style="text-align:right">Total (IQD)</th><th>Status</th><th>Approved By</th><th>Action Date</th><th>Actions</th>
             </tr></thead><tbody>
-            ${[...approved, ...rejected].map(r => claimRow(r, false)).join('')}
+            ${filtered.length === 0
+                ? `<tr><td colspan="10" class="al-empty">No claims match the current filters.</td></tr>`
+                : filtered.map(r => claimRow(r)).join('')}
             </tbody></table>
+        </div>
+
+        ${hasApproved ? `<div style="display:flex;justify-content:flex-end;margin-top:12px;padding:12px 18px;background:var(--slate-50);border:1.5px solid var(--border);border-radius:10px;gap:8px;align-items:center">
+            <span style="font-size:13px;font-weight:600;color:var(--slate-600)">Total Approved (filtered):</span>
+            <span style="font-size:15px;font-weight:800;color:#16a34a">${iqd(totalApproved)}</span>
         </div>` : ''}
     </div>`;
+
+    _updatePendingBadge();
 }
 
 function _showExpRejectInput(id, btn) {
@@ -10093,8 +10219,12 @@ async function approveExpClaim(id) {
     try {
         const { error: peErr } = await _sb.from('project_expenses').insert(projExpPayload);
         if (peErr) throw peErr;
-        const { error: clErr } = await _sb.from('expense_claims').update({ status: 'approved', rejection_reason: null }).eq('id', id);
+        const _reviewedAt = new Date().toISOString();
+        const _reviewedBy = currentUser?.full_name || currentUser?.email || '';
+        const { error: clErr } = await _sb.from('expense_claims').update({ status: 'approved', rejection_reason: null, reviewed_by: _reviewedBy, reviewed_at: _reviewedAt }).eq('id', id);
         if (clErr) throw clErr;
+        const idx2 = _adminExpClaims.findIndex(x => x.id === id);
+        if (idx2 >= 0) { _adminExpClaims[idx2].status = 'approved'; _adminExpClaims[idx2].reviewed_by = _reviewedBy; _adminExpClaims[idx2].reviewed_at = _reviewedAt; }
     } catch(e) { toast(e.message, 'err'); return; }
 
     const idx = _adminExpClaims.findIndex(x => x.id === id);
@@ -10111,13 +10241,15 @@ async function submitExpReject(id) {
     const reason = inp?.value.trim() || '';
     if (!reason) { if (inp) { inp.style.borderColor='var(--red)'; inp.placeholder='Reason required'; } return; }
 
+    const _rejAt = new Date().toISOString();
+    const _rejBy = currentUser?.full_name || currentUser?.email || '';
     try {
-        const { error } = await _sb.from('expense_claims').update({ status: 'rejected', rejection_reason: reason }).eq('id', id);
+        const { error } = await _sb.from('expense_claims').update({ status: 'rejected', rejection_reason: reason, reviewed_by: _rejBy, reviewed_at: _rejAt }).eq('id', id);
         if (error) throw error;
     } catch(e) { toast(e.message, 'err'); return; }
 
     const idx = _adminExpClaims.findIndex(x => x.id === id);
-    if (idx >= 0) { _adminExpClaims[idx].status = 'rejected'; _adminExpClaims[idx].rejection_reason = reason; }
+    if (idx >= 0) { _adminExpClaims[idx].status = 'rejected'; _adminExpClaims[idx].rejection_reason = reason; _adminExpClaims[idx].reviewed_by = _rejBy; _adminExpClaims[idx].reviewed_at = _rejAt; }
     toast('Claim rejected', 'ok');
     _renderFinExpClaims();
 }
@@ -10234,12 +10366,14 @@ async function _edmConfirmReject() {
     if (!reason) { if (inp) { inp.style.borderColor='var(--red)'; inp.placeholder='Reason required'; } return; }
     const id = _edmCurrentId;
     if (!id) return;
+    const _edmRejAt = new Date().toISOString();
+    const _edmRejBy = currentUser?.full_name || currentUser?.email || '';
     try {
-        const { error } = await _sb.from('expense_claims').update({ status: 'rejected', rejection_reason: reason }).eq('id', id);
+        const { error } = await _sb.from('expense_claims').update({ status: 'rejected', rejection_reason: reason, reviewed_by: _edmRejBy, reviewed_at: _edmRejAt }).eq('id', id);
         if (error) throw error;
     } catch(e) { toast(e.message, 'err'); return; }
     const idx = _adminExpClaims.findIndex(x => x.id === id);
-    if (idx >= 0) { _adminExpClaims[idx].status = 'rejected'; _adminExpClaims[idx].rejection_reason = reason; }
+    if (idx >= 0) { _adminExpClaims[idx].status = 'rejected'; _adminExpClaims[idx].rejection_reason = reason; _adminExpClaims[idx].reviewed_by = _edmRejBy; _adminExpClaims[idx].reviewed_at = _edmRejAt; }
     toast('Claim rejected', 'ok');
     document.getElementById('exp-detail-modal').classList.remove('open');
     _edmCurrentId = null;
