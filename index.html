@@ -617,11 +617,10 @@
         body.lang-ar .exp-table td { text-align: right; }
         body.lang-ar .exp-table td:last-child { text-align: right; }
         body.lang-ar .exp-page > div:first-child { flex-direction: row-reverse; }
-        /* Lang toggle pill in fixed top-right */
-        #lang-toggle-wrap { position:fixed; top:10px; right:16px; z-index:9100; display:none; }
-        body.lang-ar #lang-toggle-wrap { left:16px; right:auto; }
-        .lang-toggle-pill { display:inline-flex; border:1.5px solid var(--border); border-radius:20px; overflow:hidden; background:var(--bg-panel); box-shadow:var(--shadow-xs); }
-        .lang-toggle-chip { padding:5px 13px; font-size:11px; font-weight:700; letter-spacing:.5px; border:none; cursor:pointer; background:transparent; color:var(--slate-400); font-family:inherit; transition:background .15s,color .15s; }
+        /* Lang toggle — sidebar footer pill */
+        #lang-toggle-wrap { display:none; padding:6px 10px 2px; }
+        .lang-toggle-pill { display:inline-flex; border:1.5px solid var(--sb-border); border-radius:20px; overflow:hidden; background:var(--sb-icon-bg); }
+        .lang-toggle-chip { padding:5px 14px; font-size:11px; font-weight:700; letter-spacing:.5px; border:none; cursor:pointer; background:transparent; color:var(--sb-text); font-family:inherit; transition:background .15s,color .15s; }
         .lang-toggle-chip.lc-active { background:var(--accent); color:#fff; }
         /* Admin expense claims */
         .adm-exp-approve-btn { padding:5px 14px; font-size:12px; font-weight:700; background:#16a34a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; transition:opacity .15s; }
@@ -2216,6 +2215,13 @@
 
             <!-- Footer / user -->
             <div class="sidebar-footer">
+                <!-- Language toggle (Technician only) -->
+                <div id="lang-toggle-wrap">
+                    <div class="lang-toggle-pill">
+                        <button class="lang-toggle-chip lc-active" id="lang-chip-en" onclick="setLang('en')">EN</button>
+                        <button class="lang-toggle-chip" id="lang-chip-ar" onclick="setLang('ar')">AR</button>
+                    </div>
+                </div>
                 <div class="sidebar-actions">
                     <button class="btn-sidebar" onclick="logout()">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -3023,14 +3029,6 @@
     </div>
 </div>
 
-<!-- Language Toggle (Technician only) -->
-<div id="lang-toggle-wrap">
-  <div class="lang-toggle-pill">
-    <button class="lang-toggle-chip lc-active" id="lang-chip-en" onclick="setLang('en')">EN</button>
-    <button class="lang-toggle-chip" id="lang-chip-ar" onclick="setLang('ar')">AR</button>
-  </div>
-</div>
-
 <!-- Toast -->
 <div id="toast"><span id="ti"></span><span id="tt"></span></div>
 
@@ -3156,7 +3154,7 @@ function _langStorageKey() {
 }
 
 function setLang(lang, save = true) {
-    if (currentUser?.role !== 'technician') return;
+    if (currentUser?.role?.toLowerCase() !== 'technician') return;
     _lang = lang;
     if (save) localStorage.setItem(_langStorageKey(), lang);
 
@@ -3197,7 +3195,7 @@ function setLang(lang, save = true) {
 }
 
 function _loadLangPref() {
-    if (currentUser?.role !== 'technician') return;
+    if (currentUser?.role?.toLowerCase() !== 'technician') return;
     const saved = localStorage.getItem(_langStorageKey());
     if (saved === 'ar') setLang('ar', false);
     else setLang('en', false);
@@ -3995,7 +3993,7 @@ function applyPermissions() {
 
     // Language toggle — technicians only
     const langWrap = document.getElementById('lang-toggle-wrap');
-    if (langWrap) langWrap.style.display = currentUser?.role === 'technician' ? '' : 'none';
+    if (langWrap) langWrap.style.display = currentUser?.role?.toLowerCase() === 'technician' ? '' : 'none';
     _loadLangPref();
 
     // Action buttons — only after renderMain populates them
