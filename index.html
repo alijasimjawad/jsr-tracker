@@ -4532,7 +4532,7 @@ function _renderDashboard(pc) {
         <div class="dash-pg-header-right">
             <span class="dash-pg-date">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                Today · ${_fmtLastUpdated()}
+                Last updated: ${_fmtLastUpdated()}
             </span>
             <button class="dash-pg-btn dash-pg-btn-export" onclick="toast('Open a project section to export its data','ok')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -4551,7 +4551,7 @@ function _renderDashboard(pc) {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
             </div>
             <div>
-                <div class="dash-kpi-val" data-target="${grandTotal}" data-suffix="">0</div>
+                <div class="dash-kpi-val" data-target="${grandTotal}" data-suffix="">${grandTotal.toLocaleString()}</div>
                 <div class="dash-kpi-lbl">Total Target</div>
             </div>
         </div>
@@ -4560,7 +4560,7 @@ function _renderDashboard(pc) {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             </div>
             <div>
-                <div class="dash-kpi-val" style="color:#2563eb" data-target="${grandInstalled}" data-suffix="">0</div>
+                <div class="dash-kpi-val" style="color:#2563eb" data-target="${grandInstalled}" data-suffix="">${grandInstalled.toLocaleString()}</div>
                 <div class="dash-kpi-lbl">Installed</div>
             </div>
         </div>
@@ -4569,7 +4569,7 @@ function _renderDashboard(pc) {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
             </div>
             <div>
-                <div class="dash-kpi-val" style="color:#16a34a" data-target="${grandAccepted}" data-suffix="">0</div>
+                <div class="dash-kpi-val" style="color:#16a34a" data-target="${grandAccepted}" data-suffix="">${grandAccepted.toLocaleString()}</div>
                 <div class="dash-kpi-lbl">ATP Accepted</div>
             </div>
         </div>
@@ -4578,7 +4578,7 @@ function _renderDashboard(pc) {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
             <div>
-                <div class="dash-kpi-val" style="color:#d97706" data-target="${grandPending}" data-suffix="">0</div>
+                <div class="dash-kpi-val" style="color:#d97706" data-target="${grandPending}" data-suffix="">${grandPending.toLocaleString()}</div>
                 <div class="dash-kpi-lbl">Remaining</div>
             </div>
         </div>
@@ -4587,7 +4587,7 @@ function _renderDashboard(pc) {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             </div>
             <div>
-                <div class="dash-kpi-val" style="color:#16a34a" data-target="${atpOverallPct}" data-suffix="%">0%</div>
+                <div class="dash-kpi-val" style="color:#16a34a" data-target="${atpOverallPct}" data-suffix="%">${atpOverallPct}%</div>
                 <div class="dash-kpi-lbl">Overall ATP %</div>
             </div>
         </div>
