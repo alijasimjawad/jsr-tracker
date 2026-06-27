@@ -890,13 +890,6 @@
         .dash-sc-nodata { display:flex; align-items:center; gap:8px; padding:12px 16px; color:var(--slate-400); font-size:11px; }
 
         /* ── Premium Dashboard Layout ────────────────── */
-        .dash-pg-header {
-            display:flex; align-items:flex-start; justify-content:space-between;
-            gap:16px; margin-bottom:16px; flex-wrap:wrap;
-        }
-        .dash-pg-title { font-size:22px; font-weight:800; color:var(--slate-900); letter-spacing:-.3px; line-height:1.2; margin:0; }
-        .dash-pg-sub { font-size:12px; color:var(--slate-500); margin:3px 0 0; }
-        .dash-pg-header-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
         .dash-pg-date {
             font-size:12px; color:var(--slate-600); font-weight:600;
             background:#fff; border:1px solid var(--border); border-radius:7px;
@@ -2424,6 +2417,7 @@
                         <button class="lang-toggle-chip" id="lang-chip-ar" onclick="setLang('ar')">AR</button>
                     </div>
                 </div>
+                <div id="topbar-dash-actions" style="display:none;align-items:center;gap:8px;margin-left:auto;"></div>
                 <div class="topbar-right" id="topbar-right" style="display:none">
                     <button class="btn btn-chip-clear" id="topbar-clear-chip" style="display:none" onclick="clearChipFilters()">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -4568,13 +4562,10 @@ function _renderDashboard(pc) {
     const projCards = ALL_PROJS.map((p, i) => buildProjCard(p.key, p.name, i)).join('');
 
     pc.classList.remove('table-mode');
-    pc.innerHTML = `
-    <div class="dash-pg-header">
-        <div>
-            <h1 class="dash-pg-title">Dashboard</h1>
-            <p class="dash-pg-sub">Overview of all network scope delivery progress</p>
-        </div>
-        <div class="dash-pg-header-right">
+
+    const dashActionsEl = document.getElementById('topbar-dash-actions');
+    if (dashActionsEl) {
+        dashActionsEl.innerHTML = `
             <span class="dash-pg-date">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 Last updated: ${_fmtLastUpdated()}
@@ -4586,10 +4577,11 @@ function _renderDashboard(pc) {
             <button class="dash-pg-btn dash-pg-btn-refresh" onclick="this.querySelector('svg').classList.add('dash-refresh-spinning');showDashboard()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                 Refresh
-            </button>
-        </div>
-    </div>
+            </button>`;
+        dashActionsEl.style.display = 'flex';
+    }
 
+    pc.innerHTML = `
     <div class="dash-kpi-row">
         <div class="dash-kpi-card" style="border-top-color:#2563eb">
             <div class="dash-kpi-icon-wrap" style="background:#eff6ff">
@@ -4706,6 +4698,8 @@ function setTopbar(html, showAddSite) {
     document.getElementById('topbar-left').innerHTML = html;
     const right = document.getElementById('topbar-right');
     if (right) right.style.display = showAddSite ? '' : 'none';
+    const dashActions = document.getElementById('topbar-dash-actions');
+    if (dashActions) dashActions.style.display = 'none';
     if (!showAddSite) {
         const clearBtn = document.getElementById('topbar-clear-chip');
         if (clearBtn) clearBtn.style.display = 'none';
