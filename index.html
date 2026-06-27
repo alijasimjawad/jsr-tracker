@@ -888,6 +888,85 @@
 
         .dash-sc-nodata { display:flex; align-items:center; gap:8px; padding:12px 16px; color:var(--slate-400); font-size:11px; }
 
+        /* ── Premium Dashboard Layout ────────────────── */
+        .dash-pg-header {
+            display:flex; align-items:flex-start; justify-content:space-between;
+            gap:16px; margin-bottom:24px; flex-wrap:wrap;
+        }
+        .dash-pg-title { font-size:24px; font-weight:800; color:var(--slate-900); letter-spacing:-.3px; line-height:1.2; margin:0; }
+        .dash-pg-sub { font-size:13px; color:var(--slate-500); margin:4px 0 0; }
+        .dash-pg-header-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        .dash-pg-date {
+            font-size:12px; color:var(--slate-600); font-weight:600;
+            background:#fff; border:1px solid var(--border); border-radius:8px;
+            padding:7px 12px; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;
+        }
+        .dash-pg-btn {
+            display:inline-flex; align-items:center; gap:7px;
+            padding:8px 16px; border-radius:8px; font-size:13px; font-family:inherit; font-weight:600;
+            cursor:pointer; transition:all .18s ease; white-space:nowrap;
+        }
+        .dash-pg-btn-export {
+            background:#fff; border:1.5px solid var(--border); color:var(--slate-700);
+        }
+        .dash-pg-btn-export:hover { background:var(--slate-50); border-color:var(--slate-300); }
+        .dash-pg-btn-refresh {
+            background:linear-gradient(135deg,#2563eb,#1d4ed8); border:none; color:#fff;
+            box-shadow:0 2px 8px rgba(37,99,235,.35);
+        }
+        .dash-pg-btn-refresh:hover { opacity:.9; box-shadow:0 4px 14px rgba(37,99,235,.45); transform:translateY(-1px); }
+
+        /* KPI Cards row */
+        .dash-kpi-row { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:28px; }
+        @media (max-width:1350px) { .dash-kpi-row { grid-template-columns:repeat(3,1fr); } }
+        @media (max-width:900px)  { .dash-kpi-row { grid-template-columns:repeat(2,1fr); } }
+        .dash-kpi-card {
+            background:#fff; border:1px solid var(--border); border-radius:14px;
+            padding:18px 20px; box-shadow:var(--shadow-sm);
+            display:flex; flex-direction:column; gap:12px;
+            transition:box-shadow .18s, transform .18s;
+        }
+        .dash-kpi-card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+        .dash-kpi-icon-wrap { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .dash-kpi-val { font-size:28px; font-weight:900; line-height:1; letter-spacing:-1px; color:var(--slate-900); }
+        .dash-kpi-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--slate-500); margin-top:5px; }
+
+        /* Project card grid */
+        .dash-proj-section-hdr {
+            font-size:12px; font-weight:700; color:var(--slate-500); text-transform:uppercase;
+            letter-spacing:.7px; margin-bottom:16px; display:flex; align-items:center; gap:10px;
+        }
+        .dash-proj-section-hdr::after { content:''; flex:1; height:1px; background:var(--border); }
+        .dash-proj-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+        @media (max-width:1100px) { .dash-proj-grid { grid-template-columns:repeat(2,1fr); } }
+        @media (max-width:700px)  { .dash-proj-grid { grid-template-columns:1fr; } }
+        .dash-proj-card {
+            background:#fff; border:1px solid var(--border); border-radius:16px;
+            overflow:hidden; box-shadow:var(--shadow-sm);
+            transition:box-shadow .25s, transform .25s; display:flex; flex-direction:column;
+        }
+        .dash-proj-card:hover { box-shadow:0 10px 32px rgba(0,0,0,.13); transform:translateY(-3px); }
+        .dash-proj-card-accent { height:4px; }
+        .dash-proj-card-body { padding:18px 18px 20px; flex:1; }
+        .dash-proj-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:12px; }
+        .dash-proj-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .dash-proj-name { font-size:14px; font-weight:800; color:var(--slate-900); line-height:1.25; }
+        .dash-proj-sec-summary { font-size:11px; color:var(--slate-400); font-weight:500; margin-top:3px; }
+        .dash-proj-target-lbl { font-size:11px; color:var(--slate-600); font-weight:600; margin-top:2px; }
+        .dash-proj-status { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:99px; font-size:11px; font-weight:700; white-space:nowrap; flex-shrink:0; }
+        .dash-proj-status-complete { background:#dcfce7; color:#15803d; }
+        .dash-proj-status-progress { background:#fef3c7; color:#b45309; }
+        .dash-proj-status-none { background:var(--slate-100); color:var(--slate-500); }
+        .dash-proj-divider { height:1px; background:var(--slate-100); margin:10px 0 12px; }
+        .dash-proj-pct-row { display:flex; gap:10px; margin-bottom:12px; }
+        .dash-proj-pct-box { flex:1; text-align:center; background:var(--slate-50); border-radius:8px; padding:8px 4px; }
+        .dash-proj-pct-val { font-size:18px; font-weight:800; line-height:1; }
+        .dash-proj-pct-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--slate-400); margin-top:3px; }
+        .dash-proj-empty { display:flex; flex-direction:column; align-items:center; gap:8px; padding:24px 16px 20px; text-align:center; }
+        .dash-proj-empty-icon { width:44px; height:44px; border-radius:12px; background:var(--slate-100); display:flex; align-items:center; justify-content:center; color:var(--slate-400); }
+        .dash-proj-empty-title { font-size:13px; font-weight:700; color:var(--slate-600); }
+        .dash-proj-empty-desc { font-size:11px; color:var(--slate-400); line-height:1.5; max-width:180px; }
+
         /* ── Sidebar brand ───────────────── */
         .sidebar-brand {
             background: transparent; border: none; padding: 8px 0; text-align: center;
@@ -4328,71 +4407,85 @@ function _renderDashboard(pc) {
     const SEC_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="20" x2="22" y2="20"/><line x1="12" y1="20" x2="12" y2="4"/><polyline points="7 9 12 4 17 9"/><line x1="7" y1="13" x2="17" y2="13"/></svg>`;
     const NODATA_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>`;
 
-    // Build one section card
-    function buildCard(projKey, projName, secKey, secLbl, cardIdx) {
-        const color  = _projColor(projKey);
-        const dark   = _darkenHex(color);
-        const shadow = _hexToRgba(color, 0.15);
-        const delay  = (cardIdx || 0) * 60;
-        const iconBg = `linear-gradient(135deg,${color},${dark})`;
-        const cardBase = `class="dash-sc dash-card-anim" style="border-top:3px solid ${color};--card-shadow:${shadow};animation-delay:${delay}ms"`;
+    // Build dynamic section summary label for a project
+    function sectionSummaryLabel(projKey, secKeys) {
+        const labels = secKeys.map(k => sectionLabels[projKey]?.[k] || customSections[projKey]?.[k] || LABELS[k] || k);
+        const n = labels.length;
+        if (n === 0) return 'No sections yet';
+        if (n === 1) return `1 section · ${labels[0]}`;
+        if (n <= 3)  return `${n} sections · ${labels.join(', ')}`;
+        return `${n} sections · ${labels.slice(0,2).join(', ')}, +${n-2} more`;
+    }
 
-        const st = secStats(projKey, secKey);
+    // Build one project-level card (aggregates all sections dynamically)
+    function buildProjCard(projKey, projName, cardIdx) {
+        const color   = _projColor(projKey);
+        const dark    = _darkenHex(color);
+        const delay   = (cardIdx || 0) * 60;
+        const iconBg  = `linear-gradient(135deg,${color},${dark})`;
+        const secKeys = Object.keys(db[projKey] || {});
 
-        if (!st || st.total === 0) return `
-        <div ${cardBase}>
-            <div class="dash-sc-head">
-                <div class="dash-sc-row1">
-                    <div style="display:flex;align-items:center;gap:10px">
-                        <div class="dash-sc-icon" style="background:${iconBg}">${SEC_SVG}</div>
-                        <div class="dash-sc-meta">
-                            <div class="dash-sc-name">${esc(projName)}</div>
-                            <div class="dash-sc-proj">${esc(secLbl)}</div>
-                            <div class="dash-sc-target">Target: — sites</div>
-                        </div>
+        let total = 0, installed = 0, atpAccepted = 0, atpRejected = 0;
+        secKeys.forEach(secKey => {
+            const st = secStats(projKey, secKey);
+            if (st) { total += st.total; installed += st.installed; atpAccepted += st.atpAccepted; atpRejected += st.atpRejected; }
+        });
+        const atpPending = total - atpAccepted - atpRejected;
+        const instPct = total > 0 ? installed   / total * 100 : 0;
+        const atpPct  = total > 0 ? atpAccepted / total * 100 : 0;
+        const secSummary = sectionSummaryLabel(projKey, secKeys);
+
+        let statusHtml, contentHtml;
+        if (total === 0) {
+            statusHtml = `<span class="dash-proj-status dash-proj-status-none">No Data</span>`;
+            contentHtml = `
+                <div class="dash-proj-empty">
+                    <div class="dash-proj-empty-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+                    </div>
+                    <div class="dash-proj-empty-title">No sites added yet</div>
+                    <div class="dash-proj-empty-desc">Import data or add sites to begin tracking.</div>
+                </div>`;
+        } else {
+            const statusCls = instPct >= 100 ? 'dash-proj-status-complete' : 'dash-proj-status-progress';
+            const statusTxt = instPct >= 100 ? '✓ Complete' : '● In Progress';
+            statusHtml = `<span class="dash-proj-status ${statusCls}">${statusTxt}</span>`;
+            contentHtml = `
+                <div class="dash-proj-pct-row">
+                    <div class="dash-proj-pct-box" style="border-left:3px solid #3b82f6">
+                        <div class="dash-proj-pct-val" style="color:#2563eb">${instPct.toFixed(0)}%</div>
+                        <div class="dash-proj-pct-lbl">Install</div>
+                    </div>
+                    <div class="dash-proj-pct-box" style="border-left:3px solid #10b981">
+                        <div class="dash-proj-pct-val" style="color:#059669">${atpPct.toFixed(0)}%</div>
+                        <div class="dash-proj-pct-lbl">ATP</div>
                     </div>
                 </div>
-            </div>
-            <div class="dash-sc-nodata">${NODATA_SVG}<span>No data yet</span></div>
-        </div>`;
+                <div>
+                    ${buildPM('Installed',    installed,   total, 'fill-blue',   0)}
+                    ${buildPM('ATP Accepted', atpAccepted, total, 'fill-green',  1)}
+                    ${buildPM('ATP Rejected', atpRejected, total, 'fill-red',    2)}
+                    ${buildPM('ATP Pending',  atpPending,  total, 'fill-orange', 3)}
+                </div>`;
+        }
 
-        const instPct = st.total > 0 ? st.installed   / st.total * 100 : 0;
-        const atpPct  = st.total > 0 ? st.atpAccepted / st.total * 100 : 0;
-        const pill = instPct >= 100
-            ? `<span class="dash-pill dash-pill-complete">✓ Complete</span>`
-            : instPct > 0
-                ? `<span class="dash-pill dash-pill-progress">● In Progress</span>`
-                : `<span class="dash-pill dash-pill-none">Not Started</span>`;
         return `
-        <div ${cardBase}>
-            <div class="dash-sc-head">
-                <div class="dash-sc-row1">
-                    <div style="display:flex;align-items:center;gap:10px">
-                        <div class="dash-sc-icon" style="background:${iconBg}">${SEC_SVG}</div>
-                        <div class="dash-sc-meta">
-                            <div class="dash-sc-name">${esc(projName)}</div>
-                            <div class="dash-sc-proj">${esc(secLbl)}</div>
-                            <div class="dash-sc-target">Target: ${st.total} sites</div>
+        <div class="dash-proj-card dash-card-anim" style="animation-delay:${delay}ms">
+            <div class="dash-proj-card-accent" style="background:${color}"></div>
+            <div class="dash-proj-card-body">
+                <div class="dash-proj-card-head">
+                    <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                        <div class="dash-proj-icon" style="background:${iconBg}">${SEC_SVG}</div>
+                        <div style="min-width:0">
+                            <div class="dash-proj-name">${esc(projName)}</div>
+                            <div class="dash-proj-sec-summary">${esc(secSummary)}</div>
+                            ${total > 0 ? `<div class="dash-proj-target-lbl">Target: ${total} sites</div>` : ''}
                         </div>
                     </div>
-                    <div class="dash-sc-badges">
-                        ${pill}
-                        <span class="dash-badge dash-badge-inst">INST ${instPct.toFixed(0)}%</span>
-                        <span class="dash-badge ${atpPct >= 50 ? 'dash-badge-atp-ok' : 'dash-badge-atp-warn'}">ATP ${atpPct.toFixed(0)}%</span>
-                    </div>
+                    ${statusHtml}
                 </div>
-            </div>
-            <div class="dash-sc-planned">
-                <div class="dash-sc-slbl">Planned</div>
-                <div class="dash-sc-prow"><span>PO Sites</span><span class="dash-pval-green">${st.total}</span></div>
-                <div class="dash-sc-eff">Effective target&nbsp;<span>${st.total} sites</span></div>
-            </div>
-            <div class="dash-sc-prog">
-                <div class="dash-sc-slbl">Progress</div>
-                ${buildPM('Installed',    st.installed,   st.total, 'fill-blue',   0)}
-                ${buildPM('ATP Accepted', st.atpAccepted, st.total, 'fill-green',  1)}
-                ${buildPM('ATP Rejected', st.atpRejected, st.total, 'fill-red',    2)}
-                ${buildPM('ATP Pending',  st.atpPending,  st.total, 'fill-orange', 3)}
+                <div class="dash-proj-divider"></div>
+                ${contentHtml}
             </div>
         </div>`;
     }
@@ -4409,103 +4502,115 @@ function _renderDashboard(pc) {
         { key:'tasc',   name:'TASC Project'   }
     ];
 
-    // Accumulate grand totals while building cards (single pass)
+    // Accumulate grand totals (single pass over all sections of all projects)
     let grandTotal = 0, grandInstalled = 0, grandAccepted = 0, grandRejected = 0;
-    const allCards = [];
-    let _cardIdx = 0;
-
     ALL_PROJS.forEach(p => {
         Object.keys(db[p.key] || {}).forEach(secKey => {
-            const lbl = sectionLabels[p.key]?.[secKey] || customSections[p.key]?.[secKey] || LABELS[secKey] || secKey;
-            const st  = secStats(p.key, secKey);
+            const st = secStats(p.key, secKey);
             if (st) {
                 grandTotal     += st.total;
                 grandInstalled += st.installed;
                 grandAccepted  += st.atpAccepted;
                 grandRejected  += st.atpRejected;
             }
-            allCards.push(buildCard(p.key, p.name, secKey, lbl, _cardIdx++));
         });
     });
 
-    const grandPending = grandTotal - grandAccepted - grandRejected;
-    const atpOverall   = grandTotal > 0 ? grandAccepted / grandTotal : 0;
-    // SVG ring: r=38, circumference = 2π×38 ≈ 238.76
-    const ringC      = 238.76;
-    const ringOffset = (ringC * (1 - atpOverall)).toFixed(2);
+    const grandPending  = grandTotal - grandAccepted - grandRejected;
+    const atpOverall    = grandTotal > 0 ? grandAccepted / grandTotal : 0;
+    const atpOverallPct = Math.round(atpOverall * 100);
+
+    const projCards = ALL_PROJS.map((p, i) => buildProjCard(p.key, p.name, i)).join('');
 
     pc.classList.remove('table-mode');
     pc.innerHTML = `
-    <div class="dash-hero">
-        <div class="dash-hero-left">
-            <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
-                <div class="dash-hero-badge">JSR</div>
-                <div style="min-width:0">
-                    <div class="dash-hero-title">JSR Network Tracker</div>
-                    <div class="dash-hero-sub">Project delivery tracker across all scopes</div>
-                </div>
-            </div>
-            <button class="dash-export-btn" onclick="toast('Open a project section to export its data','ok')">
+    <div class="dash-pg-header">
+        <div>
+            <h1 class="dash-pg-title">Dashboard</h1>
+            <p class="dash-pg-sub">Overview of all network scope delivery progress</p>
+        </div>
+        <div class="dash-pg-header-right">
+            <span class="dash-pg-date">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Today · ${_fmtLastUpdated()}
+            </span>
+            <button class="dash-pg-btn dash-pg-btn-export" onclick="toast('Open a project section to export its data','ok')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Export Data
             </button>
-            <div class="dash-lastupd">Last updated: ${_fmtLastUpdated()}</div>
-        </div>
-        <div class="dash-hero-center">
-            <div class="dash-hstat hs-white">
-                <div class="dash-hstat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg></div>
-                <div class="dash-hstat-val">${grandTotal}</div>
-                <div class="dash-hstat-lbl">Total Target</div>
-            </div>
-            <div class="dash-hstat hs-blue">
-                <div class="dash-hstat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-                <div class="dash-hstat-val">${grandInstalled}</div>
-                <div class="dash-hstat-lbl">Installed</div>
-            </div>
-            <div class="dash-hstat hs-green">
-                <div class="dash-hstat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
-                <div class="dash-hstat-val">${grandAccepted}</div>
-                <div class="dash-hstat-lbl">ATP Accepted</div>
-            </div>
-            <div class="dash-hstat hs-orange">
-                <div class="dash-hstat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-                <div class="dash-hstat-val">${grandPending}</div>
-                <div class="dash-hstat-lbl">Remaining</div>
-            </div>
-        </div>
-        <div class="dash-ring-wrap">
-            <button class="dash-banner-refresh-btn" onclick="this.querySelector('svg').classList.add('dash-refresh-spinning');showDashboard()">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <button class="dash-pg-btn dash-pg-btn-refresh" onclick="this.querySelector('svg').classList.add('dash-refresh-spinning');showDashboard()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                 Refresh
             </button>
-            <div style="position:relative;width:100px;height:100px">
-                <svg width="100" height="100" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="8"/>
-                    <circle class="dash-ring-path${atpOverall > 0 ? ' dash-ring-pulsing' : ''}" cx="50" cy="50" r="38" fill="none" stroke="#34d399" stroke-width="8"
-                        stroke-linecap="round" stroke-dasharray="${ringC}" stroke-dashoffset="${ringOffset}"/>
-                </svg>
-                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px">
-                    <span style="font-size:20px;font-weight:900;color:#34d399;line-height:1">${(atpOverall*100).toFixed(0)}%</span>
-                    <span style="font-size:7px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.8px">OVERALL ATP</span>
-                </div>
-            </div>
-            <div class="dash-ring-lbl">Overall ATP %</div>
         </div>
     </div>
 
-    <div class="dash-grid">${allCards.join('')}</div>`;
+    <div class="dash-kpi-row">
+        <div class="dash-kpi-card">
+            <div class="dash-kpi-icon-wrap" style="background:#eff6ff">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+            </div>
+            <div>
+                <div class="dash-kpi-val" data-target="${grandTotal}" data-suffix="">0</div>
+                <div class="dash-kpi-lbl">Total Target</div>
+            </div>
+        </div>
+        <div class="dash-kpi-card">
+            <div class="dash-kpi-icon-wrap" style="background:#dbeafe">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div>
+                <div class="dash-kpi-val" style="color:#2563eb" data-target="${grandInstalled}" data-suffix="">0</div>
+                <div class="dash-kpi-lbl">Installed</div>
+            </div>
+        </div>
+        <div class="dash-kpi-card">
+            <div class="dash-kpi-icon-wrap" style="background:#dcfce7">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            </div>
+            <div>
+                <div class="dash-kpi-val" style="color:#16a34a" data-target="${grandAccepted}" data-suffix="">0</div>
+                <div class="dash-kpi-lbl">ATP Accepted</div>
+            </div>
+        </div>
+        <div class="dash-kpi-card">
+            <div class="dash-kpi-icon-wrap" style="background:#fef3c7">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+                <div class="dash-kpi-val" style="color:#d97706" data-target="${grandPending}" data-suffix="">0</div>
+                <div class="dash-kpi-lbl">Remaining</div>
+            </div>
+        </div>
+        <div class="dash-kpi-card">
+            <div class="dash-kpi-icon-wrap" style="background:#f0fdf4">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+                <div class="dash-kpi-val" style="color:#16a34a" data-target="${atpOverallPct}" data-suffix="%">0%</div>
+                <div class="dash-kpi-lbl">Overall ATP %</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dash-proj-section-hdr">Projects <span style="color:var(--slate-400);font-weight:500;text-transform:none;letter-spacing:0;font-size:11px;margin-left:4px">${ALL_PROJS.length} total</span></div>
+    <div class="dash-proj-grid">${projCards}</div>`;
 
     // Counter animation — first load only
     if (!_dashHeroAnimated) {
         _dashHeroAnimated = true;
-        const valEls  = pc.querySelectorAll('.dash-hstat-val');
-        const targets = [...valEls].map(el => ({ el, target: parseInt((el.textContent||'0').replace(/,/g,'')) || 0 }));
-        targets.forEach(t => { t.el.textContent = '0'; });
+        const valEls  = pc.querySelectorAll('.dash-kpi-val[data-target]');
+        const targets = [...valEls].map(el => ({
+            el,
+            target: parseInt(el.dataset.target) || 0,
+            suffix: el.dataset.suffix || ''
+        }));
+        targets.forEach(t => { t.el.textContent = '0' + t.suffix; });
         const t0 = performance.now(), dur = 1200;
         (function tick(now) {
             const p = Math.min((now - t0) / dur, 1);
             const e = 1 - Math.pow(1 - p, 3);
-            targets.forEach(({ el, target }) => { el.textContent = Math.round(e * target).toLocaleString(); });
+            targets.forEach(({ el, target, suffix }) => { el.textContent = Math.round(e * target).toLocaleString() + suffix; });
             if (p < 1) requestAnimationFrame(tick);
         })(performance.now());
     }
