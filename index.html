@@ -924,8 +924,8 @@
         .dash-kpi-card {
             background:#fff; border:1px solid var(--border); border-radius:12px;
             border-top-width:3px;
-            padding:12px 16px 14px; box-shadow:var(--shadow-sm);
-            display:flex; flex-direction:column; gap:8px;
+            padding:10px 14px 12px; box-shadow:var(--shadow-sm);
+            display:flex; flex-direction:column; gap:6px;
             transition:box-shadow .18s, transform .18s;
         }
         .dash-kpi-card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
@@ -950,9 +950,13 @@
         }
         .dash-proj-card:hover { box-shadow:0 8px 28px rgba(0,0,0,.12); transform:translateY(-2px); border-color:var(--slate-300); }
         .dash-proj-card-accent { height:3px; }
-        .dash-proj-card-body { padding:14px 16px 16px; flex:1; }
-        .dash-proj-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px; }
-        .dash-proj-icon { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .dash-proj-card-body { padding:12px 14px 14px; flex:1; }
+        .dash-proj-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px; }
+        .dash-proj-avatar {
+            width:30px; height:30px; border-radius:7px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            font-size:11px; font-weight:800; color:#fff; letter-spacing:-.3px;
+        }
         .dash-proj-name { font-size:13px; font-weight:800; color:var(--slate-900); line-height:1.25; }
         .dash-proj-sec-summary { font-size:10px; color:var(--slate-400); font-weight:500; margin-top:2px; }
         .dash-proj-target-lbl { font-size:10px; color:var(--slate-600); font-weight:600; margin-top:2px; }
@@ -960,18 +964,21 @@
         .dash-proj-status-complete { background:#dcfce7; color:#15803d; }
         .dash-proj-status-progress { background:#fef3c7; color:#b45309; }
         .dash-proj-status-none { background:var(--slate-100); color:var(--slate-500); }
-        .dash-proj-divider { height:1px; background:var(--slate-100); margin:8px 0 10px; }
+        .dash-proj-divider { height:1px; background:var(--slate-100); margin:6px 0 8px; }
         .dash-proj-pct-row { display:flex; gap:8px; margin-bottom:8px; }
         .dash-proj-pct-box { flex:1; text-align:center; background:var(--slate-50); border-radius:7px; padding:6px 4px; }
         .dash-proj-pct-val { font-size:16px; font-weight:800; line-height:1; }
         .dash-proj-pct-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--slate-400); margin-top:2px; }
-        .dash-proj-empty { display:flex; flex-direction:column; align-items:center; gap:6px; padding:16px 12px 14px; text-align:center; }
-        .dash-proj-empty-icon { width:38px; height:38px; border-radius:10px; background:var(--slate-100); display:flex; align-items:center; justify-content:center; color:var(--slate-400); }
-        .dash-proj-empty-title { font-size:12px; font-weight:700; color:var(--slate-600); }
-        .dash-proj-empty-desc { font-size:11px; color:var(--slate-400); line-height:1.5; max-width:180px; }
+        .dash-proj-empty {
+            border:1.5px dashed var(--slate-200); border-radius:8px;
+            display:flex; flex-direction:column; align-items:center;
+            gap:3px; padding:10px 12px; text-align:center; margin-top:2px;
+        }
+        .dash-proj-empty-title { font-size:11px; font-weight:700; color:var(--slate-500); }
+        .dash-proj-empty-desc { font-size:10px; color:var(--slate-400); line-height:1.4; }
         .dash-proj-open-btn {
             display:flex; align-items:center; justify-content:center; gap:5px;
-            width:100%; padding:6px 12px; margin-top:10px; border-radius:7px;
+            width:100%; padding:5px 12px; margin-top:8px; border-radius:7px;
             font-size:11px; font-family:inherit; font-weight:600;
             background:var(--slate-50); border:1px solid var(--border); color:var(--slate-600);
             cursor:pointer; transition:all .15s ease;
@@ -4436,11 +4443,14 @@ function _renderDashboard(pc) {
     }
 
     // Build one project-level card (aggregates all sections dynamically)
+    const PROJ_INITIALS = { zain:'ZP', nokia:'NP', huawei:'HP', mrc:'MR', metco:'MT', mfc:'MF', tac:'TA', ipt:'IP', tasc:'TS' };
+
     function buildProjCard(projKey, projName, cardIdx) {
         const color    = _projColor(projKey);
         const dark     = _darkenHex(color);
         const delay    = (cardIdx || 0) * 60;
         const iconBg   = `linear-gradient(135deg,${color},${dark})`;
+        const initials = PROJ_INITIALS[projKey] || projName.replace(/[^A-Z]/g,'').slice(0,2) || projName.slice(0,2).toUpperCase();
         const secKeys  = Object.keys(db[projKey] || {});
         const firstSec = secKeys[0] || null;
 
@@ -4472,13 +4482,9 @@ function _renderDashboard(pc) {
             statusHtml = `<span class="dash-proj-status dash-proj-status-none">No Data</span>`;
             contentHtml = `
                 <div class="dash-proj-empty">
-                    <div class="dash-proj-empty-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
-                    </div>
-                    <div class="dash-proj-empty-title">No sites added yet</div>
-                    <div class="dash-proj-empty-desc">Import data or add sites to begin tracking.</div>
-                </div>
-                ${openBtn}`;
+                    <span class="dash-proj-empty-title">No sites added yet</span>
+                    <span class="dash-proj-empty-desc">Import data or add sites to begin tracking.</span>
+                </div>`;
         } else {
             const statusCls = instPct >= 100 ? 'dash-proj-status-complete' : 'dash-proj-status-progress';
             const statusTxt = instPct >= 100 ? '✓ Complete' : '● In Progress';
@@ -4508,8 +4514,8 @@ function _renderDashboard(pc) {
             <div class="dash-proj-card-accent" style="background:${accentColor}"></div>
             <div class="dash-proj-card-body">
                 <div class="dash-proj-card-head">
-                    <div style="display:flex;align-items:center;gap:10px;min-width:0">
-                        <div class="dash-proj-icon" style="background:${iconBg}">${SEC_SVG}</div>
+                    <div style="display:flex;align-items:center;gap:9px;min-width:0">
+                        <div class="dash-proj-avatar" style="background:${iconBg}">${initials}</div>
                         <div style="min-width:0">
                             <div class="dash-proj-name">${esc(projName)}</div>
                             <div class="dash-proj-sec-summary">${esc(secSummary)}</div>
@@ -4632,7 +4638,7 @@ function _renderDashboard(pc) {
         </div>
     </div>
 
-    <div class="dash-proj-section-hdr">Projects
+    <div class="dash-proj-section-hdr">Network Scope Projects
         <span style="color:var(--slate-400);font-weight:500;text-transform:none;letter-spacing:0;font-size:11px">${ALL_PROJS.length} total</span>
         <span class="dash-proj-hdr-badge dash-proj-hdr-badge-active">${projActiveCount} active</span>
         <span class="dash-proj-hdr-badge dash-proj-hdr-badge-nodata">${projNoDataCount} no data</span>
