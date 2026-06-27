@@ -47,12 +47,12 @@
             --bg:          var(--slate-50);
             --bg-panel:    #ffffff;
             --bg-sidebar:  #0f2038;
-            --sb-hover:    #122436;
-            --sb-active:   #162d4a;
+            --sb-hover:    #1a3050;
+            --sb-active:   #1d3a5e;
             --sb-icon-bg:  #0a1828;
-            --sb-border:   rgba(255,255,255,.07);
-            --sb-text:     #94a3b8;
-            --sb-label:    #475569;
+            --sb-border:   rgba(255,255,255,.09);
+            --sb-text:     #adc0d4;
+            --sb-label:    #617d98;
             --accent:      var(--blue-600);
             --accent-hover:var(--blue-700);
             --text-primary:var(--slate-900);
@@ -764,7 +764,7 @@
             border-left: 2.5px solid transparent; margin-left: 2px;
         }
         .dash-nav:hover { background: var(--sb-hover); color: #fff; border-left-color: rgba(255,255,255,.2); }
-        .dash-nav.active { background: var(--sb-active); color: #fff; font-weight: 700; border-left-color: #3b82f6; }
+        .dash-nav.active { background: var(--sb-active); color: #fff; font-weight: 700; border-left-color: #3b82f6; box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.1); }
         .dash-nav-icon {
             width: 30px; height: 30px; flex-shrink: 0;
             background: var(--sb-icon-bg); border: 1px solid var(--sb-border);
@@ -1051,8 +1051,8 @@
 
         /* Section label inside tree */
         .tree-section-label {
-            font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
-            text-transform: uppercase; color: var(--sb-label);
+            font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+            text-transform: uppercase; color: #7a9ab8;
             padding: 10px 10px 4px; margin-top: 4px;
         }
 
@@ -1069,7 +1069,7 @@
         }
         .tree-parent:hover { background: var(--sb-hover); }
         .tree-parent:hover .tree-parent-iconbox,
-        .tree-group.open > .tree-parent .tree-parent-iconbox {
+        .tree-group:has(.tree-child.active) > .tree-parent .tree-parent-iconbox {
             background: var(--sb-active); border-color: rgba(255,255,255,.15); color: #fff;
         }
 
@@ -1104,12 +1104,13 @@
         .tree-add-sec-btn {
             display: flex; align-items: center; gap: 7px;
             width: 100%; padding: 5px 10px 7px 26px;
-            font-size: 11px; font-weight: 600; color: var(--sb-label);
+            font-size: 11px; font-weight: 600; color: #5b86aa;
             background: none; border: none; cursor: pointer;
             font-family: inherit; text-align: left; letter-spacing: .3px;
-            transition: color .15s; margin-top: 1px;
+            border-radius: var(--radius-xs);
+            transition: color .15s, background .15s; margin-top: 1px;
         }
-        .tree-add-sec-btn:hover { color: var(--sb-text); }
+        .tree-add-sec-btn:hover { color: #93c5fd; background: rgba(59,130,246,.07); }
 
         .tree-child {
             display: flex; align-items: center; gap: 8px;
@@ -1119,7 +1120,7 @@
             transition: background .18s, color .18s, border-color .18s;
         }
         .tree-child:hover { background: var(--sb-hover); color: #fff; border-left-color: rgba(255,255,255,.2); }
-        .tree-child.active { background: var(--sb-active); color: #fff; font-weight: 700; border-left-color: #3b82f6; }
+        .tree-child.active { background: var(--sb-active); color: #fff; font-weight: 700; border-left-color: #3b82f6; box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.1); }
 
         /* Status dot */
         .tree-status {
@@ -1627,12 +1628,12 @@
         /* ── Sidebar count badge ──────────── */
         .tree-count-badge {
             font-size: 10px; font-weight: 700;
-            background: var(--sb-active); color: var(--sb-text);
+            background: rgba(255,255,255,.1); color: #93afca;
             border-radius: var(--radius-full); padding: 1px 7px;
             min-width: 28px; text-align: center; flex-shrink: 0; margin-right: 2px;
-            border: 1px solid rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.12);
         }
-        .tree-child.active .tree-count-badge { background: rgba(255,255,255,.18); color: #fff; border-color: rgba(255,255,255,.2); }
+        .tree-child.active .tree-count-badge { background: rgba(255,255,255,.18); color: #fff; border-color: rgba(255,255,255,.25); }
 
         /* ── Pagination bar ──────────────── */
         .pagination-bar {
@@ -7243,6 +7244,7 @@ function closeFinModal(id, e) {
 
 function _finNavActive(id) {
     document.querySelectorAll('.tree-child').forEach(c => c.classList.remove('active'));
+    document.getElementById('dash-nav').classList.remove('active');
     document.getElementById(id)?.classList.add('active');
     closeSidebar();
     selProj = null; selSec = null;
@@ -10702,6 +10704,7 @@ const _BACKUP_TABLES = ['users','sections','rows','activity_log','general_expens
 
 function showBackupRestore() {
     document.querySelectorAll('.tree-child').forEach(c => c.classList.remove('active'));
+    document.getElementById('dash-nav').classList.remove('active');
     document.getElementById('nav-backup')?.classList.add('active');
     setTopbar('<span class="bc-cur">Backup &amp; Restore</span>');
     const el = document.getElementById('panel-content');
