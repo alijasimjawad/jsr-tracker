@@ -945,9 +945,10 @@
         .dash-proj-card {
             background:#fff; border:1px solid var(--border); border-radius:14px;
             overflow:hidden; box-shadow:var(--shadow-sm);
-            transition:box-shadow .25s, transform .25s; display:flex; flex-direction:column;
+            transition:box-shadow .25s, transform .25s, border-color .25s;
+            display:flex; flex-direction:column; cursor:pointer;
         }
-        .dash-proj-card:hover { box-shadow:0 8px 28px rgba(0,0,0,.12); transform:translateY(-3px); }
+        .dash-proj-card:hover { box-shadow:0 8px 28px rgba(0,0,0,.12); transform:translateY(-2px); border-color:var(--slate-300); }
         .dash-proj-card-accent { height:3px; }
         .dash-proj-card-body { padding:14px 16px 16px; flex:1; }
         .dash-proj-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px; }
@@ -968,6 +969,21 @@
         .dash-proj-empty-icon { width:38px; height:38px; border-radius:10px; background:var(--slate-100); display:flex; align-items:center; justify-content:center; color:var(--slate-400); }
         .dash-proj-empty-title { font-size:12px; font-weight:700; color:var(--slate-600); }
         .dash-proj-empty-desc { font-size:11px; color:var(--slate-400); line-height:1.5; max-width:180px; }
+        .dash-proj-open-btn {
+            display:flex; align-items:center; justify-content:center; gap:5px;
+            width:100%; padding:6px 12px; margin-top:10px; border-radius:7px;
+            font-size:11px; font-family:inherit; font-weight:600;
+            background:var(--slate-50); border:1px solid var(--border); color:var(--slate-600);
+            cursor:pointer; transition:all .15s ease;
+        }
+        .dash-proj-open-btn:hover { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+        .dash-proj-hdr-badge {
+            display:inline-flex; align-items:center; padding:2px 8px; border-radius:99px;
+            font-size:10px; font-weight:700; white-space:nowrap;
+            text-transform:none; letter-spacing:0;
+        }
+        .dash-proj-hdr-badge-active { background:#dbeafe; color:#1d4ed8; }
+        .dash-proj-hdr-badge-nodata { background:var(--slate-100); color:var(--slate-500); }
 
         /* ── Sidebar brand ───────────────── */
         .sidebar-brand {
@@ -4421,11 +4437,12 @@ function _renderDashboard(pc) {
 
     // Build one project-level card (aggregates all sections dynamically)
     function buildProjCard(projKey, projName, cardIdx) {
-        const color   = _projColor(projKey);
-        const dark    = _darkenHex(color);
-        const delay   = (cardIdx || 0) * 60;
-        const iconBg  = `linear-gradient(135deg,${color},${dark})`;
-        const secKeys = Object.keys(db[projKey] || {});
+        const color    = _projColor(projKey);
+        const dark     = _darkenHex(color);
+        const delay    = (cardIdx || 0) * 60;
+        const iconBg   = `linear-gradient(135deg,${color},${dark})`;
+        const secKeys  = Object.keys(db[projKey] || {});
+        const firstSec = secKeys[0] || null;
 
         let total = 0, installed = 0, atpAccepted = 0, atpRejected = 0;
         secKeys.forEach(secKey => {
@@ -4437,17 +4454,31 @@ function _renderDashboard(pc) {
         const atpPct  = total > 0 ? atpAccepted / total * 100 : 0;
         const secSummary = sectionSummaryLabel(projKey, secKeys);
 
+        // Accent color driven by status, not project identity
+        let accentColor;
+        if (total === 0)                                      accentColor = '#cbd5e1'; // gray  — no data
+        else if (instPct >= 100)                              accentColor = '#16a34a'; // green — complete
+        else if (total > 0 && atpRejected / total > 0.10)    accentColor = '#dc2626'; // red   — >10% rejected
+        else if (instPct > 0)                                 accentColor = '#d97706'; // orange — in progress
+        else                                                  accentColor = '#2563eb'; // blue  — has data, not started
+
+        // Navigation: open the project's first section
+        const cardClick = firstSec ? `onclick="selectSection('${projKey}','${firstSec}')"` : '';
+        const openBtn   = firstSec ? `
+                <button class="dash-proj-open-btn" onclick="event.stopPropagation();selectSection('${projKey}','${firstSec}')">Open Project →</button>` : '';
+
         let statusHtml, contentHtml;
         if (total === 0) {
             statusHtml = `<span class="dash-proj-status dash-proj-status-none">No Data</span>`;
             contentHtml = `
                 <div class="dash-proj-empty">
                     <div class="dash-proj-empty-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
                     </div>
                     <div class="dash-proj-empty-title">No sites added yet</div>
                     <div class="dash-proj-empty-desc">Import data or add sites to begin tracking.</div>
-                </div>`;
+                </div>
+                ${openBtn}`;
         } else {
             const statusCls = instPct >= 100 ? 'dash-proj-status-complete' : 'dash-proj-status-progress';
             const statusTxt = instPct >= 100 ? '✓ Complete' : '● In Progress';
@@ -4468,12 +4499,13 @@ function _renderDashboard(pc) {
                     ${buildPM('ATP Accepted', atpAccepted, total, 'fill-green',  1)}
                     ${buildPM('ATP Rejected', atpRejected, total, 'fill-red',    2)}
                     ${buildPM('ATP Pending',  atpPending,  total, 'fill-orange', 3)}
-                </div>`;
+                </div>
+                ${openBtn}`;
         }
 
         return `
-        <div class="dash-proj-card dash-card-anim" style="animation-delay:${delay}ms">
-            <div class="dash-proj-card-accent" style="background:${color}"></div>
+        <div class="dash-proj-card dash-card-anim" style="animation-delay:${delay}ms" ${cardClick}>
+            <div class="dash-proj-card-accent" style="background:${accentColor}"></div>
             <div class="dash-proj-card-body">
                 <div class="dash-proj-card-head">
                     <div style="display:flex;align-items:center;gap:10px;min-width:0">
@@ -4504,9 +4536,11 @@ function _renderDashboard(pc) {
         { key:'tasc',   name:'TASC Project'   }
     ];
 
-    // Accumulate grand totals (single pass over all sections of all projects)
+    // Accumulate grand totals and per-project status counts (single pass)
     let grandTotal = 0, grandInstalled = 0, grandAccepted = 0, grandRejected = 0;
+    let projActiveCount = 0, projNoDataCount = 0;
     ALL_PROJS.forEach(p => {
+        let projTotal = 0;
         Object.keys(db[p.key] || {}).forEach(secKey => {
             const st = secStats(p.key, secKey);
             if (st) {
@@ -4514,8 +4548,11 @@ function _renderDashboard(pc) {
                 grandInstalled += st.installed;
                 grandAccepted  += st.atpAccepted;
                 grandRejected  += st.atpRejected;
+                projTotal      += st.total;
             }
         });
+        if (projTotal > 0) projActiveCount++;
+        else projNoDataCount++;
     });
 
     const grandPending  = grandTotal - grandAccepted - grandRejected;
@@ -4595,7 +4632,11 @@ function _renderDashboard(pc) {
         </div>
     </div>
 
-    <div class="dash-proj-section-hdr">Projects <span style="color:var(--slate-400);font-weight:500;text-transform:none;letter-spacing:0;font-size:11px;margin-left:4px">${ALL_PROJS.length} total</span></div>
+    <div class="dash-proj-section-hdr">Projects
+        <span style="color:var(--slate-400);font-weight:500;text-transform:none;letter-spacing:0;font-size:11px">${ALL_PROJS.length} total</span>
+        <span class="dash-proj-hdr-badge dash-proj-hdr-badge-active">${projActiveCount} active</span>
+        <span class="dash-proj-hdr-badge dash-proj-hdr-badge-nodata">${projNoDataCount} no data</span>
+    </div>
     <div class="dash-proj-grid">${projCards}</div>`;
 
     // Counter animation — first load only
