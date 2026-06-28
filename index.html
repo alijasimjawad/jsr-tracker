@@ -2398,6 +2398,13 @@
                         </span>
                         <span class="tree-child-arr">›</span>
                     </div>
+                    <div class="tree-child" id="nav-my-claims-admin" onclick="showAdminMyClaims()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                            <span class="tree-child-label">My Claims</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
                     </div><!-- /sb-fin-body -->
                 </div>
 
@@ -4109,7 +4116,8 @@ async function login() {
             applySectionLabels();
             applyDeletedSections();
             refreshStatusDots();
-            if (currentUser.role?.toLowerCase() === 'technician') showMyExpenses();
+            const _loginRole = currentUser.role?.toLowerCase();
+            if (_loginRole === 'technician' || _loginRole === 'engineer') showMyExpenses();
             else showDashboard();
             _loadFinAll().catch(() => {}); // preload finance data in background
         }
@@ -4183,6 +4191,7 @@ function applyUserRole() {
 
 function hasPerm(key) {
     if (currentUser?.role === 'admin') return true;
+    if (key === 'view_my_expenses' && currentUser?.role?.toLowerCase() === 'engineer') return true;
     return currentUser?.permissions?.[key] === true;
 }
 
@@ -4224,7 +4233,8 @@ function applyPermissions() {
     sv('nav-fin-report',      p.view_fin_report,      true);
 
     // My Expenses (member-facing sidebar section)
-    sv('sidebar-my-expenses-section', p.view_my_expenses, false);
+    const isEngineer = currentUser?.role?.toLowerCase() === 'engineer';
+    sv('sidebar-my-expenses-section', p.view_my_expenses || isEngineer, false);
 
     // Admin — activity log only (user mgmt is always admin-only)
     if (p.view_activity_log) {
@@ -6568,7 +6578,8 @@ async function initApp() {
         applySectionLabels();
         applyDeletedSections();
         refreshStatusDots();
-        if (currentUser?.role?.toLowerCase() === 'technician') showMyExpenses();
+        const _restoreRole = currentUser?.role?.toLowerCase();
+        if (_restoreRole === 'technician' || _restoreRole === 'engineer') showMyExpenses();
         else showDashboard();
         _loadFinAll().catch(() => {}); // preload finance data in background
     }
@@ -10050,6 +10061,17 @@ async function showMyExpenses() {
     _renderMyExpenses(pc);
 }
 
+async function showAdminMyClaims() {
+    _finNavActive('nav-my-claims-admin');
+    setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">My Claims</span>');
+    const pc = _finSpinner();
+    try {
+        if (_finTeam.length === 0) await _loadFinAll();
+        await _loadExpClaims();
+    } catch(_) {}
+    _renderMyExpenses(pc);
+}
+
 function _renderMyExpenses(pc) {
     pc = pc || document.getElementById('panel-content');
     const rows = _expClaims;
@@ -10494,6 +10516,10 @@ function _renderFinExpClaims(pc) {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
             <div style="font-size:22px;font-weight:800;color:var(--text-primary)">Expense Claims</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-primary" onclick="showAdminMyClaims()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                    My Claims
+                </button>
                 <button class="btn btn-ghost" onclick="exportExpClaims()">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Export Excel
