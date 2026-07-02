@@ -20,7 +20,8 @@
       "Bash(awk 'NR>=253 && NR<=270 {printf \"%d\\\\t%s\\\\n\", NR, $0}' /Users/alijasim/Desktop/JSR/index.html)",
       "Bash(awk 'NR>=956 && NR<=967 {printf \"%d\\\\t%s\\\\n\", NR, \\(length\\($0\\)>100 ? substr\\($0,1,100\\)\"...\" : $0\\)}' /Users/alijasim/Desktop/JSR/index.html)",
       "Bash(awk NR>=253 && NR<=268 {printf \"%d\\\\t%s\\\\n\", NR, $0} *)",
-      "Bash(grep -n \"sidebar-body\\\\|</div>$\" /Users/alijasim/Desktop/JSR/index.html)"
+      "Bash(grep -n \"sidebar-body\\\\|</div>$\" /Users/alijasim/Desktop/JSR/index.html)",
+      "Bash(git *)"
     ]
   }
 }

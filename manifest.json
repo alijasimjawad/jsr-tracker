@@ -1,0 +1,21 @@
+{
+  "name": "JSR Network Tracker",
+  "short_name": "JSR",
+  "description": "JSR Network Project Tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1f3d",
+  "theme_color": "#0f1f3d",
+  "icons": [
+    {
+      "src": "logo/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
