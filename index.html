@@ -11,6 +11,9 @@
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -4203,6 +4206,7 @@ async function login() {
             else showDashboard();
             _loadFinAll().catch(() => {}); // preload finance data in background
             loadNotifications().catch(() => {});
+            registerPushNotifications().catch(() => {});
         }
     } catch (err) {
         e.textContent   = 'Connection error. Please try again.';
@@ -10451,6 +10455,7 @@ async function saveExpClaim() {
             if (error) throw error;
             _expClaims.unshift({ id: data.id, ...payload });
             toast('Claim submitted', 'ok');
+            sendPushToAllAdmins('New Expense Claim', `New claim submitted by ${currentUser?.full_name || currentUser?.username || 'a team member'}`).catch(() => {});
         }
     } catch(e) {
         errEl.textContent = e.message;
@@ -10738,6 +10743,7 @@ async function approveExpClaim(id) {
     if (idx >= 0) _adminExpClaims[idx].status = 'approved';
     _invalidateFin();
     toast('Claim approved and added to Project Expenses', 'ok');
+    _getMemberUserId(claim.member_id).then(uid => { if (uid) sendPushToUser(uid, 'Claim Approved ✓', `Your claim for ${claim.project_name} has been approved`).catch(() => {}); }).catch(() => {});
     const dm = document.getElementById('exp-detail-modal');
     if (dm && dm.classList.contains('open')) dm.classList.remove('open');
     _renderFinExpClaims();
@@ -10758,6 +10764,8 @@ async function submitExpReject(id) {
     const idx = _adminExpClaims.findIndex(x => x.id === id);
     if (idx >= 0) { _adminExpClaims[idx].status = 'rejected'; _adminExpClaims[idx].rejection_reason = reason; _adminExpClaims[idx].reviewed_by = _rejBy; _adminExpClaims[idx].reviewed_at = _rejAt; }
     toast('Claim rejected', 'ok');
+    const _rejClaim = _adminExpClaims.find(x => x.id === id);
+    if (_rejClaim) _getMemberUserId(_rejClaim.member_id).then(uid => { if (uid) sendPushToUser(uid, 'Claim Rejected ✗', `Your claim for ${_rejClaim.project_name} was rejected: ${reason}`).catch(() => {}); }).catch(() => {});
     _renderFinExpClaims();
 }
 
@@ -10882,6 +10890,8 @@ async function _edmConfirmReject() {
     const idx = _adminExpClaims.findIndex(x => x.id === id);
     if (idx >= 0) { _adminExpClaims[idx].status = 'rejected'; _adminExpClaims[idx].rejection_reason = reason; _adminExpClaims[idx].reviewed_by = _edmRejBy; _adminExpClaims[idx].reviewed_at = _edmRejAt; }
     toast('Claim rejected', 'ok');
+    const _edmRejClaim = _adminExpClaims.find(x => x.id === id);
+    if (_edmRejClaim) _getMemberUserId(_edmRejClaim.member_id).then(uid => { if (uid) sendPushToUser(uid, 'Claim Rejected ✗', `Your claim for ${_edmRejClaim.project_name} was rejected: ${reason}`).catch(() => {}); }).catch(() => {});
     document.getElementById('exp-detail-modal').classList.remove('open');
     _edmCurrentId = null;
     _renderFinExpClaims();
@@ -11005,6 +11015,63 @@ async function _doRestore(backup) {
         status.innerHTML = `<span style="color:#16a34a">✓ Restore complete — <strong>${totalRestored.toLocaleString()}</strong> records upserted across ${tables.length} tables.</span>`;
     }
     toast('Restore complete', 'ok');
+}
+
+// ══════════════════════════════════════════════
+// WEB PUSH
+// ══════════════════════════════════════════════
+const VAPID_PUBLIC_KEY = 'BNRkBW0K1lpB3W10b1uQgrqKRFL2GMGFrOF4ECkpIDcaFYXowjqqdbvJA2RoWU-smR7wip_bVdO91ksfZPeSoPo';
+
+async function registerPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: VAPID_PUBLIC_KEY
+    });
+    const { data: userData } = await _sb.from('users').select('id').eq('username', currentUser?.username).single();
+    if (userData) {
+      await _sb.from('push_subscriptions').upsert({
+        user_id: userData.id,
+        subscription: sub.toJSON()
+      }, { onConflict: 'user_id' });
+    }
+  } catch (err) {
+    console.error('Push registration failed:', err);
+  }
+}
+
+async function sendPushToUser(userId, title, body) {
+  const { data } = await _sb.from('push_subscriptions').select('subscription').eq('user_id', userId).single();
+  if (!data) return;
+  await fetch('/api/send-push', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subscription: data.subscription, title, body })
+  });
+}
+
+async function sendPushToAllAdmins(title, body) {
+  const { data: admins } = await _sb.from('users').select('id').eq('role', 'admin');
+  if (!admins) return;
+  for (const admin of admins) {
+    await sendPushToUser(admin.id, title, body);
+  }
+}
+
+async function _getMemberUserId(memberId) {
+  if (!memberId) return null;
+  const member = (_finTeam || []).find(t => t.id === memberId);
+  if (!member) return null;
+  const filters = [];
+  if (member.username)  filters.push(`username.eq.${member.username}`);
+  if (member.full_name) filters.push(`full_name.eq.${member.full_name}`);
+  if (!filters.length) return null;
+  const { data } = await _sb.from('users').select('id').or(filters.join(',')).limit(1).single();
+  return data?.id || null;
 }
 
 // ══════════════════════════════════════════════
