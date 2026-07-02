@@ -1904,6 +1904,73 @@
             .fin-charts-grid { grid-template-columns:1fr; }
             .fin-bottom-row { grid-template-columns:1fr; }
         }
+
+        /* ── Notification Bell ─────────────────────── */
+        #notif-wrap { position:relative; flex-shrink:0; }
+        .notif-btn {
+            width:34px; height:34px; border-radius:var(--radius-sm);
+            border:1.5px solid var(--border); background:var(--bg-panel);
+            color:var(--slate-600); cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            transition:var(--transition); position:relative;
+        }
+        .notif-btn:hover { background:var(--slate-50); border-color:var(--slate-300); color:var(--slate-800); }
+        .notif-badge {
+            position:absolute; top:-5px; right:-5px;
+            min-width:16px; height:16px; padding:0 4px;
+            background:#ef4444; color:#fff;
+            font-size:9px; font-weight:800; border-radius:20px;
+            display:flex; align-items:center; justify-content:center;
+            border:1.5px solid #fff; line-height:1; pointer-events:none;
+        }
+        .notif-dropdown {
+            position:absolute; top:calc(100% + 10px); right:0;
+            width:340px; background:#fff;
+            border:1px solid var(--border); border-radius:var(--radius-md);
+            box-shadow:var(--shadow-xl); z-index:9999; overflow:hidden;
+            animation:ddPop .16s ease both;
+        }
+        .notif-dd-header {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:12px 16px; border-bottom:1px solid var(--slate-100);
+        }
+        .notif-dd-title { font-size:13px; font-weight:700; color:var(--text-primary); }
+        .notif-dd-mark-read {
+            font-size:11px; font-weight:600; color:var(--accent);
+            background:none; border:none; cursor:pointer; font-family:inherit;
+            padding:2px 6px; border-radius:4px; transition:background .14s;
+        }
+        .notif-dd-mark-read:hover { background:var(--blue-50); }
+        .notif-list { max-height:400px; overflow-y:auto; }
+        .notif-list::-webkit-scrollbar { width:4px; }
+        .notif-list::-webkit-scrollbar-thumb { background:var(--slate-200); border-radius:2px; }
+        .notif-item {
+            display:flex; align-items:flex-start; gap:10px;
+            padding:11px 16px 11px 20px; border-bottom:1px solid var(--slate-100);
+            transition:background .14s; position:relative;
+        }
+        .notif-item:last-child { border-bottom:none; }
+        .notif-item:hover { background:var(--slate-50); }
+        .notif-item.notif-unread { background:#f0f7ff; }
+        .notif-item.notif-unread:hover { background:#e8f2ff; }
+        .notif-unread-dot {
+            position:absolute; left:7px; top:50%; transform:translateY(-50%);
+            width:5px; height:5px; border-radius:50%; background:#3b82f6; flex-shrink:0;
+        }
+        .notif-icon {
+            width:28px; height:28px; border-radius:8px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            font-size:12px; font-weight:700;
+        }
+        .notif-icon-green  { background:#dcfce7; color:#16a34a; }
+        .notif-icon-red    { background:#fee2e2; color:#dc2626; }
+        .notif-icon-orange { background:#fef3c7; color:#d97706; }
+        .notif-icon-gray   { background:#f1f5f9; color:#64748b; }
+        .notif-body { flex:1; min-width:0; }
+        .notif-msg { font-size:12px; color:var(--text-primary); line-height:1.5; word-break:break-word; }
+        .notif-item.notif-read .notif-msg { color:var(--slate-400); }
+        .notif-time { font-size:10px; color:var(--slate-400); margin-top:2px; }
+        .notif-empty { text-align:center; padding:40px 20px; color:var(--slate-400); font-size:13px; }
     </style>
 </head>
 <body>
@@ -2521,6 +2588,21 @@
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Add Site
                     </button>
+                </div>
+                <div id="notif-wrap">
+                    <button class="notif-btn" id="notif-btn" onclick="toggleNotifDropdown()" title="Notifications" aria-label="Notifications">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+                    </button>
+                    <div class="notif-dropdown" id="notif-dropdown" style="display:none">
+                        <div class="notif-dd-header">
+                            <span class="notif-dd-title">Notifications</span>
+                            <button class="notif-dd-mark-read" onclick="markAllNotifRead()">Mark all as read</button>
+                        </div>
+                        <div class="notif-list" id="notif-list">
+                            <div class="notif-empty">No notifications yet</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="panel-content" id="panel-content">
@@ -4120,6 +4202,7 @@ async function login() {
             if (_loginRole === 'technician' || _loginRole === 'engineer') showMyExpenses();
             else showDashboard();
             _loadFinAll().catch(() => {}); // preload finance data in background
+            loadNotifications().catch(() => {});
         }
     } catch (err) {
         e.textContent   = 'Connection error. Please try again.';
@@ -6582,6 +6665,7 @@ async function initApp() {
         if (_restoreRole === 'technician' || _restoreRole === 'engineer') showMyExpenses();
         else showDashboard();
         _loadFinAll().catch(() => {}); // preload finance data in background
+        loadNotifications().catch(() => {});
     }
 }
 
@@ -10922,6 +11006,190 @@ async function _doRestore(backup) {
     }
     toast('Restore complete', 'ok');
 }
+
+// ══════════════════════════════════════════════
+// NOTIFICATION BELL
+// ══════════════════════════════════════════════
+let _notifItems = [];
+let _notifDropdownOpen = false;
+let _notifMarkReadTimer = null;
+
+function _notifStorageKey() {
+    return `jsr_notif_read_${currentUser?.id || 'anon'}`;
+}
+
+function _notifGetRead() {
+    try { return new Set(JSON.parse(localStorage.getItem(_notifStorageKey()) || '[]')); }
+    catch (_) { return new Set(); }
+}
+
+function _notifSaveRead(readSet) {
+    try { localStorage.setItem(_notifStorageKey(), JSON.stringify([...readSet])); }
+    catch (_) {}
+}
+
+function _notifRelTime(ts) {
+    if (!ts) return '';
+    const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (s < 60)     return 'Just now';
+    if (s < 3600)   return `${Math.floor(s / 60)} min ago`;
+    if (s < 86400)  return `${Math.floor(s / 3600)} hour${Math.floor(s / 3600) > 1 ? 's' : ''} ago`;
+    if (s < 172800) return 'Yesterday';
+    if (s < 604800) return `${Math.floor(s / 86400)} days ago`;
+    return new Date(ts).toLocaleDateString();
+}
+
+function _notifIconClass(action) {
+    if (!action) return 'notif-icon-gray';
+    const a = action.toLowerCase();
+    if (a.includes('add') || a.includes('approv') || a.includes('approved') || a.includes('integrat')) return 'notif-icon-green';
+    if (a.includes('delet') || a.includes('reject') || a.includes('rejected') || a.includes('remov')) return 'notif-icon-red';
+    if (a.includes('edit') || a.includes('updat') || a.includes('bulk') || a.includes('import')) return 'notif-icon-orange';
+    if (a === 'pending') return 'notif-icon-gray';
+    return 'notif-icon-gray';
+}
+
+function _notifIconSymbol(action) {
+    if (!action) return '🕐';
+    const a = action.toLowerCase();
+    if (a.includes('add') || a.includes('approv') || a.includes('approved') || a.includes('integrat')) return '✓';
+    if (a.includes('delet') || a.includes('reject') || a.includes('rejected') || a.includes('remov')) return '✗';
+    if (a.includes('edit') || a.includes('updat') || a.includes('bulk') || a.includes('import')) return '✏';
+    return '🕐';
+}
+
+function _notifBuildAdminMsg(r) {
+    const who  = r.user_full_name || 'Someone';
+    const act  = r.action || 'did something';
+    const proj = r.project_name ? ` in ${r.project_name}` : '';
+    const sec  = r.section_name ? ` (${r.section_name})` : '';
+    const det  = r.details ? ` — ${r.details}` : '';
+    return `${who} ${act}${proj}${sec}${det}`;
+}
+
+function _notifBuildClaimMsg(r) {
+    const proj    = r.project_name || 'Unknown Project';
+    const dateVal = r.activity_date ? new Date(r.activity_date).toLocaleDateString() : '';
+    const dateStr = dateVal ? ` on ${dateVal}` : '';
+    if (r.status === 'approved') return `Your claim for ${proj}${dateStr} was approved ✓`;
+    if (r.status === 'rejected') {
+        const reason = r.rejection_reason ? ` — ${r.rejection_reason}` : '';
+        return `Your claim for ${proj}${dateStr} was rejected ✗${reason}`;
+    }
+    return `Your claim for ${proj}${dateStr} is pending review`;
+}
+
+async function loadNotifications() {
+    if (!currentUser) return;
+    const role = (currentUser.role || '').toLowerCase();
+    _notifItems = [];
+
+    if (role === 'admin') {
+        const { data } = await _sb.from('activity_log')
+            .select('id,user_full_name,action,project_name,section_name,details,created_at')
+            .order('created_at', { ascending: false })
+            .limit(15);
+        if (data) {
+            _notifItems = data.map(r => ({
+                id:     `al_${r.id}`,
+                msg:    _notifBuildAdminMsg(r),
+                action: r.action || '',
+                ts:     r.created_at
+            }));
+        }
+    } else if (role === 'technician' || role === 'engineer') {
+        const memberId = await _getMyMemberId();
+        if (memberId) {
+            const { data } = await _sb.from('expense_claims')
+                .select('id,project_name,activity_date,status,rejection_reason,submitted_at')
+                .eq('member_id', memberId)
+                .order('submitted_at', { ascending: false })
+                .limit(15);
+            if (data) {
+                _notifItems = data.map(r => ({
+                    id:     `ec_${r.id}_${r.status}`,
+                    msg:    _notifBuildClaimMsg(r),
+                    action: r.status || '',
+                    ts:     r.submitted_at
+                }));
+            }
+        }
+    }
+
+    renderNotifBadge();
+    if (_notifDropdownOpen) renderNotifList();
+}
+
+function renderNotifBadge() {
+    const badge = document.getElementById('notif-badge');
+    if (!badge) return;
+    const readSet = _notifGetRead();
+    const unread  = _notifItems.filter(n => !readSet.has(n.id)).length;
+    if (unread > 0) {
+        badge.textContent  = unread > 99 ? '99+' : String(unread);
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function renderNotifList() {
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+    const readSet = _notifGetRead();
+    if (_notifItems.length === 0) {
+        list.innerHTML = '<div class="notif-empty">No notifications yet</div>';
+        return;
+    }
+    list.innerHTML = _notifItems.map(n => {
+        const isUnread = !readSet.has(n.id);
+        const iconCls  = _notifIconClass(n.action);
+        const iconSym  = _notifIconSymbol(n.action);
+        return `<div class="notif-item ${isUnread ? 'notif-unread' : 'notif-read'}">
+            ${isUnread ? '<span class="notif-unread-dot"></span>' : ''}
+            <div class="notif-icon ${iconCls}">${iconSym}</div>
+            <div class="notif-body">
+                <div class="notif-msg">${esc(n.msg)}</div>
+                <div class="notif-time">${_notifRelTime(n.ts)}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function toggleNotifDropdown() {
+    const dd = document.getElementById('notif-dropdown');
+    if (!dd) return;
+    _notifDropdownOpen = !_notifDropdownOpen;
+    dd.style.display = _notifDropdownOpen ? 'block' : 'none';
+    if (_notifDropdownOpen) {
+        loadNotifications().then(() => renderNotifList());
+        clearTimeout(_notifMarkReadTimer);
+        _notifMarkReadTimer = setTimeout(markAllNotifRead, 3000);
+    } else {
+        clearTimeout(_notifMarkReadTimer);
+    }
+}
+
+function markAllNotifRead() {
+    const readSet = _notifGetRead();
+    _notifItems.forEach(n => readSet.add(n.id));
+    _notifSaveRead(readSet);
+    renderNotifBadge();
+    renderNotifList();
+}
+
+function _closeNotifDropdown() {
+    if (!_notifDropdownOpen) return;
+    _notifDropdownOpen = false;
+    const dd = document.getElementById('notif-dropdown');
+    if (dd) dd.style.display = 'none';
+    clearTimeout(_notifMarkReadTimer);
+}
+
+document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('notif-wrap');
+    if (wrap && !wrap.contains(e.target)) _closeNotifDropdown();
+});
 </script>
 </body>
 </html>
