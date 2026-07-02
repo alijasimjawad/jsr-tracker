@@ -3707,6 +3707,9 @@ async function syncNewRow(proj, sec) {
     if (insErr) throw new Error('Row insert failed: ' + insErr.message);
     if (!_rowIds[key]) _rowIds[key] = [];
     _rowIds[key][ri - 1] = ins?.id;
+    const _projName = PROJ_NAMES[proj] || proj;
+    sendPushToRoles(['admin'], 'New Site Added', `Site added to ${_projName} — ${LABELS[sec]||sec}`).catch(err => console.warn('Push failed:', err));
+    sendPushToRoles(['engineer'], 'New Site Added', `Site added to ${_projName}`).catch(err => console.warn('Push failed:', err));
 }
 
 // Update a single existing row by index ri (1-based)
@@ -3723,6 +3726,9 @@ async function syncUpdateRow(proj, sec, ri) {
         updated_at: new Date().toISOString()
     }).eq('id', rowUid);
     if (updErr) throw new Error('Row update failed: ' + updErr.message);
+    const _updProjName = PROJ_NAMES[proj] || proj;
+    sendPushToRoles(['admin'], 'Site Updated', `Site updated in ${_updProjName}`).catch(err => console.warn('Push failed:', err));
+    sendPushToRoles(['engineer'], 'Site Updated', `Site updated in ${_updProjName}`).catch(err => console.warn('Push failed:', err));
 }
 
 // Delete a single row by index ri (1-based) — call BEFORE splicing db
@@ -3732,6 +3738,7 @@ async function syncDeleteRow(proj, sec, ri) {
     if (rowUid) {
         await _sb.from('rows').delete().eq('id', rowUid);
         _rowIds[key]?.splice(ri - 1, 1);
+        sendPushToRoles(['admin'], 'Site Deleted', `Site removed from ${PROJ_NAMES[proj]||proj}`).catch(err => console.warn('Push failed:', err));
     } else { return syncSection(proj, sec); }
 }
 
@@ -3745,6 +3752,7 @@ async function syncCreateSection(proj, sec, label) {
     if (error) throw error;
     _secIds[key] = data.id;
     _rowIds[key] = [];
+    sendPushToRoles(['admin', 'engineer'], 'New Section Added', `${label} added to ${PROJ_NAMES[proj]||proj}`).catch(err => console.warn('Push failed:', err));
 }
 
 // Rename a custom section
@@ -7179,6 +7187,7 @@ async function saveNewUser() {
     _umUsers.push(data);
     _renderUserTable();
     logActivity('Add User', `Created user: ${fullName} (${username}), role: ${role}`);
+    sendPushToRoles(['admin'], 'User Updated', `User account ${username} was created`).catch(err => console.warn('Push failed:', err));
 }
 
 // ── Edit User Modal — Dynamic Permissions ─────────────────────
@@ -7361,6 +7370,7 @@ async function saveEditUser() {
 
     _renderUserTable();
     logActivity('Edit User', `Updated user: ${fullName} (${username}), role: ${role}`);
+    sendPushToRoles(['admin'], 'User Updated', `User account ${username} was modified`).catch(err => console.warn('Push failed:', err));
 }
 
 async function deleteUser(id, username) {
@@ -8134,6 +8144,7 @@ async function saveFinTeamMember() {
             const { error } = await _sb.from('team_members').insert({ ...payload, is_active: true });
             if (error) throw error;
             logActivity('Added Team Member', `Added Team Member: ${name}`);
+            sendPushToRoles(['admin'], 'Team Member Added', `${name} added to team`).catch(err => console.warn('Push failed:', err));
         }
     } catch(e) { errEl.textContent = e.message; errEl.style.display = ''; return; }
     closeFinModal('fin-team-modal');
@@ -8826,11 +8837,13 @@ async function saveFinRevenue() {
             const idx = _finRevenue.findIndex(x => x.id === _finRevEditId);
             if (idx >= 0) _finRevenue[idx] = { ..._finRevenue[idx], ...payload };
             logActivity('Edited Revenue', `Edited Revenue: ${proj} ${iqd(amt)}`, proj);
+            sendPushToRoles(['admin'], 'Revenue Updated', `Revenue updated for ${proj}`).catch(err => console.warn('Push failed:', err));
         } else {
             const { data, error } = await _sb.from('revenue').insert(payload).select('id').single();
             if (error) throw error;
             _finRevenue.unshift({ id: data.id, ...payload });
             logActivity('Added Revenue', `Added Revenue: ${proj} ${iqd(amt)}`, proj);
+            sendPushToRoles(['admin'], 'Revenue Added', `Revenue entry added for ${proj}`).catch(err => console.warn('Push failed:', err));
         }
     } catch(e) { errEl.textContent = e.message; errEl.style.display = ''; return; }
     closeFinModal('fin-rev-modal');
@@ -8846,6 +8859,7 @@ async function deleteFinRev(id) {
     closeFinModal('fin-del-modal');
     const detail = rec ? `Deleted: ${rec.project_name || '—'} — ${iqd(rec.amount || 0)}` : 'Deleted Revenue entry';
     logActivity('Deleted Revenue', detail, rec?.project_name || null);
+    sendPushToRoles(['admin'], 'Revenue Deleted', `Revenue entry removed for ${rec?.project_name || 'a project'}`).catch(err => console.warn('Push failed:', err));
     toast('Deleted', 'ok'); _renderRevenue();
 }
 
@@ -8961,6 +8975,7 @@ async function saveFinGenExp() {
             if (error) throw error;
             _finGenExp.unshift({ id: data.id, ...payload });
             logActivity('Added General Expense', `Added: ${desc} ${iqd(amt)}`);
+            sendPushToRoles(['admin'], 'General Expense Added', `New expense: ${desc} — ${iqd(amt)}`).catch(err => console.warn('Push failed:', err));
         }
     } catch(e) { errEl.textContent = e.message; errEl.style.display = ''; return; }
     closeFinModal('fin-genexp-modal');
@@ -9235,6 +9250,7 @@ async function saveFinProjExp() {
             if (error) throw error;
             _finProjExp.unshift({ id: data.id, ...payload });
             logActivity('Added Project Expense', `Added: ${proj} - ${desc} ${iqd(amt)}`, proj);
+            sendPushToRoles(['admin'], 'Project Expense Added', `New expense for ${proj}: ${iqd(amt)}`).catch(err => console.warn('Push failed:', err));
         }
     } catch(e) { errEl.textContent = e.message; errEl.style.display = ''; return; }
     closeFinModal('fin-projexp-modal');
@@ -10777,6 +10793,8 @@ async function approveExpClaim(id) {
     _invalidateFin();
     toast('Claim approved and added to Project Expenses', 'ok');
     _getMemberUserId(claim.member_id).then(uid => { if (uid) sendPushToUser(uid, 'Claim Approved ✓', `Your claim for ${claim.project_name} has been approved`).catch(() => {}); }).catch(() => {});
+    const _approveMemberName = _finTeam.find(t => t.id === claim.member_id)?.full_name || 'team member';
+    sendPushToRoles(['admin'], 'Claim Approved', `Claim approved for ${_approveMemberName}`).catch(err => console.warn('Push failed:', err));
     const dm = document.getElementById('exp-detail-modal');
     if (dm && dm.classList.contains('open')) dm.classList.remove('open');
     _renderFinExpClaims();
@@ -10799,6 +10817,7 @@ async function submitExpReject(id) {
     toast('Claim rejected', 'ok');
     const _rejClaim = _adminExpClaims.find(x => x.id === id);
     if (_rejClaim) _getMemberUserId(_rejClaim.member_id).then(uid => { if (uid) sendPushToUser(uid, 'Claim Rejected ✗', `Your claim for ${_rejClaim.project_name} was rejected: ${reason}`).catch(() => {}); }).catch(() => {});
+    if (_rejClaim) sendPushToRoles(['admin'], 'Claim Rejected', `Claim rejected for ${_finTeam.find(t=>t.id===_rejClaim.member_id)?.full_name||'team member'}`).catch(err => console.warn('Push failed:', err));
     _renderFinExpClaims();
 }
 
@@ -10925,6 +10944,7 @@ async function _edmConfirmReject() {
     toast('Claim rejected', 'ok');
     const _edmRejClaim = _adminExpClaims.find(x => x.id === id);
     if (_edmRejClaim) _getMemberUserId(_edmRejClaim.member_id).then(uid => { if (uid) sendPushToUser(uid, 'Claim Rejected ✗', `Your claim for ${_edmRejClaim.project_name} was rejected: ${reason}`).catch(() => {}); }).catch(() => {});
+    if (_edmRejClaim) sendPushToRoles(['admin'], 'Claim Rejected', `Claim rejected for ${_finTeam.find(t=>t.id===_edmRejClaim.member_id)?.full_name||'team member'}`).catch(err => console.warn('Push failed:', err));
     document.getElementById('exp-detail-modal').classList.remove('open');
     _edmCurrentId = null;
     _renderFinExpClaims();
@@ -11094,6 +11114,14 @@ async function sendPushToAllAdmins(title, body) {
   if (!admins) return;
   for (const admin of admins) {
     await sendPushToUser(admin.id, title, body);
+  }
+}
+
+async function sendPushToRoles(roles, title, body) {
+  const { data: users } = await _sb.from('users').select('id').in('role', roles);
+  if (!users) return;
+  for (const user of users) {
+    await sendPushToUser(user.id, title, body);
   }
 }
 
