@@ -653,6 +653,17 @@
         .adm-exp-rej-inp { flex:1; padding:6px 10px; border:1.5px solid #fca5a5; border-radius:6px; font-size:12px; font-family:inherit; outline:none; }
         .adm-exp-rej-inp:focus { border-color:var(--red); }
         .adm-exp-rej-confirm { padding:5px 12px; background:var(--red); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+        .adm-exp-edit-btn { padding:5px 14px; font-size:12px; font-weight:700; background:transparent; color:#2563eb; border:1.5px solid #2563eb; border-radius:6px; cursor:pointer; font-family:inherit; transition:opacity .15s; }
+        .adm-exp-edit-btn:hover { opacity:.82; }
+        .edm-edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-bottom:14px; }
+        .edm-edit-field { display:flex; flex-direction:column; gap:4px; }
+        .edm-edit-field.edm-edit-full { grid-column:1/-1; }
+        .edm-edit-label { font-size:11px; font-weight:700; color:var(--slate-400); text-transform:uppercase; letter-spacing:.4px; }
+        .edm-edit-inp, .edm-edit-sel { padding:7px 10px; border:1.5px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; background:var(--bg-panel); color:var(--text-primary); outline:none; width:100%; box-sizing:border-box; }
+        .edm-edit-inp:focus, .edm-edit-sel:focus { border-color:#2563eb; }
+        .edm-edit-total-bar { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--slate-50); border:1.5px solid var(--border); border-radius:8px; }
+        .edm-edit-total-label { font-size:12px; font-weight:600; color:var(--slate-500); }
+        .edm-edit-total-val { font-size:15px; font-weight:800; color:var(--text-primary); }
         .adm-exp-view-btn { padding:5px 12px; font-size:12px; font-weight:600; background:var(--slate-100); color:var(--slate-700); border:1.5px solid var(--slate-200); border-radius:6px; cursor:pointer; font-family:inherit; transition:background .15s; }
         .adm-exp-view-btn:hover { background:var(--slate-200); }
         /* Expense Claims — stat cards */
@@ -3034,14 +3045,82 @@
       <div style="display:flex;gap:8px;align-items:center">
         <button class="adm-exp-approve-btn" onclick="approveExpClaim(_edmCurrentId)">Approve</button>
         <button class="adm-exp-reject-btn" onclick="_edmShowReject()">Reject</button>
+        <button class="adm-exp-edit-btn" id="edm-edit-btn" onclick="_edmStartEdit()" style="display:none">&#9998; Edit</button>
       </div>
       <div id="edm-rej-wrap" class="adm-exp-rej-wrap" style="display:none;margin-top:10px">
         <input class="adm-exp-rej-inp" type="text" id="edm-rej-inp" placeholder="Rejection reason…">
         <button class="adm-exp-rej-confirm" onclick="_edmConfirmReject()">Confirm</button>
       </div>
     </div>
+    <!-- Edit form (admin only, pending claims) -->
+    <div id="edm-edit-section" style="display:none;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+      <div class="edm-edit-grid">
+        <div class="edm-edit-field">
+          <label class="edm-edit-label">Project</label>
+          <select class="edm-edit-sel" id="edm-e-project">
+            <option value="zain">Zain Project</option>
+            <option value="nokia">Nokia Project</option>
+            <option value="huawei">Huawei Project</option>
+            <option value="mrc">MRC Project</option>
+            <option value="metco">Metco Project</option>
+            <option value="mfc">MFC Project</option>
+            <option value="tac">TAC Project</option>
+            <option value="ipt">IPT Project</option>
+            <option value="tasc">TASC Project</option>
+            <option value="general">General</option>
+          </select>
+        </div>
+        <div class="edm-edit-field">
+          <label class="edm-edit-label">Site ID</label>
+          <input class="edm-edit-inp" type="text" id="edm-e-site-id">
+        </div>
+        <div class="edm-edit-field">
+          <label class="edm-edit-label">Governorate</label>
+          <input class="edm-edit-inp" type="text" id="edm-e-governorate">
+        </div>
+        <div class="edm-edit-field">
+          <label class="edm-edit-label">Description</label>
+          <select class="edm-edit-sel" id="edm-e-description">
+            <option value="Delivery">Delivery</option>
+            <option value="Installation">Installation</option>
+            <option value="Integration">Integration</option>
+            <option value="ATP">ATP</option>
+            <option value="Clearance">Clearance</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="edm-edit-field">
+          <label class="edm-edit-label">Activity Date</label>
+          <input class="edm-edit-inp" type="date" id="edm-e-activity-date">
+        </div>
+        <div class="edm-edit-field">
+          <label class="edm-edit-label">Transport Amount</label>
+          <input class="edm-edit-inp" type="number" id="edm-e-transport" min="0" oninput="_edmRecalcTotal()">
+        </div>
+        <div class="edm-edit-field">
+          <label class="edm-edit-label">Accommodation</label>
+          <select class="edm-edit-sel" id="edm-e-accommodation" onchange="_edmAccomChange()">
+            <option value="">None</option>
+            <option value="Returned Home">Returned Home</option>
+            <option value="Hotel">Hotel</option>
+          </select>
+        </div>
+        <div class="edm-edit-field">
+          <label class="edm-edit-label">Food Amount</label>
+          <input class="edm-edit-inp" type="number" id="edm-e-food" min="0" oninput="_edmRecalcTotal()">
+        </div>
+        <div class="edm-edit-field edm-edit-full">
+          <div class="edm-edit-total-bar">
+            <span class="edm-edit-total-label">Total Amount</span>
+            <span class="edm-edit-total-val" id="edm-e-total">0 IQD</span>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="modal-actions" style="margin-top:18px">
       <button class="btn btn-ghost" onclick="closeExpDetailModal()">Close</button>
+      <button class="btn btn-ghost" id="edm-cancel-btn" onclick="_edmCancelEdit()" style="display:none">Cancel</button>
+      <button class="btn btn-accent" id="edm-save-btn" onclick="_edmSaveEdit()" style="display:none">Save Changes</button>
     </div>
   </div>
 </div>
@@ -10828,6 +10907,13 @@ function openExpClaimDetail(id) {
     const r = _adminExpClaims.find(x => x.id === id);
     if (!r) return;
     _edmCurrentId = id;
+    // Reset edit mode
+    const _edmEditSec = document.getElementById('edm-edit-section');
+    if (_edmEditSec) _edmEditSec.style.display = 'none';
+    const _edmSaveBtn = document.getElementById('edm-save-btn');
+    const _edmCancelBtn = document.getElementById('edm-cancel-btn');
+    if (_edmSaveBtn) _edmSaveBtn.style.display = 'none';
+    if (_edmCancelBtn) _edmCancelBtn.style.display = 'none';
 
     const memObj = _finTeam.find(t => t.id === r.member_id);
     const memberName = memObj ? (memObj.full_name || '') : (r.member_id || '—');
@@ -10908,6 +10994,8 @@ function openExpClaimDetail(id) {
     const rejInp  = document.getElementById('edm-rej-inp');
     rejWrap.style.display = 'none';
     if (rejInp) rejInp.value = '';
+    const _editBtnEl = document.getElementById('edm-edit-btn');
+    if (_editBtnEl) _editBtnEl.style.display = (currentUser?.role === 'admin' && r.status === 'pending') ? '' : 'none';
 
     document.getElementById('exp-detail-modal').classList.add('open');
 }
@@ -10916,6 +11004,12 @@ function closeExpDetailModal(e) {
     if (e && e.target !== document.getElementById('exp-detail-modal')) return;
     document.getElementById('exp-detail-modal').classList.remove('open');
     _edmCurrentId = null;
+    const _cls = document.getElementById('edm-edit-section');
+    if (_cls) _cls.style.display = 'none';
+    const _clsSave = document.getElementById('edm-save-btn');
+    const _clsCancel = document.getElementById('edm-cancel-btn');
+    if (_clsSave) _clsSave.style.display = 'none';
+    if (_clsCancel) _clsCancel.style.display = 'none';
 }
 
 function _edmShowReject() {
@@ -10948,6 +11042,91 @@ async function _edmConfirmReject() {
     document.getElementById('exp-detail-modal').classList.remove('open');
     _edmCurrentId = null;
     _renderFinExpClaims();
+}
+
+function _edmStartEdit() {
+    const r = _adminExpClaims.find(x => x.id === _edmCurrentId);
+    if (!r) return;
+    document.getElementById('edm-e-project').value = r.project_name || '';
+    document.getElementById('edm-e-site-id').value = r.site_id || '';
+    document.getElementById('edm-e-governorate').value = r.governorate || '';
+    document.getElementById('edm-e-description').value = r.description || 'Delivery';
+    document.getElementById('edm-e-activity-date').value = r.activity_date || '';
+    document.getElementById('edm-e-transport').value = r.transport_amount || 0;
+    document.getElementById('edm-e-accommodation').value = r.accommodation || '';
+    document.getElementById('edm-e-food').value = r.food_amount || 0;
+    _edmRecalcTotal();
+    document.getElementById('edm-edit-section').style.display = '';
+    document.getElementById('edm-edit-btn').style.display = 'none';
+    document.getElementById('edm-actions').style.display = 'none';
+    document.getElementById('edm-save-btn').style.display = '';
+    document.getElementById('edm-cancel-btn').style.display = '';
+}
+
+function _edmCancelEdit() {
+    document.getElementById('edm-edit-section').style.display = 'none';
+    document.getElementById('edm-edit-btn').style.display = '';
+    document.getElementById('edm-actions').style.display = '';
+    document.getElementById('edm-save-btn').style.display = 'none';
+    document.getElementById('edm-cancel-btn').style.display = 'none';
+}
+
+async function _edmSaveEdit() {
+    const id = _edmCurrentId;
+    if (!id) return;
+    const project_name = document.getElementById('edm-e-project').value;
+    const site_id = document.getElementById('edm-e-site-id').value.trim();
+    const governorate = document.getElementById('edm-e-governorate').value.trim();
+    const description = document.getElementById('edm-e-description').value;
+    const activity_date = document.getElementById('edm-e-activity-date').value;
+    const transport_amount = parseFloat(document.getElementById('edm-e-transport').value) || 0;
+    const accommodation = document.getElementById('edm-e-accommodation').value;
+    const food_amount = parseFloat(document.getElementById('edm-e-food').value) || 0;
+    const total_amount = transport_amount + food_amount;
+    const saveBtn = document.getElementById('edm-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    try {
+        const { error } = await _sb.from('expense_claims').update({
+            project_name, site_id, governorate, description, activity_date,
+            transport_amount, accommodation, food_amount, total_amount
+        }).eq('id', id);
+        if (error) throw error;
+    } catch(e) {
+        toast(e.message, 'err');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+        return;
+    }
+    const idx = _adminExpClaims.findIndex(x => x.id === id);
+    if (idx >= 0) Object.assign(_adminExpClaims[idx], { project_name, site_id, governorate, description, activity_date, transport_amount, accommodation, food_amount, total_amount });
+    const claim = _adminExpClaims.find(x => x.id === id);
+    const memberName = _finTeam.find(t => t.id === claim?.member_id)?.full_name || 'team member';
+    const projLabel = (typeof PROJ_NAMES !== 'undefined' && PROJ_NAMES[project_name]) ? PROJ_NAMES[project_name] : project_name;
+    logActivity('admin_edit_claim', `Admin edited expense claim for ${memberName} - ${projLabel}`, projLabel, '');
+    toast('Claim updated', 'ok');
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Changes';
+    document.getElementById('exp-detail-modal').classList.remove('open');
+    _edmCurrentId = null;
+    _renderFinExpClaims();
+}
+
+function _edmRecalcTotal() {
+    const transport = parseFloat(document.getElementById('edm-e-transport')?.value) || 0;
+    const food = parseFloat(document.getElementById('edm-e-food')?.value) || 0;
+    const totalEl = document.getElementById('edm-e-total');
+    if (totalEl) totalEl.textContent = iqd(transport + food);
+}
+
+function _edmAccomChange() {
+    const accom = document.getElementById('edm-e-accommodation').value;
+    const foodInp = document.getElementById('edm-e-food');
+    if (!foodInp) return;
+    if (accom === 'Returned Home') foodInp.value = 10000;
+    else if (accom === 'Hotel') foodInp.value = 15000;
+    else foodInp.value = 0;
+    _edmRecalcTotal();
 }
 
 // ── Backup & Restore ──────────────────────────────────────────────────
