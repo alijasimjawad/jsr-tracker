@@ -10116,11 +10116,14 @@ async function repApplyAdjAll() {
     const reason   = document.getElementById('rep-adj-all-reason')?.value.trim() || null;
     if (isNaN(pct) || pct < 0) { toast('Enter a valid percentage', 'err'); return; }
     if (!_repTeamWithSalary.length) { toast('No team members for this period', 'err'); return; }
-    const upserts = _repTeamWithSalary.map(t => ({
-        member_id: t.id, month: _repMonth, year: _repYear,
-        adjusted_amount: Math.round(t.proratedSalary * pct / 100),
-        reason, adj_type
-    }));
+    const upserts = _repTeamWithSalary.map(t => {
+        const base = t.proratedSalary;
+        const delta = Math.round(base * pct / 100);
+        const adjusted_amount = adj_type === 'bonus'     ? base + delta
+                              : adj_type === 'deduction' ? Math.max(0, base - delta)
+                              : delta;
+        return { member_id: t.id, month: _repMonth, year: _repYear, adjusted_amount, reason, adj_type };
+    });
     const { error } = await _sb.from('salary_adjustments').upsert(upserts, { onConflict: 'member_id,month,year' });
     if (error) { toast(error.message, 'err'); return; }
     closeFinModal('rep-adj-all-modal');
