@@ -8025,24 +8025,24 @@ function _teamMemberRow(m) {
         : `<span class="fin-badge-inactive" style="display:inline-flex;align-items:center;gap:2px"><span class="tm-status-dot inactive"></span>Inactive</span>`;
     const toggleCls = m.is_active ? 'fin-act-btn tm-deactivate' : 'fin-act-btn tm-activate';
     return `<tr class="tm-row">
-        <td>
+        <td style="white-space:nowrap">
             <div style="display:flex;align-items:center;gap:10px">
                 <div class="tm-avatar" style="background:${rc.avatar}">${initials}</div>
                 <strong>${esc(m.full_name)}</strong>
             </div>
         </td>
-        <td class="fin-num">${iqd(m.monthly_salary)}</td>
-        <td>${roleHTML}</td>
-        <td>${esc(m.phone||'')}</td>
-        <td style="color:var(--slate-500);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.notes||'')}</td>
-        <td>${statusHTML}</td>
-        <td>
+        <td class="fin-num" style="white-space:nowrap">${iqd(m.monthly_salary)}</td>
+        <td style="white-space:nowrap">${roleHTML}</td>
+        <td style="white-space:nowrap">${esc(m.phone||'')}</td>
+        <td style="color:var(--slate-500);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.notes||'')}</td>
+        <td style="white-space:nowrap">${statusHTML}</td>
+        <td style="white-space:nowrap">
             <div style="font-size:13px">${actFmt}</div>
             ${actSub ? `<div style="font-size:11px;color:var(--slate-400);margin-top:2px">${actSub}</div>` : ''}
         </td>
-        <td style="color:var(--text-secondary)">${leftFmt}</td>
-        <td>
-            <div style="display:flex;gap:4px">
+        <td style="color:var(--text-secondary);white-space:nowrap">${leftFmt}</td>
+        <td style="white-space:nowrap">
+            <div style="display:flex;gap:4px;flex-wrap:nowrap">
                 <button class="fin-act-btn tm-edit" onclick="openFinTeamForm('${m.id}')" title="Edit">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
@@ -8167,7 +8167,7 @@ function _renderFinTeam(pc) {
             </button>
             <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
         </div>
-        <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
+        <div class="fin-table-wrap"><table class="fin-table" style="min-width:920px"><thead><tr>
             ${colTh('name',   'Full Name')}
             ${colTh('salary', 'Monthly Salary')}
             ${colTh('role',   'Job Title')}
@@ -8176,7 +8176,7 @@ function _renderFinTeam(pc) {
             ${colTh('status', 'Status')}
             <th>Active Since</th>
             <th>Left On</th>
-            <th>Actions</th>
+            <th style="white-space:nowrap">Actions</th>
         </tr></thead><tbody id="team-member-tbody"></tbody></table></div></div>`;
     applyTmFilters();
 }
