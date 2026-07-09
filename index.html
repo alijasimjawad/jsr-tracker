@@ -10616,7 +10616,11 @@ function daSendWhatsApp() {
     const teamLines = v.team_member_names.length
         ? v.team_member_names.map(n => `  › ${n}`).join('\n')
         : '  › —';
-    const msg = `◆ *JSR Network Tracker*\n━━━━━━━━━━━━━━━━━━━━\n◆ *DAILY ACTIVITY REPORT*\n━━━━━━━━━━━━━━━━━━━━\n\n◆ *Date:* ${d}\n◆ *Project:* ${projectLine}\n◆ *Site ID:* ${v.site_id||'—'}  |  ◆ *Gov:* ${v.governate||'—'}\n\n━━━━━━━━━━━━━━━━━━━━\n◆ *Team*\n${teamLines}\n\n◆ *Activity:* ${v.activity_type||'—'}\n◆ *Status:* ${v.status||'—'}\n\n◆ *Notes*\n${v.notes||'—'}\n━━━━━━━━━━━━━━━━━━━━\n_Sent via JSR Network Tracker_`;
+    const msg = `◆ *JSR Network Tracker*
+━━━━━━━━━━━━
+◆ *DAILY ACTIVITY REPORT*
+━━━━━━━━━━━━
+\n◆ *Date:* ${d}\n◆ *Project:* ${projectLine}\n◆ *Site ID:* ${v.site_id||'—'}  |  ◆ *Gov:* ${v.governate||'—'}\n\n━━━━━━━━━━━━\n◆ *Team*\n${teamLines}\n\n◆ *Activity:* ${v.activity_type||'—'}\n◆ *Status:* ${v.status||'—'}\n\n◆ *Notes*\n${v.notes||'—'}\n━━━━━━━━━━━━\n_◆ JSR Network Operations Center_`;
     window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
