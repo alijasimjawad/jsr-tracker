@@ -9429,6 +9429,18 @@ async function deleteFinProjExp(id) {
 let _repMonth = _nowM(), _repYear = _nowY();
 let _repWorkDays = 22;
 let _repCharts = [];
+let _repAdjustments = [];
+let _repTeamWithSalary = [];
+
+async function _loadRepAdjustments() {
+    const { data } = await _sb.from('salary_adjustments').select('*').eq('month', _repMonth).eq('year', _repYear);
+    _repAdjustments = data || [];
+}
+
+async function _repReloadReport() {
+    await _loadRepAdjustments();
+    _renderReport();
+}
 
 async function showFinReport(force = false) {
     if (!_guardPerm('view_fin_report')) return;
@@ -9437,11 +9449,13 @@ async function showFinReport(force = false) {
     _repCharts.forEach(c => { try { c.destroy(); } catch(_) {} }); _repCharts = [];
     if (_finCacheOk() && !force) {
         const pc = _finPanel();
+        await _loadRepAdjustments();
         _renderReport(pc);
-        _bgFinRefresh('nav-fin-report', () => _renderReport());
+        _bgFinRefresh('nav-fin-report', () => _repReloadReport());
     } else {
         const pc = _finSpinner();
         try { await _loadFinAll(); } catch(e) { pc.innerHTML = `<div style="padding:40px;color:var(--red)">Failed: ${esc(e.message)}</div>`; return; }
+        await _loadRepAdjustments();
         _renderReport(pc);
     }
 }
@@ -9487,9 +9501,12 @@ function _renderReport(pc) {
         const totalCalDays   = _rLast.getDate();
         const daysActive     = Math.round((endD - startD) / 86400000) + 1;
         const proratedSalary = Math.round((+t.monthly_salary || 0) / totalCalDays * daysActive);
-        return { ...t, daysActive, totalCalDays, proratedSalary };
+        const adj            = _repAdjustments.find(a => a.member_id === t.id);
+        const effectiveSalary = adj ? +adj.adjusted_amount : proratedSalary;
+        return { ...t, daysActive, totalCalDays, proratedSalary, effectiveSalary, isAdjusted: !!adj, adjReason: adj?.reason || '' };
     });
-    const totalSalaryBudget   = teamWithSalary.reduce((s, t) => s + t.proratedSalary, 0);
+    _repTeamWithSalary = teamWithSalary;
+    const totalSalaryBudget   = teamWithSalary.reduce((s, t) => s + t.effectiveSalary, 0);
     const activeEmployeeCount = teamWithSalary.length;
     const totalGenExp         = _finGenExp.filter(r => r.month === m && r.year === y).reduce((s, r) => s + (+r.amount || 0), 0);
 
@@ -9523,10 +9540,10 @@ function _renderReport(pc) {
 
     pc.innerHTML = `<div class="fin-page" id="fin-rep-wrap" style="padding-bottom:40px">
         <div class="fin-toolbar">
-            <select class="fin-sel" onchange="_repMonth=+this.value;_renderReport()">
+            <select class="fin-sel" onchange="_repMonth=+this.value;_repReloadReport()">
                 ${FIN_MONTHS.map((mn,i) => `<option value="${i+1}"${i+1===_repMonth?' selected':''}>${mn}</option>`).join('')}
             </select>
-            <select class="fin-sel" onchange="_repYear=+this.value;_renderReport()">${yearsOpts}</select>
+            <select class="fin-sel" onchange="_repYear=+this.value;_repReloadReport()">${yearsOpts}</select>
             <label style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;margin-left:4px">
                 Working Days
                 <input type="number" min="1" max="31" value="${_repWorkDays}" style="width:52px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg-panel);color:var(--text-primary)" onchange="_repWorkDays=Math.max(1,+this.value||22);_renderReport()">
@@ -9662,11 +9679,31 @@ function _renderReport(pc) {
         </div>
 
         <!-- ── Team Member Salaries ── -->
-        ${repSection('Team Member Salaries')}
-        <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:28px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)">
+            <h3 style="font-size:13px;font-weight:700;color:var(--text-primary);letter-spacing:.3px;text-transform:uppercase;margin:0">Team Member Salaries</h3>
+            ${teamWithSalary.length > 0 ? `<button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="repToggleAdjAllPanel()">Adjust All</button>` : ''}
+        </div>
+        <p style="font-size:13px;color:var(--text-secondary);margin:0 0 10px">
             Pro-rated salaries based on activation date for <strong>${_monthName(m)} ${y}</strong>
-            (${_repWorkDays} working days).
+            (${_repWorkDays} working days). Click the pencil icon to override an individual salary.
         </p>
+        <div id="rep-adj-all-panel" style="display:none;background:var(--slate-50);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+            <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px">Adjust All Salaries</div>
+            <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+                <label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block">
+                    % of calculated salary
+                    <input type="number" id="rep-adj-all-pct" min="0" max="500" value="100" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:100px;background:var(--bg-panel);color:var(--text-primary)">
+                </label>
+                <label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block">
+                    Reason (optional)
+                    <input type="text" id="rep-adj-all-reason" placeholder="e.g. Bonus, deduction…" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:220px;background:var(--bg-panel);color:var(--text-primary)">
+                </label>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-accent" style="font-size:12px;padding:6px 14px" onclick="repApplyAdjAll()">Apply to All</button>
+                    <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px" onclick="document.getElementById('rep-adj-all-panel').style.display='none'">Cancel</button>
+                </div>
+            </div>
+        </div>
         ${teamWithSalary.length === 0
             ? `<div class="al-empty">No active team members for this period.</div>`
             : `<div class="fin-table-wrap">
@@ -9678,14 +9715,41 @@ function _renderReport(pc) {
             <th class="fin-num">Actual Salary (IQD)</th>
         </tr></thead><tbody>
         ${teamWithSalary.map(t => {
-            const actFromStr = t.activated_at || '—';
             const actFromFmt = t.activated_at ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(t.activated_at.split('-')) : '—';
+            const pencilColor = t.isAdjusted ? '#d97706' : '#94a3b8';
+            const pencilTitle = t.isAdjusted ? 'Override active — click to edit' : 'Click to override salary';
+            const pencilSVG = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
             return `<tr>
             <td><strong>${esc(t.full_name)}</strong></td>
             <td style="color:var(--text-secondary)">${esc(t.role||'—')}</td>
             <td class="fin-num">${actFromFmt}</td>
             <td class="fin-num">${t.daysActive}/${t.totalCalDays} days</td>
-            <td class="fin-num" style="color:var(--warning)">${iqd(t.proratedSalary)}</td>
+            <td class="fin-num" style="color:var(--warning)">
+                ${iqd(t.effectiveSalary)}
+                ${t.isAdjusted ? `<span style="font-size:10px;color:#d97706;margin-left:3px">(adj)</span>` : ''}
+                <button onclick="repToggleAdjPanel('${t.id}')" title="${pencilTitle}" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:${pencilColor};vertical-align:middle;line-height:1;margin-left:2px">${pencilSVG}</button>
+            </td>
+        </tr>
+        <tr id="rep-adj-panel-${t.id}" style="display:none">
+            <td colspan="5" style="padding:0;background:var(--slate-50);border-bottom:2px solid var(--accent)">
+                <div style="padding:14px 16px">
+                    <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+                        <label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block">
+                            Override Amount (IQD)
+                            <input type="number" id="rep-adj-amt-${t.id}" value="${t.effectiveSalary}" min="0" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:160px;background:var(--bg-panel);color:var(--text-primary)">
+                        </label>
+                        <label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block">
+                            Reason (optional)
+                            <input type="text" id="rep-adj-reason-${t.id}" value="${esc(t.adjReason)}" placeholder="e.g. Bonus, deduction…" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:220px;background:var(--bg-panel);color:var(--text-primary)">
+                        </label>
+                        <div style="display:flex;gap:8px;padding-bottom:1px">
+                            <button class="btn btn-accent" style="font-size:12px;padding:6px 14px" onclick="repSaveAdj('${t.id}')">Save</button>
+                            <button class="btn btn-danger" id="rep-adj-rm-${t.id}" style="font-size:12px;padding:6px 14px${t.isAdjusted ? '' : ';display:none'}" onclick="repRemoveAdj('${t.id}')">Remove Override</button>
+                            <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px" onclick="repToggleAdjPanel('${t.id}')">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </td>
         </tr>`;
         }).join('')}
         </tbody><tfoot><tr>
@@ -9839,6 +9903,66 @@ function exportFinReport(m, y) {
     ws['!cols'] = [28, 20, 18, 20, 12].map(w => ({ wch: w }));
     XLSX.utils.book_append_sheet(wb, ws, 'Monthly Report');
     XLSX.writeFile(wb, `Finance_Report_${_monthName(m)}_${y}.xlsx`);
+}
+
+// ── Salary Adjustment helpers ─────────────────
+function repToggleAdjPanel(memberId) {
+    const panelRow = document.getElementById('rep-adj-panel-' + memberId);
+    if (!panelRow) return;
+    const isOpen = panelRow.style.display !== 'none';
+    document.querySelectorAll('[id^="rep-adj-panel-"]').forEach(el => { el.style.display = 'none'; });
+    if (!isOpen) panelRow.style.display = '';
+}
+
+function repToggleAdjAllPanel() {
+    const p = document.getElementById('rep-adj-all-panel');
+    if (p) p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+
+async function repSaveAdj(memberId) {
+    const amtEl = document.getElementById('rep-adj-amt-' + memberId);
+    const reasonEl = document.getElementById('rep-adj-reason-' + memberId);
+    const amt = +amtEl.value;
+    if (isNaN(amt) || amt < 0) { toast('Enter a valid amount', 'err'); return; }
+    const reason = reasonEl.value.trim() || null;
+    const { error } = await _sb.from('salary_adjustments').upsert(
+        { member_id: memberId, month: _repMonth, year: _repYear, adjusted_amount: amt, reason },
+        { onConflict: 'member_id,month,year' }
+    );
+    if (error) { toast(error.message, 'err'); return; }
+    await _loadRepAdjustments();
+    _renderReport();
+    toast('Adjustment saved', 'ok');
+}
+
+async function repRemoveAdj(memberId) {
+    const { error } = await _sb.from('salary_adjustments').delete()
+        .eq('member_id', memberId).eq('month', _repMonth).eq('year', _repYear);
+    if (error) { toast(error.message, 'err'); return; }
+    await _loadRepAdjustments();
+    _renderReport();
+    toast('Override removed', 'ok');
+}
+
+async function repApplyAdjAll() {
+    const pctEl = document.getElementById('rep-adj-all-pct');
+    const reasonEl = document.getElementById('rep-adj-all-reason');
+    const pct = +pctEl.value;
+    if (isNaN(pct) || pct < 0) { toast('Enter a valid percentage', 'err'); return; }
+    const reason = reasonEl?.value.trim() || null;
+    if (!_repTeamWithSalary.length) { toast('No team members for this period', 'err'); return; }
+    const upserts = _repTeamWithSalary.map(t => ({
+        member_id: t.id,
+        month: _repMonth,
+        year: _repYear,
+        adjusted_amount: Math.round(t.proratedSalary * pct / 100),
+        reason
+    }));
+    const { error } = await _sb.from('salary_adjustments').upsert(upserts, { onConflict: 'member_id,month,year' });
+    if (error) { toast(error.message, 'err'); return; }
+    await _loadRepAdjustments();
+    _renderReport();
+    toast(`Applied ${pct}% adjustment to ${upserts.length} member${upserts.length !== 1 ? 's' : ''}`, 'ok');
 }
 
 // ── Generic helpers ───────────────────────────
