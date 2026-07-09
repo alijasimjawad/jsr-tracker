@@ -10403,9 +10403,14 @@ function _renderDailyActivities(pc) {
                 </div>
                 <div class="da-field">
                     <label>Section</label>
-                    <select id="da-site">
+                    <select id="da-section" onchange="daUpdateSiteIds()">
                         <option value="">— Select project first —</option>
                     </select>
+                </div>
+                <div class="da-field">
+                    <label>Site ID</label>
+                    <input type="text" id="da-site" placeholder="Select section or type new…" list="da-site-list" autocomplete="off">
+                    <datalist id="da-site-list"></datalist>
                 </div>
                 <div class="da-field">
                     <label>Activity Type</label>
@@ -10452,18 +10457,20 @@ function _renderDailyActivities(pc) {
         </table></div>
     </div>`;
     setTimeout(daUpdateSiteList, 80);
+    setTimeout(daUpdateSiteIds, 300);
 }
 
 async function daUpdateSiteList() {
     const project = document.getElementById('da-project')?.value || '';
-    const sel = document.getElementById('da-site');
+    const sel = document.getElementById('da-section');
     if (!sel) return;
     sel.innerHTML = '<option value="">— Loading… —</option>';
+    document.getElementById('da-site-list').innerHTML = '';
+    document.getElementById('da-site').value = '';
     if (!project) {
         sel.innerHTML = '<option value="">— Select project first —</option>';
         return;
     }
-    // Map display name → short key used in sections table
     const nameToKey = {
         'Zain Project':'zain','Nokia Project':'nokia','Huawei Project':'huawei',
         'MRC Project':'mrc','Metco Project':'metco','MFC Project':'mfc',
@@ -10472,20 +10479,16 @@ async function daUpdateSiteList() {
     const projKey = nameToKey[project] || project;
     try {
         const { data, error } = await _sb.from('sections')
-            .select('section_label, section_name')
+            .select('id, section_label, section_name')
             .eq('project_name', projKey)
             .neq('is_deleted', true)
             .order('created_at', { ascending: true });
         if (error) throw error;
         if (data && data.length > 0) {
-            const seen = new Set();
             let opts = '<option value="">— Select section —</option>';
             data.forEach(r => {
                 const label = r.section_label || r.section_name || '';
-                if (label && !seen.has(label)) {
-                    seen.add(label);
-                    opts += `<option value="${esc(label)}">${esc(label)}</option>`;
-                }
+                if (label) opts += `<option value="${esc(r.id)}">${esc(label)}</option>`;
             });
             sel.innerHTML = opts;
         } else {
@@ -10494,6 +10497,37 @@ async function daUpdateSiteList() {
     } catch(e) {
         sel.innerHTML = '<option value="">— Error loading sections —</option>';
         console.warn('daUpdateSiteList error:', e.message);
+    }
+}
+
+async function daUpdateSiteIds() {
+    const sectionId = document.getElementById('da-section')?.value || '';
+    const dl = document.getElementById('da-site-list');
+    const input = document.getElementById('da-site');
+    if (!dl || !input) return;
+    dl.innerHTML = '';
+    input.value = '';
+    if (!sectionId) return;
+    try {
+        const { data, error } = await _sb.from('rows')
+            .select('data')
+            .eq('section_id', sectionId)
+            .order('row_order', { ascending: true });
+        if (error) throw error;
+        if (data && data.length > 0) {
+            const seen = new Set();
+            data.forEach(r => {
+                const siteId = Array.isArray(r.data) ? String(r.data[0] || '').trim() : '';
+                if (siteId && siteId !== 'undefined' && siteId !== 'null' && !seen.has(siteId)) {
+                    seen.add(siteId);
+                    const opt = document.createElement('option');
+                    opt.value = siteId;
+                    dl.appendChild(opt);
+                }
+            });
+        }
+    } catch(e) {
+        console.warn('daUpdateSiteIds error:', e.message);
     }
 }
 
