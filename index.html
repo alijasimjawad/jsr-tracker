@@ -10402,9 +10402,10 @@ function _renderDailyActivities(pc) {
                     </select>
                 </div>
                 <div class="da-field">
-                    <label>Site ID</label>
-                    <input type="text" id="da-site" placeholder="e.g. ZN-001" list="da-site-list" autocomplete="off">
-                    <datalist id="da-site-list"></datalist>
+                    <label>Section</label>
+                    <select id="da-site">
+                        <option value="">— Select project first —</option>
+                    </select>
                 </div>
                 <div class="da-field">
                     <label>Activity Type</label>
@@ -10450,26 +10451,40 @@ function _renderDailyActivities(pc) {
             <tbody>${historyRows}</tbody>
         </table></div>
     </div>`;
-    setTimeout(daUpdateSiteList, 50);
+    setTimeout(daUpdateSiteList, 80);
 }
 
 async function daUpdateSiteList() {
     const project = document.getElementById('da-project')?.value || '';
-    const dl = document.getElementById('da-site-list');
-    if (!dl) return;
-    dl.innerHTML = '';
-    if (!project) return;
+    const sel = document.getElementById('da-site');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Loading… —</option>';
+    if (!project) {
+        sel.innerHTML = '<option value="">— Select project first —</option>';
+        return;
+    }
     try {
-        const { data } = await _sb.from('sections').select('section_label').eq('project_name', project).neq('section_label', null);
+        const { data } = await _sb.from('sections')
+            .select('section_label, section_name')
+            .eq('project_name', project)
+            .eq('is_deleted', false)
+            .order('created_at', { ascending: true });
         if (data && data.length > 0) {
-            const labels = [...new Set(data.map(r => r.section_label).filter(Boolean))].sort();
-            labels.forEach(label => {
-                const opt = document.createElement('option');
-                opt.value = label;
-                dl.appendChild(opt);
+            const seen = new Set();
+            let opts = '<option value="">— Select section —</option>';
+            data.forEach(r => {
+                const label = r.section_label || r.section_name || '';
+                if (label && !seen.has(label)) {
+                    seen.add(label);
+                    opts += `<option value="${esc(label)}">${esc(label)}</option>`;
+                }
             });
+            sel.innerHTML = opts;
+        } else {
+            sel.innerHTML = '<option value="">— No sections found —</option>';
         }
     } catch(e) {
+        sel.innerHTML = '<option value="">— Error loading sections —</option>';
         console.warn('daUpdateSiteList error:', e.message);
     }
 }
