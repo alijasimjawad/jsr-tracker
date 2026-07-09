@@ -466,6 +466,24 @@
         .fin-table .tm-row:hover td { background:rgba(37,99,235,.03) !important; transition:background .1s; }
         .fin-table .tm-row:hover td:first-child { box-shadow:inset 3px 0 0 var(--accent); }
 
+        /* ── Daily Activities ───────────────── */
+        .da-form-card { background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;padding:24px 28px;margin-bottom:24px; }
+        .da-form-title { font-size:14px;font-weight:800;color:var(--slate-800);margin-bottom:18px;letter-spacing:-.1px; }
+        .da-form-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:14px; }
+        @media(max-width:900px){ .da-form-grid { grid-template-columns:1fr 1fr; } }
+        .da-field { display:flex;flex-direction:column;gap:5px; }
+        .da-field label { font-size:11px;font-weight:700;color:var(--slate-600);text-transform:uppercase;letter-spacing:.5px; }
+        .da-field input,.da-field select,.da-field textarea { padding:8px 11px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg-panel);color:var(--text-primary);transition:border-color .15s; }
+        .da-field input:focus,.da-field select:focus,.da-field textarea:focus { outline:none;border-color:var(--accent); }
+        .da-field textarea { resize:vertical;min-height:72px; }
+        .da-team-wrap { border:1.5px solid var(--border);border-radius:var(--radius);background:var(--bg-panel);max-height:140px;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:3px; }
+        .da-team-item { display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text-primary); }
+        .da-team-item:hover { background:var(--slate-50); }
+        .da-team-item input[type=checkbox] { accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;cursor:pointer; }
+        .da-form-actions { display:flex;gap:10px;margin-top:18px; }
+        .da-history-table { width:100%;border-collapse:collapse; }
+        .da-status-badge { display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700; }
+
         /* ── HR Employee Profiles ────────────── */
         /* ── HR: List page ─────────────────── */
         .hr-page { padding:24px 28px; }
@@ -2464,6 +2482,20 @@
                 </div>
 
                 </div><!-- /sb-ns-body -->
+
+                <!-- DAILY WORK section (admin + engineer) -->
+                <div class="sb-flat-section" id="sidebar-daily-section">
+                    <div class="tree-section-label sb-sec-hdr" onclick="toggleSbSection('sb-daily-body')"><span style="display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Daily Work</span><svg class="sb-sec-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+                    <div id="sb-daily-body" class="sb-sec-body">
+                    <div class="tree-child" id="nav-daily-activities" onclick="showDailyActivities()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                            <span class="tree-child-label">Daily Activities</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
+                    </div><!-- /sb-daily-body -->
+                </div>
 
                 <!-- MY EXPENSES section (member only) -->
                 <div class="member-section sb-flat-section" id="sidebar-my-expenses-section">
@@ -4535,6 +4567,11 @@ function applyPermissions() {
     // My Expenses (member-facing sidebar section)
     const isEngineer = currentUser?.role?.toLowerCase() === 'engineer';
     sv('sidebar-my-expenses-section', p.view_my_expenses || isEngineer, false);
+
+    // Daily Work (admin + engineer)
+    const isDailyAllowed = currentUser?.role === 'admin' || isEngineer;
+    sv('sidebar-daily-section', isDailyAllowed, false);
+    sv('nav-daily-activities',  isDailyAllowed, true);
 
     // Admin — activity log only (user mgmt is always admin-only)
     if (p.view_activity_log) {
@@ -7579,6 +7616,8 @@ let _finDashCharts = [];
 let _finTeamEditId    = null;
 let _finTeamFilter    = null;
 
+let _dailyActivities = [];
+
 // ── Data cache ────────────────────────────────────
 let _finLoaded = false;   // has finance data been loaded at least once?
 let _finLoadTs = 0;       // timestamp of last successful finance load
@@ -10267,6 +10306,208 @@ function _hrCardHtml(m) {
             <button class="hr-doc-btn${cnt > 0 ? ' has-docs' : ''}" onclick="showHrProfile('${m.id}','documents')" title="Documents">${docSVG} ${cnt > 0 ? cnt : ''}</button>
         </div>
     </div>`;
+}
+
+// ══════════════════════════════════════════════
+// DAILY ACTIVITIES
+// ══════════════════════════════════════════════
+
+async function showDailyActivities() {
+    const allowed = currentUser?.role === 'admin' || currentUser?.role?.toLowerCase() === 'engineer';
+    if (!allowed) { toast('You do not have permission to view this section.', 'err'); return; }
+    _finNavActive('nav-daily-activities');
+    setTopbar('<span class="bc">Daily Work</span><span class="bc-sep">›</span><span class="bc-cur">Daily Activities</span>');
+    const pc = _finSpinner();
+    try {
+        if (!_finCacheOk()) await _loadFinAll();
+        const { data, error } = await _sb.from('daily_activities').select('*').order('date', { ascending: false }).order('created_at', { ascending: false });
+        if (error) throw error;
+        _dailyActivities = data || [];
+    } catch(e) {
+        pc.innerHTML = `<div style="padding:40px;color:var(--red)">Failed: ${esc(e.message)}</div>`;
+        return;
+    }
+    _renderDailyActivities(pc);
+}
+
+function _renderDailyActivities(pc) {
+    pc = pc || document.getElementById('panel-content');
+    pc.classList.remove('table-mode');
+
+    const today = new Date().toISOString().split('T')[0];
+    const acts  = _dailyActivities;
+
+    // KPI counts
+    const total     = acts.length;
+    const completed = acts.filter(a => a.status === 'Completed').length;
+    const inProg    = acts.filter(a => a.status === 'In Progress').length;
+    const blocked   = acts.filter(a => a.status === 'Blocked').length;
+
+    // Unique site IDs from revenue + project expenses
+    const siteIds = [...new Set([
+        ..._finRevenue.map(r => r.site_id),
+        ..._finProjExp.map(r => r.site_id)
+    ].filter(Boolean))].sort();
+
+    const activityTypes = ['Installation','Maintenance','Survey','Testing','Commissioning','Integration','Clearance'];
+    const statusOptions  = ['In Progress','Completed','Blocked'];
+
+    const teamOptions = _finTeam.filter(m => m.is_active !== false).map(m =>
+        `<label class="da-team-item"><input type="checkbox" class="da-team-cb" value="${esc(m.id)}" data-name="${esc(m.full_name)}"><span>${esc(m.full_name)}</span></label>`
+    ).join('');
+
+    const statusBadge = s => {
+        const colors = { 'Completed':'background:#dcfce7;color:#166534', 'In Progress':'background:#dbeafe;color:#1e40af', 'Blocked':'background:#fee2e2;color:#991b1b' };
+        return `<span class="da-status-badge" style="${colors[s]||'background:#f1f5f9;color:#475569'}">${esc(s)}</span>`;
+    };
+
+    const historyRows = acts.length === 0
+        ? `<tr><td colspan="7" class="al-empty">No activities yet.</td></tr>`
+        : acts.map(a => {
+            const teamNames = Array.isArray(a.team_member_names) ? a.team_member_names.join(', ') : (a.team_member_names || '');
+            const d = a.date ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(a.date.split('-')) : '—';
+            return `<tr>
+                <td style="white-space:nowrap">${d}</td>
+                <td>${esc(a.project||'')}</td>
+                <td>${esc(a.site_id||'')}</td>
+                <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(teamNames)}">${esc(teamNames)}</td>
+                <td style="white-space:nowrap">${esc(a.activity_type||'')}</td>
+                <td>${statusBadge(a.status||'')}</td>
+                <td style="white-space:nowrap">
+                    <button class="fin-act-btn" style="color:#2563eb" title="View" onclick="daView('${a.id}')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button class="fin-act-btn" style="color:#dc2626" title="Delete" onclick="daDelete('${a.id}')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
+                </td>
+            </tr>`;
+        }).join('');
+
+    pc.innerHTML = `<div class="fin-page">
+        <!-- KPI Cards -->
+        <div class="fin-kpi-row" style="grid-template-columns:repeat(4,1fr)">
+            <div class="fin-kpi-card"><div class="fin-kpi-label">Total Activities</div><div class="fin-kpi-value" style="color:#2563eb">${total}</div></div>
+            <div class="fin-kpi-card"><div class="fin-kpi-label">Completed</div><div class="fin-kpi-value" style="color:#16a34a">${completed}</div></div>
+            <div class="fin-kpi-card"><div class="fin-kpi-label">In Progress</div><div class="fin-kpi-value" style="color:#2563eb">${inProg}</div></div>
+            <div class="fin-kpi-card"><div class="fin-kpi-label">Blocked</div><div class="fin-kpi-value" style="color:#dc2626">${blocked}</div></div>
+        </div>
+
+        <!-- Form -->
+        <div class="da-form-card">
+            <div class="da-form-title">Log New Activity</div>
+            <div class="da-form-grid">
+                <div class="da-field">
+                    <label>Date</label>
+                    <input type="date" id="da-date" value="${today}">
+                </div>
+                <div class="da-field">
+                    <label>Project</label>
+                    <select id="da-project">
+                        ${FIN_PROJECTS.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="da-field">
+                    <label>Site ID</label>
+                    <input type="text" id="da-site" placeholder="e.g. ZN-001" list="da-site-list" autocomplete="off">
+                    <datalist id="da-site-list">${siteIds.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+                </div>
+                <div class="da-field">
+                    <label>Activity Type</label>
+                    <select id="da-activity-type">
+                        ${activityTypes.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="da-field">
+                    <label>Status</label>
+                    <select id="da-status">
+                        ${statusOptions.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="da-field" style="grid-row:span 2">
+                    <label>Notes</label>
+                    <textarea id="da-notes" placeholder="Describe the work done…"></textarea>
+                </div>
+                <div class="da-field" style="grid-column:span 2">
+                    <label>Team Members</label>
+                    <div class="da-team-wrap" id="da-team-wrap">
+                        ${teamOptions || '<span style="color:var(--slate-400);font-size:13px;padding:4px">No active team members</span>'}
+                    </div>
+                </div>
+            </div>
+            <div class="da-form-actions">
+                <button class="btn btn-accent" onclick="daSave()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Save Activity
+                </button>
+                <button class="btn btn-ghost" style="color:#25d366;border-color:#25d366" onclick="daSendWhatsApp()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    Send to WhatsApp
+                </button>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div style="font-size:14px;font-weight:800;color:var(--slate-800);margin-bottom:12px">Activity History</div>
+        <div class="fin-table-wrap"><table class="fin-table" style="min-width:780px">
+            <thead><tr>
+                <th>Date</th><th>Project</th><th>Site ID</th><th>Team</th><th>Activity</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody>${historyRows}</tbody>
+        </table></div>
+    </div>`;
+}
+
+function _daFormValues() {
+    const date         = document.getElementById('da-date')?.value || '';
+    const project      = document.getElementById('da-project')?.value || '';
+    const site_id      = document.getElementById('da-site')?.value.trim() || '';
+    const activity_type = document.getElementById('da-activity-type')?.value || '';
+    const status       = document.getElementById('da-status')?.value || '';
+    const notes        = document.getElementById('da-notes')?.value.trim() || '';
+    const checked      = [...document.querySelectorAll('.da-team-cb:checked')];
+    const team_member_ids   = checked.map(cb => cb.value);
+    const team_member_names = checked.map(cb => cb.dataset.name);
+    return { date, project, site_id, activity_type, status, notes, team_member_ids, team_member_names };
+}
+
+async function daSave() {
+    const v = _daFormValues();
+    if (!v.date)    { toast('Please select a date.', 'err'); return; }
+    if (!v.project) { toast('Please select a project.', 'err'); return; }
+    const payload = { ...v, created_by: currentUser?.full_name || currentUser?.username || '' };
+    const { error } = await _sb.from('daily_activities').insert(payload);
+    if (error) { toast(error.message, 'err'); return; }
+    toast('Activity saved!', 'ok');
+    // Reload
+    const { data } = await _sb.from('daily_activities').select('*').order('date', { ascending: false }).order('created_at', { ascending: false });
+    _dailyActivities = data || [];
+    _renderDailyActivities();
+}
+
+async function daDelete(id) {
+    if (!confirm('Delete this activity?')) return;
+    const { error } = await _sb.from('daily_activities').delete().eq('id', id);
+    if (error) { toast(error.message, 'err'); return; }
+    _dailyActivities = _dailyActivities.filter(a => a.id !== id);
+    _renderDailyActivities();
+    toast('Deleted.', 'ok');
+}
+
+function daView(id) {
+    const a = _dailyActivities.find(x => x.id === id);
+    if (!a) return;
+    const teamNames = Array.isArray(a.team_member_names) ? a.team_member_names.join(', ') : (a.team_member_names || '—');
+    const d = a.date ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(a.date.split('-')) : '—';
+    alert(`📋 Daily Activity\n\n📅 Date: ${d}\n🏗️ Project: ${a.project||'—'}\n📍 Site: ${a.site_id||'—'}\n👥 Team: ${teamNames}\n🔧 Activity: ${a.activity_type||'—'}\n✅ Status: ${a.status||'—'}\n📝 Notes: ${a.notes||'—'}`);
+}
+
+function daSendWhatsApp() {
+    const v = _daFormValues();
+    const d = v.date ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(v.date.split('-')) : '—';
+    const teamStr = v.team_member_names.length ? v.team_member_names.join(', ') : '—';
+    const msg = `📋 *Daily Activity Report*\n📅 ${d}\n🏗️ Project: ${v.project||'—'}\n📍 Site: ${v.site_id||'—'}\n👥 Team: ${teamStr}\n🔧 Activity: ${v.activity_type||'—'}\n✅ Status: ${v.status||'—'}\n📝 Notes: ${v.notes||'—'}`;
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
 // ── List page ─────────────────────────────────────────────────────────────────
