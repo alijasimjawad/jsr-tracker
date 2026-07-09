@@ -9403,7 +9403,7 @@ function _renderReport(pc) {
     const _rFirst = new Date(y, m-1, 1);
     const _rLast  = new Date(y, m, 0);
     const _rFirstStr = `${y}-${String(m).padStart(2,'0')}-01`;
-    const _rLastStr  = _rLast.toISOString().split('T')[0];
+    const _rLastStr  = `${y}-${String(m).padStart(2,'0')}-${String(_rLast.getDate()).padStart(2,'0')}`;
     const teamWithSalary = _finTeam.filter(t => {
         if (!t.activated_at) return t.is_active !== false;
         const act = new Date(t.activated_at + 'T00:00:00');
@@ -9689,7 +9689,7 @@ function exportFinReport(m, y) {
     const _exFirst = new Date(y, m-1, 1);
     const _exLast  = new Date(y, m, 0);
     const _exFirstStr = `${y}-${String(m).padStart(2,'0')}-01`;
-    const _exLastStr  = _exLast.toISOString().split('T')[0];
+    const _exLastStr  = `${y}-${String(m).padStart(2,'0')}-${String(_exLast.getDate()).padStart(2,'0')}`;
     const _exTeam = _finTeam.filter(t => {
         if (!t.activated_at) return t.is_active !== false;
         const act = new Date(t.activated_at + 'T00:00:00');
