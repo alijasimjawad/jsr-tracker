@@ -7685,7 +7685,7 @@ async function showFinDashboard(force = false) {
     }
 }
 
-function _renderFinDashboard(pc) {
+async function _renderFinDashboard(pc) {
     if (!pc) pc = document.getElementById('panel-content');
     _finDashCharts.forEach(c => { try { c.destroy(); } catch(e){} });
     _finDashCharts = [];
@@ -7698,12 +7698,41 @@ function _renderFinDashboard(pc) {
         if (r.activity_date) { const d=new Date(r.activity_date); return d.getMonth()+1===m && d.getFullYear()===y; }
         return r.month===m && r.year===y;
     });
-    // Salary = sum of active team members' monthly_salary (matches Monthly Report)
-    const activeTeam  = _finTeam.filter(t => t.is_active !== false);
+    // Load salary adjustments for this month — same logic as Monthly Report
+    const { data: _dashAdjData } = await _sb.from('salary_adjustments').select('*').eq('month', m).eq('year', y);
+    const dashAdjMap = {};
+    (_dashAdjData || []).forEach(a => { dashAdjMap[a.member_id] = a; });
+    const _dFirst    = new Date(y, m-1, 1);
+    const _dLast     = new Date(y, m, 0);
+    const _dFirstStr = `${y}-${String(m).padStart(2,'0')}-01`;
+    const _dLastStr  = `${y}-${String(m).padStart(2,'0')}-${String(_dLast.getDate()).padStart(2,'0')}`;
+    const totalCalDays = _dLast.getDate();
+    const activeTeam = _finTeam.filter(t => {
+        if (!t.activated_at) return t.is_active !== false;
+        const act = new Date(t.activated_at + 'T00:00:00');
+        if (act > _dLast) return false;
+        if (t.deactivated_at) { const deact = new Date(t.deactivated_at + 'T00:00:00'); if (deact < _dFirst) return false; }
+        return true;
+    }).map(t => {
+        const actStr   = (t.activated_at && t.activated_at > _dFirstStr) ? t.activated_at : _dFirstStr;
+        const deactStr = (t.deactivated_at && t.deactivated_at < _dLastStr) ? t.deactivated_at : _dLastStr;
+        const daysActive     = Math.round((new Date(deactStr+'T00:00:00') - new Date(actStr+'T00:00:00')) / 86400000) + 1;
+        const proratedSalary = Math.round((+t.monthly_salary || 0) / totalCalDays * daysActive);
+        const adj = dashAdjMap[t.id];
+        const adjType = adj?.adj_type || 'override';
+        const adjAmount = adj ? +adj.adjusted_amount : 0;
+        let effectiveSalary = proratedSalary;
+        if (adj) {
+            if (adjType === 'bonus')          effectiveSalary = proratedSalary + adjAmount;
+            else if (adjType === 'deduction') effectiveSalary = Math.max(0, proratedSalary - adjAmount);
+            else                              effectiveSalary = adjAmount;
+        }
+        return { ...t, effectiveSalary };
+    });
     const totalRev    = rev.reduce((s,r)=>s+(+r.amount||0),0);
     const totalProjEx = projExp.reduce((s,r)=>s+(+r.amount||0),0);
     const totalGenEx  = genExp.reduce((s,r)=>s+(+r.amount||0),0);
-    const totalSal    = activeTeam.reduce((s,t)=>s+(+t.monthly_salary||0),0);
+    const totalSal    = activeTeam.reduce((s,t)=>s+t.effectiveSalary,0);
     const totalExp    = totalSal + totalGenEx + totalProjEx;
     const netProfit   = totalRev - totalExp;
     const margin      = totalRev > 0 ? (netProfit / totalRev * 100) : 0;
@@ -7852,7 +7881,7 @@ function _renderFinDashboard(pc) {
                     ? `<div style="color:var(--slate-400);font-size:13px;text-align:center;padding:20px">No active team members</div>`
                     : activeTeam.map(t=>`<div class="fin-panel-row">
                         <span style="font-weight:500">${esc(t.full_name)}</span>
-                        <span style="font-weight:600">${iqd(+t.monthly_salary||0)}</span>
+                        <span style="font-weight:600">${iqd(t.effectiveSalary)}</span>
                       </div>`).join('')
                 }
                 ${activeTeam.length>0?`<div class="fin-panel-row" style="font-weight:700;border-top:2px solid var(--slate-200);margin-top:4px"><span>Total (${activeTeam.length} members)</span><span>${iqd(totalSal)}</span></div>`:''}
