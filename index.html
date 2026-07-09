@@ -10509,6 +10509,15 @@ async function daUpdateSiteIds() {
     input.value = '';
     if (!sectionId) return;
     try {
+        // Get the section's column names so we know which key holds the Site ID
+        const { data: secData } = await _sb.from('sections')
+            .select('columns')
+            .eq('id', sectionId)
+            .single();
+        const columns = secData?.columns || [];
+        const siteIdCol = columns[0] || 'Site ID'; // first column is always the Site ID
+
+        // Get all rows for this section
         const { data, error } = await _sb.from('rows')
             .select('data')
             .eq('section_id', sectionId)
@@ -10517,11 +10526,12 @@ async function daUpdateSiteIds() {
         if (data && data.length > 0) {
             const seen = new Set();
             data.forEach(r => {
-                const siteId = Array.isArray(r.data) ? String(r.data[0] || '').trim() : '';
-                if (siteId && siteId !== 'undefined' && siteId !== 'null' && !seen.has(siteId)) {
-                    seen.add(siteId);
+                if (!r.data) return;
+                const val = String(r.data[siteIdCol] ?? '').trim();
+                if (val && val !== 'undefined' && val !== 'null' && !seen.has(val)) {
+                    seen.add(val);
                     const opt = document.createElement('option');
-                    opt.value = siteId;
+                    opt.value = val;
                     dl.appendChild(opt);
                 }
             });
