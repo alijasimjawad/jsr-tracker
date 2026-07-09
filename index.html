@@ -3170,6 +3170,18 @@
   </div>
 </div>
 
+<!-- Team Member Toggle Active Modal -->
+<div class="modal-overlay" id="team-toggle-modal" onclick="if(event.target===this)document.getElementById('team-toggle-modal').classList.remove('open')">
+  <div class="modal-card" style="max-width:400px">
+    <div class="modal-title" id="team-toggle-modal-title"></div>
+    <p class="modal-sub" id="team-toggle-modal-sub"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('team-toggle-modal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-accent" id="team-toggle-confirm-btn" onclick="confirmToggleTeamActive()">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <!-- Add Section Modal -->
 <div class="modal-overlay" id="add-section-modal" onclick="closeAddSectionModal(event)">
     <div class="modal-card">
@@ -8255,15 +8267,38 @@ async function saveFinTeamMember() {
     showFinTeam(true);
 }
 
-async function toggleFinTeamActive(id, val) {
+let _teamToggleId = null, _teamToggleVal = null;
+
+function toggleFinTeamActive(id, val) {
+    const m = _finTeam.find(x => x.id === id);
+    _teamToggleId = id;
+    _teamToggleVal = val;
+    const action = val ? 'Activate' : 'Deactivate';
+    const name = m?.full_name || 'this member';
+    document.getElementById('team-toggle-modal-title').textContent = `${action} Team Member`;
+    document.getElementById('team-toggle-modal-sub').textContent = `Are you sure you want to ${action.toLowerCase()} ${name}?`;
+    const btn = document.getElementById('team-toggle-confirm-btn');
+    btn.textContent = action;
+    btn.className = val ? 'btn btn-accent' : 'btn btn-danger';
+    document.getElementById('team-toggle-modal').classList.add('open');
+}
+
+async function confirmToggleTeamActive() {
+    if (_teamToggleId === null) return;
+    const id = _teamToggleId, val = _teamToggleVal;
+    const btn = document.getElementById('team-toggle-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Saving…';
     const today = new Date().toISOString().split('T')[0];
     const upd = { is_active: val };
     if (val) { upd.activated_at = today; upd.deactivated_at = null; }
     else { upd.deactivated_at = today; }
     const { error } = await _sb.from('team_members').update(upd).eq('id', id);
+    document.getElementById('team-toggle-modal').classList.remove('open');
+    btn.disabled = false;
     if (error) { toast(error.message, 'err'); return; }
     const m = _finTeam.find(x => x.id === id);
     if (m) { m.is_active = val; if (val) { m.activated_at = today; m.deactivated_at = null; } else { m.deactivated_at = today; } }
+    _teamToggleId = null; _teamToggleVal = null;
     _renderFinTeam();
     toast(val ? 'Member activated' : 'Member deactivated', 'ok');
 }
