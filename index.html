@@ -8220,7 +8220,7 @@ async function saveFinTeamMember() {
             if (error) throw error;
             logActivity('Edited Team Member', `Edited Team Member: ${name}`);
         } else {
-            const { error } = await _sb.from('team_members').insert({ ...payload, is_active: true });
+            const { error } = await _sb.from('team_members').insert({ ...payload, is_active: true, activated_at: new Date().toISOString().split('T')[0], deactivated_at: null });
             if (error) throw error;
             logActivity('Added Team Member', `Added Team Member: ${name}`);
             sendPushToRoles(['admin'], 'Team Member Added', `${name} added to team`).catch(err => console.warn('Push failed:', err));
@@ -8232,10 +8232,14 @@ async function saveFinTeamMember() {
 }
 
 async function toggleFinTeamActive(id, val) {
-    const { error } = await _sb.from('team_members').update({ is_active: val }).eq('id', id);
+    const today = new Date().toISOString().split('T')[0];
+    const upd = { is_active: val };
+    if (val) { upd.activated_at = today; upd.deactivated_at = null; }
+    else { upd.deactivated_at = today; }
+    const { error } = await _sb.from('team_members').update(upd).eq('id', id);
     if (error) { toast(error.message, 'err'); return; }
     const m = _finTeam.find(x => x.id === id);
-    if (m) m.is_active = val;
+    if (m) { m.is_active = val; if (val) { m.activated_at = today; m.deactivated_at = null; } else { m.deactivated_at = today; } }
     _renderFinTeam();
     toast(val ? 'Member activated' : 'Member deactivated', 'ok');
 }
@@ -8312,11 +8316,12 @@ async function confirmDeactivateTeamMember() {
     const btn = document.getElementById('team-del-deactivate-btn');
     btn.disabled = true; btn.textContent = 'Deactivating…';
 
-    const { error } = await _sb.from('team_members').update({ is_active: false }).eq('id', _teamDelId);
+    const _deactToday = new Date().toISOString().split('T')[0];
+    const { error } = await _sb.from('team_members').update({ is_active: false, deactivated_at: _deactToday }).eq('id', _teamDelId);
 
     if (error) { btn.disabled = false; btn.textContent = 'Deactivate Instead'; toast(error.message, 'err'); return; }
 
-    if (m) m.is_active = false;
+    if (m) { m.is_active = false; m.deactivated_at = _deactToday; }
     document.getElementById('team-del-modal').classList.remove('open');
     logActivity('Deactivated Team Member', `Deactivated: ${m?.full_name || _teamDelId}`);
     toast(`${m?.full_name || 'Member'} deactivated`, 'ok');
@@ -9356,6 +9361,7 @@ async function deleteFinProjExp(id) {
 // MONTHLY REPORT
 // ══════════════════════════════════════════════
 let _repMonth = _nowM(), _repYear = _nowY();
+let _repWorkDays = 22;
 let _repCharts = [];
 
 async function showFinReport(force = false) {
@@ -9392,8 +9398,32 @@ function _renderReport(pc) {
     ];
 
     const totalRevenue        = activeProjs.reduce((s, p) => s + (projRevMap[p] || 0), 0);
-    const totalSalaryBudget   = _finTeam.filter(t => t.is_active).reduce((s, t) => s + (+t.monthly_salary || 0), 0);
-    const activeEmployeeCount = _finTeam.filter(t => t.is_active).length;
+
+    // Pro-rated salary calculation
+    const _rFirst = new Date(y, m-1, 1);
+    const _rLast  = new Date(y, m, 0);
+    const _rFirstStr = `${y}-${String(m).padStart(2,'0')}-01`;
+    const _rLastStr  = _rLast.toISOString().split('T')[0];
+    const teamWithSalary = _finTeam.filter(t => {
+        if (!t.activated_at) return t.is_active !== false;
+        const act = new Date(t.activated_at + 'T00:00:00');
+        if (act > _rLast) return false;
+        if (t.deactivated_at) {
+            const deact = new Date(t.deactivated_at + 'T00:00:00');
+            if (deact < _rFirst) return false;
+        }
+        return true;
+    }).map(t => {
+        const actStr   = (t.activated_at && t.activated_at > _rFirstStr) ? t.activated_at : _rFirstStr;
+        const deactStr = (t.deactivated_at && t.deactivated_at < _rLastStr) ? t.deactivated_at : _rLastStr;
+        const startD   = new Date(actStr   + 'T00:00:00');
+        const endD     = new Date(deactStr + 'T00:00:00');
+        const daysActive     = Math.round((endD - startD) / 86400000) + 1;
+        const proratedSalary = Math.round((+t.monthly_salary || 0) / _repWorkDays * daysActive);
+        return { ...t, daysActive, proratedSalary };
+    });
+    const totalSalaryBudget   = teamWithSalary.reduce((s, t) => s + t.proratedSalary, 0);
+    const activeEmployeeCount = teamWithSalary.length;
     const totalGenExp         = _finGenExp.filter(r => r.month === m && r.year === y).reduce((s, r) => s + (+r.amount || 0), 0);
 
     // Project expenses by project for this month (using activity_date, fall back to month/year)
@@ -9430,6 +9460,10 @@ function _renderReport(pc) {
                 ${FIN_MONTHS.map((mn,i) => `<option value="${i+1}"${i+1===_repMonth?' selected':''}>${mn}</option>`).join('')}
             </select>
             <select class="fin-sel" onchange="_repYear=+this.value;_renderReport()">${yearsOpts}</select>
+            <label style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;margin-left:4px">
+                Working Days
+                <input type="number" min="1" max="31" value="${_repWorkDays}" style="width:52px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg-panel);color:var(--text-primary)" onchange="_repWorkDays=Math.max(1,+this.value||22);_renderReport()">
+            </label>
             <div class="fin-spacer"></div>
             <button class="btn btn-ghost" onclick="showFinReport(true)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
@@ -9560,6 +9594,38 @@ function _renderReport(pc) {
             <div style="position:relative;height:240px"><canvas id="fin-rep-chart"></canvas></div>
         </div>
 
+        <!-- ── Team Member Salaries ── -->
+        ${repSection('Team Member Salaries')}
+        <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px">
+            Pro-rated salaries based on activation date for <strong>${_monthName(m)} ${y}</strong>
+            (${_repWorkDays} working days).
+        </p>
+        ${teamWithSalary.length === 0
+            ? `<div class="al-empty">No active team members for this period.</div>`
+            : `<div class="fin-table-wrap">
+        <table class="fin-table fin-report-table"><thead><tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th class="fin-num">Active From</th>
+            <th class="fin-num">Days Active</th>
+            <th class="fin-num">Actual Salary (IQD)</th>
+        </tr></thead><tbody>
+        ${teamWithSalary.map(t => {
+            const actFromStr = t.activated_at || '—';
+            const actFromFmt = t.activated_at ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(t.activated_at.split('-')) : '—';
+            return `<tr>
+            <td><strong>${esc(t.full_name)}</strong></td>
+            <td style="color:var(--text-secondary)">${esc(t.role||'—')}</td>
+            <td class="fin-num">${actFromFmt}</td>
+            <td class="fin-num">${t.daysActive}/${_repWorkDays} days</td>
+            <td class="fin-num" style="color:var(--warning)">${iqd(t.proratedSalary)}</td>
+        </tr>`;
+        }).join('')}
+        </tbody><tfoot><tr>
+            <td colspan="4"><strong>TOTAL</strong></td>
+            <td class="fin-num"><strong style="color:var(--warning)">${iqd(totalSalaryBudget)}</strong></td>
+        </tr></tfoot></table></div>`}
+
         <!-- ── Company Summary ── -->
         ${repSection('Company Summary')}
         <div class="fin-table-wrap">
@@ -9619,7 +9685,25 @@ function exportFinReport(m, y) {
         ...Object.keys(projRevMap).filter(p => !FIN_PROJECTS.includes(p) && projRevMap[p] > 0)
     ];
     const totalRevenue      = activeProjs.reduce((s, p) => s + (projRevMap[p] || 0), 0);
-    const totalSalaryBudget = _finTeam.filter(t => t.is_active).reduce((s, t) => s + (+t.monthly_salary || 0), 0);
+    // Pro-rated salary for export
+    const _exFirst = new Date(y, m-1, 1);
+    const _exLast  = new Date(y, m, 0);
+    const _exFirstStr = `${y}-${String(m).padStart(2,'0')}-01`;
+    const _exLastStr  = _exLast.toISOString().split('T')[0];
+    const _exTeam = _finTeam.filter(t => {
+        if (!t.activated_at) return t.is_active !== false;
+        const act = new Date(t.activated_at + 'T00:00:00');
+        if (act > _exLast) return false;
+        if (t.deactivated_at) { const deact = new Date(t.deactivated_at + 'T00:00:00'); if (deact < _exFirst) return false; }
+        return true;
+    }).map(t => {
+        const actStr   = (t.activated_at && t.activated_at > _exFirstStr) ? t.activated_at : _exFirstStr;
+        const deactStr = (t.deactivated_at && t.deactivated_at < _exLastStr) ? t.deactivated_at : _exLastStr;
+        const daysActive     = Math.round((new Date(deactStr+'T00:00:00') - new Date(actStr+'T00:00:00')) / 86400000) + 1;
+        const proratedSalary = Math.round((+t.monthly_salary || 0) / _repWorkDays * daysActive);
+        return { ...t, daysActive, proratedSalary };
+    });
+    const totalSalaryBudget = _exTeam.reduce((s, t) => s + t.proratedSalary, 0);
     const totalGenExp       = _finGenExp.filter(r => r.month === m && r.year === y).reduce((s, r) => s + (+r.amount || 0), 0);
     const projExpMap2 = {};
     _finProjExp.filter(r => { if (r.activity_date) { const d=new Date(r.activity_date); return d.getMonth()+1===m&&d.getFullYear()===y; } return r.month===m&&r.year===y; })
@@ -9671,6 +9755,16 @@ function exportFinReport(m, y) {
     projRows.forEach(r => rows.push([r.proj, r.revenue, r.salaryCost, r.projExp, r.netProfit, pct(r.margin)]));
     const tn = projRows.reduce((s, r) => s + r.netProfit, 0);
     rows.push(['TOTAL', totalRevenue, projRows.reduce((s,r)=>s+r.salaryCost,0), totalProjExp2, tn, pct(totalRevenue > 0 ? tn/totalRevenue*100 : 0)]);
+    rows.push([]);
+
+    // Team Member Salaries
+    rows.push([`TEAM MEMBER SALARIES (${_repWorkDays} working days)`]);
+    rows.push(['Name', 'Role', 'Active From', 'Days Active', 'Actual Salary (IQD)']);
+    _exTeam.forEach(t => {
+        const actFmt = t.activated_at ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(t.activated_at.split('-')) : '—';
+        rows.push([t.full_name, t.role || '—', actFmt, `${t.daysActive}/${_repWorkDays} days`, t.proratedSalary]);
+    });
+    rows.push(['TOTAL', '', '', '', totalSalaryBudget]);
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -10188,6 +10282,13 @@ async function saveHrProfile() {
         is_active:               document.getElementById('hrm-status').value === 'true',
         notes:                   document.getElementById('hrm-notes').value.trim() || null,
     };
+    const _hrmCur = _finTeam.find(x => x.id === _hrViewId);
+    const _hrmNewActive = payload.is_active;
+    const _hrmToday = new Date().toISOString().split('T')[0];
+    if (_hrmCur && _hrmCur.is_active !== _hrmNewActive) {
+        if (_hrmNewActive) { payload.activated_at = _hrmToday; payload.deactivated_at = null; }
+        else { payload.deactivated_at = _hrmToday; }
+    }
     try {
         const { error } = await _sb.from('team_members').update(payload).eq('id', _hrViewId);
         if (error) throw error;
