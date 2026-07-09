@@ -618,6 +618,17 @@
         .ecm-remove-btn:hover { background:#fee2e2; border-color:#fca5a5; }
         .ecm-add-cat-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; font-size:13px; font-family:inherit; font-weight:700; color:var(--accent); background:transparent; border:1.5px dashed var(--accent); border-radius:8px; cursor:pointer; transition:background .15s; margin-top:4px; }
         .ecm-add-cat-btn:hover { background:rgba(37,99,235,.06); }
+        .ecm-quick-add-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; font-size:13px; font-family:inherit; font-weight:700; color:#7c3aed; background:transparent; border:1.5px dashed #7c3aed; border-radius:8px; cursor:pointer; transition:background .15s; margin-top:4px; margin-left:8px; }
+        .ecm-quick-add-btn:hover { background:rgba(124,58,237,.06); }
+        .ecm-quick-panel { display:none; background:#fff; border:1.5px solid #e0e7ff; border-radius:12px; padding:14px 16px; margin-top:10px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+        .ecm-quick-panel.open { display:block; }
+        .ecm-quick-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+        .ecm-quick-item { display:flex; align-items:center; gap:8px; padding:8px 10px; border:1.5px solid var(--slate-200); border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; color:var(--text-primary); transition:border-color .12s,background .12s; user-select:none; }
+        .ecm-quick-item:hover { border-color:#a5b4fc; background:#f5f3ff; }
+        .ecm-quick-item.selected { border-color:#7c3aed; background:#f5f3ff; color:#7c3aed; }
+        .ecm-quick-item input[type=checkbox] { accent-color:#7c3aed; width:15px; height:15px; cursor:pointer; }
+        .ecm-quick-apply { padding:8px 20px; font-size:13px; font-weight:700; font-family:inherit; color:#fff; background:#7c3aed; border:none; border-radius:8px; cursor:pointer; transition:opacity .15s; }
+        .ecm-quick-apply:hover { opacity:.88; }
         .ecm-total-box { display:flex; align-items:center; justify-content:space-between; padding:16px 22px; background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); border:1.5px solid #bfdbfe; border-radius:12px; }
         .ecm-total-label { font-size:13px; font-weight:700; color:#1e40af; }
         .ecm-total-num { font-size:24px; font-weight:900; color:#1d4ed8; letter-spacing:-.5px; }
@@ -2992,6 +3003,16 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span data-i18n="modal.add_cat">Add Category</span>
       </button>
+      <button type="button" class="ecm-quick-add-btn" onclick="ecToggleQuickPanel()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Quick Add
+      </button>
+      <div class="ecm-quick-panel" id="ec-quick-panel">
+        <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Select categories to add:</div>
+        <div class="ecm-quick-grid" id="ec-quick-grid"></div>
+        <button type="button" class="ecm-quick-apply" onclick="ecApplyQuickAdd()">Add Selected</button>
+        <button type="button" onclick="ecToggleQuickPanel()" style="margin-left:8px;padding:8px 16px;font-size:13px;font-weight:600;font-family:inherit;color:var(--text-secondary);background:none;border:1.5px solid var(--slate-200);border-radius:8px;cursor:pointer">Cancel</button>
+      </div>
       <div class="ecm-field" style="margin-top:16px">
         <label class="ecm-label" data-i18n="modal.notes">Notes</label>
         <textarea class="ecm-textarea" id="ec-notes" data-i18n-ph="modal.notes_ph" placeholder="Add any additional notes…"></textarea>
@@ -10581,6 +10602,38 @@ function ecRemoveRow(idx) {
     ecCalcTotal();
 }
 
+const _EC_CATS = ['Fuel','Materials','Taxi','Tools','Parking','Hotel','Car Maintenance','Other'];
+
+function ecToggleQuickPanel() {
+    const panel = document.getElementById('ec-quick-panel');
+    const grid  = document.getElementById('ec-quick-grid');
+    const isOpen = panel.classList.toggle('open');
+    if (isOpen) {
+        // Render checkboxes, pre-check categories not yet added
+        const already = new Set(_ecExtraRows.map(r => r.category));
+        grid.innerHTML = _EC_CATS.map(c => `
+            <label class="ecm-quick-item${already.has(c) ? ' selected' : ''}" onclick="this.classList.toggle('selected');this.querySelector('input').checked=!this.querySelector('input').checked">
+                <input type="checkbox" ${already.has(c) ? 'checked' : ''} onclick="event.stopPropagation()">
+                ${c}
+            </label>`).join('');
+    }
+}
+
+function ecApplyQuickAdd() {
+    const items = document.querySelectorAll('#ec-quick-grid .ecm-quick-item');
+    const already = new Set(_ecExtraRows.map(r => r.category));
+    items.forEach(item => {
+        const cb  = item.querySelector('input[type=checkbox]');
+        const cat = item.textContent.trim();
+        if (cb.checked && !already.has(cat)) {
+            _ecExtraRows.push({ category: cat, amount: 0 });
+        }
+    });
+    _ecRenderExtraRows();
+    ecCalcTotal();
+    document.getElementById('ec-quick-panel').classList.remove('open');
+}
+
 function _ecRenderExtraRows() {
     const container = document.getElementById('ec-extra-rows');
     container.innerHTML = _ecExtraRows.map((row, i) => `
@@ -10589,7 +10642,7 @@ function _ecRenderExtraRows() {
                 <div class="ecm-extra-label">${_t('extra.category')}</div>
                 <select class="ecm-select" onchange="_ecExtraRows[${i}].category=this.value">
                     <option value="">— Select —</option>
-                    ${['Fuel','Materials','Taxi','Tools','Other'].map(c =>
+                    ${['Fuel','Materials','Taxi','Tools','Parking','Hotel','Car Maintenance','Other'].map(c =>
                         `<option value="${c}"${row.category===c?' selected':''}>${c}</option>`
                     ).join('')}
                 </select>
