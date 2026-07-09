@@ -3175,6 +3175,10 @@
   <div class="modal-card" style="max-width:400px">
     <div class="modal-title" id="team-toggle-modal-title"></div>
     <p class="modal-sub" id="team-toggle-modal-sub"></p>
+    <div class="modal-field" style="margin-top:4px;margin-bottom:4px">
+      <label id="team-toggle-date-label" style="display:block;font-size:12px;font-weight:600;color:var(--slate-700);margin-bottom:7px;letter-spacing:.2px"></label>
+      <input type="date" id="team-toggle-date-input" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg-input,var(--bg-panel));color:var(--text-primary);outline:none;box-sizing:border-box" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="document.getElementById('team-toggle-modal').classList.remove('open')">Cancel</button>
       <button class="btn btn-accent" id="team-toggle-confirm-btn" onclick="confirmToggleTeamActive()">Confirm</button>
@@ -8275,8 +8279,11 @@ function toggleFinTeamActive(id, val) {
     _teamToggleVal = val;
     const action = val ? 'Activate' : 'Deactivate';
     const name = m?.full_name || 'this member';
+    const today = new Date().toISOString().split('T')[0];
     document.getElementById('team-toggle-modal-title').textContent = `${action} Team Member`;
     document.getElementById('team-toggle-modal-sub').textContent = `Are you sure you want to ${action.toLowerCase()} ${name}?`;
+    document.getElementById('team-toggle-date-label').textContent = val ? 'Active Since' : 'Left On';
+    document.getElementById('team-toggle-date-input').value = today;
     const btn = document.getElementById('team-toggle-confirm-btn');
     btn.textContent = action;
     btn.className = val ? 'btn btn-accent' : 'btn btn-danger';
@@ -8288,16 +8295,16 @@ async function confirmToggleTeamActive() {
     const id = _teamToggleId, val = _teamToggleVal;
     const btn = document.getElementById('team-toggle-confirm-btn');
     btn.disabled = true; btn.textContent = 'Saving…';
-    const today = new Date().toISOString().split('T')[0];
+    const chosenDate = document.getElementById('team-toggle-date-input').value || new Date().toISOString().split('T')[0];
     const upd = { is_active: val };
-    if (val) { upd.activated_at = today; upd.deactivated_at = null; }
-    else { upd.deactivated_at = today; }
+    if (val) { upd.activated_at = chosenDate; upd.deactivated_at = null; }
+    else { upd.deactivated_at = chosenDate; }
     const { error } = await _sb.from('team_members').update(upd).eq('id', id);
     document.getElementById('team-toggle-modal').classList.remove('open');
     btn.disabled = false;
     if (error) { toast(error.message, 'err'); return; }
     const m = _finTeam.find(x => x.id === id);
-    if (m) { m.is_active = val; if (val) { m.activated_at = today; m.deactivated_at = null; } else { m.deactivated_at = today; } }
+    if (m) { m.is_active = val; if (val) { m.activated_at = chosenDate; m.deactivated_at = null; } else { m.deactivated_at = chosenDate; } }
     _teamToggleId = null; _teamToggleVal = null;
     _renderFinTeam();
     toast(val ? 'Member activated' : 'Member deactivated', 'ok');
