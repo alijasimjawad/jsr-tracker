@@ -8033,8 +8033,7 @@ function _teamMemberRow(m) {
         </td>
         <td class="fin-num" style="white-space:nowrap">${iqd(m.monthly_salary)}</td>
         <td style="white-space:nowrap">${roleHTML}</td>
-        <td style="white-space:nowrap">${esc(m.phone||'')}</td>
-        <td style="color:var(--slate-500);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.notes||'')}</td>
+        <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.phone||'')}</td>
         <td style="white-space:nowrap">${statusHTML}</td>
         <td style="white-space:nowrap">
             <div style="font-size:13px">${actFmt}</div>
@@ -8096,7 +8095,7 @@ function applyTmFilters() {
         );
     }
     tbody.innerHTML = rows.length === 0
-        ? `<tr><td colspan="7" class="al-empty">No members match this filter.</td></tr>`
+        ? `<tr><td colspan="8" class="al-empty">No members match this filter.</td></tr>`
         : rows.map(_teamMemberRow).join('');
 }
 
@@ -8167,12 +8166,11 @@ function _renderFinTeam(pc) {
             </button>
             <button class="btn btn-accent" onclick="openFinTeamForm(null)">+ Add Member</button>
         </div>
-        <div class="fin-table-wrap"><table class="fin-table" style="min-width:920px"><thead><tr>
+        <div class="fin-table-wrap"><table class="fin-table" style="min-width:780px"><thead><tr>
             ${colTh('name',   'Full Name')}
             ${colTh('salary', 'Monthly Salary')}
             ${colTh('role',   'Job Title')}
             ${colTh('phone',  'Phone')}
-            ${colTh('notes',  'Notes')}
             ${colTh('status', 'Status')}
             <th>Active Since</th>
             <th>Left On</th>
