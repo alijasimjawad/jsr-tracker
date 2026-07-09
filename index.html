@@ -7617,6 +7617,7 @@ let _finTeamEditId    = null;
 let _finTeamFilter    = null;
 
 let _dailyActivities = [];
+let _daSiteDataMap   = {}; // siteId → full row data object for auto-fill
 
 // ── Data cache ────────────────────────────────────
 let _finLoaded = false;   // has finance data been loaded at least once?
@@ -10356,7 +10357,7 @@ function _renderDailyActivities(pc) {
     };
 
     const historyRows = acts.length === 0
-        ? `<tr><td colspan="7" class="al-empty">No activities yet.</td></tr>`
+        ? `<tr><td colspan="8" class="al-empty">No activities yet.</td></tr>`
         : acts.map(a => {
             const teamNames = Array.isArray(a.team_member_names) ? a.team_member_names.join(', ') : (a.team_member_names || '');
             const d = a.date ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(a.date.split('-')) : '—';
@@ -10364,6 +10365,7 @@ function _renderDailyActivities(pc) {
                 <td style="white-space:nowrap">${d}</td>
                 <td>${esc(a.project||'')}</td>
                 <td>${esc(a.site_id||'')}</td>
+                <td>${esc(a.governate||'')}</td>
                 <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(teamNames)}">${esc(teamNames)}</td>
                 <td style="white-space:nowrap">${esc(a.activity_type||'')}</td>
                 <td>${statusBadge(a.status||'')}</td>
@@ -10409,8 +10411,12 @@ function _renderDailyActivities(pc) {
                 </div>
                 <div class="da-field">
                     <label>Site ID</label>
-                    <input type="text" id="da-site" placeholder="Select section or type new…" list="da-site-list" autocomplete="off">
+                    <input type="text" id="da-site" placeholder="Select or type new…" list="da-site-list" autocomplete="off" oninput="daAutoFillGovernate()">
                     <datalist id="da-site-list"></datalist>
+                </div>
+                <div class="da-field">
+                    <label>Governate</label>
+                    <input type="text" id="da-governate" placeholder="Auto-fills or type new…">
                 </div>
                 <div class="da-field">
                     <label>Activity Type</label>
@@ -10424,11 +10430,11 @@ function _renderDailyActivities(pc) {
                         ${statusOptions.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}
                     </select>
                 </div>
-                <div class="da-field" style="grid-row:span 2">
+                <div class="da-field">
                     <label>Notes</label>
                     <textarea id="da-notes" placeholder="Describe the work done…"></textarea>
                 </div>
-                <div class="da-field" style="grid-column:span 2">
+                <div class="da-field" style="grid-column:span 3">
                     <label>Team Members</label>
                     <div class="da-team-wrap" id="da-team-wrap">
                         ${teamOptions || '<span style="color:var(--slate-400);font-size:13px;padding:4px">No active team members</span>'}
@@ -10451,7 +10457,7 @@ function _renderDailyActivities(pc) {
         <div style="font-size:14px;font-weight:800;color:var(--slate-800);margin-bottom:12px">Activity History</div>
         <div class="fin-table-wrap"><table class="fin-table" style="min-width:780px">
             <thead><tr>
-                <th>Date</th><th>Project</th><th>Site ID</th><th>Team</th><th>Activity</th><th>Status</th><th>Actions</th>
+                <th>Date</th><th>Project</th><th>Site ID</th><th>Governate</th><th>Team</th><th>Activity</th><th>Status</th><th>Actions</th>
             </tr></thead>
             <tbody>${historyRows}</tbody>
         </table></div>
@@ -10507,17 +10513,18 @@ async function daUpdateSiteIds() {
     if (!dl || !input) return;
     dl.innerHTML = '';
     input.value = '';
+    const govEl = document.getElementById('da-governate');
+    if (govEl) govEl.value = '';
+    _daSiteDataMap = {};
     if (!sectionId) return;
     try {
-        // Get the section's column names so we know which key holds the Site ID
         const { data: secData } = await _sb.from('sections')
             .select('columns')
             .eq('id', sectionId)
             .single();
         const columns = secData?.columns || [];
-        const siteIdCol = columns[0] || 'Site ID'; // first column is always the Site ID
+        const siteIdCol = columns[0] || 'Site ID';
 
-        // Get all rows for this section
         const { data, error } = await _sb.from('rows')
             .select('data')
             .eq('section_id', sectionId)
@@ -10530,6 +10537,7 @@ async function daUpdateSiteIds() {
                 const val = String(r.data[siteIdCol] ?? '').trim();
                 if (val && val !== 'undefined' && val !== 'null' && !seen.has(val)) {
                     seen.add(val);
+                    _daSiteDataMap[val] = r.data;
                     const opt = document.createElement('option');
                     opt.value = val;
                     dl.appendChild(opt);
@@ -10541,17 +10549,29 @@ async function daUpdateSiteIds() {
     }
 }
 
+function daAutoFillGovernate() {
+    const siteId = document.getElementById('da-site')?.value.trim() || '';
+    const govEl  = document.getElementById('da-governate');
+    if (!govEl) return;
+    const rowData = _daSiteDataMap[siteId];
+    if (rowData) {
+        const gov = rowData['Governate'] || rowData['governate'] || rowData['Gov'] || rowData['Governorate'] || '';
+        govEl.value = String(gov).trim();
+    }
+}
+
 function _daFormValues() {
     const date         = document.getElementById('da-date')?.value || '';
     const project      = document.getElementById('da-project')?.value || '';
     const site_id      = document.getElementById('da-site')?.value.trim() || '';
+    const governate    = document.getElementById('da-governate')?.value.trim() || '';
     const activity_type = document.getElementById('da-activity-type')?.value || '';
     const status       = document.getElementById('da-status')?.value || '';
     const notes        = document.getElementById('da-notes')?.value.trim() || '';
     const checked      = [...document.querySelectorAll('.da-team-cb:checked')];
     const team_member_ids   = checked.map(cb => cb.value);
     const team_member_names = checked.map(cb => cb.dataset.name);
-    return { date, project, site_id, activity_type, status, notes, team_member_ids, team_member_names };
+    return { date, project, site_id, governate, activity_type, status, notes, team_member_ids, team_member_names };
 }
 
 async function daSave() {
@@ -10582,14 +10602,14 @@ function daView(id) {
     if (!a) return;
     const teamNames = Array.isArray(a.team_member_names) ? a.team_member_names.join(', ') : (a.team_member_names || '—');
     const d = a.date ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(a.date.split('-')) : '—';
-    alert(`📋 Daily Activity\n\n📅 Date: ${d}\n🏗️ Project: ${a.project||'—'}\n📍 Site: ${a.site_id||'—'}\n👥 Team: ${teamNames}\n🔧 Activity: ${a.activity_type||'—'}\n✅ Status: ${a.status||'—'}\n📝 Notes: ${a.notes||'—'}`);
+    alert(`📋 Daily Activity\n\n📅 Date: ${d}\n🏗️ Project: ${a.project||'—'}\n📍 Site: ${a.site_id||'—'}\n📌 Governate: ${a.governate||'—'}\n👥 Team: ${teamNames}\n🔧 Activity: ${a.activity_type||'—'}\n✅ Status: ${a.status||'—'}\n📝 Notes: ${a.notes||'—'}`);
 }
 
 function daSendWhatsApp() {
     const v = _daFormValues();
     const d = v.date ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(v.date.split('-')) : '—';
     const teamStr = v.team_member_names.length ? v.team_member_names.join(', ') : '—';
-    const msg = `📋 *Daily Activity Report*\n📅 ${d}\n🏗️ Project: ${v.project||'—'}\n📍 Site: ${v.site_id||'—'}\n👥 Team: ${teamStr}\n🔧 Activity: ${v.activity_type||'—'}\n✅ Status: ${v.status||'—'}\n📝 Notes: ${v.notes||'—'}`;
+    const msg = `📋 *Daily Activity Report*\n📅 ${d}\n🏗️ Project: ${v.project||'—'}\n📍 Site: ${v.site_id||'—'}\n📌 Governate: ${v.governate||'—'}\n👥 Team: ${teamStr}\n🔧 Activity: ${v.activity_type||'—'}\n✅ Status: ${v.status||'—'}\n📝 Notes: ${v.notes||'—'}`;
     window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
