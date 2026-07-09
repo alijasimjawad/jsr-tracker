@@ -10463,12 +10463,20 @@ async function daUpdateSiteList() {
         sel.innerHTML = '<option value="">— Select project first —</option>';
         return;
     }
+    // Map display name → short key used in sections table
+    const nameToKey = {
+        'Zain Project':'zain','Nokia Project':'nokia','Huawei Project':'huawei',
+        'MRC Project':'mrc','Metco Project':'metco','MFC Project':'mfc',
+        'TAC Project':'tac','IPT Project':'ipt','TASC Project':'tasc'
+    };
+    const projKey = nameToKey[project] || project;
     try {
-        const { data } = await _sb.from('sections')
+        const { data, error } = await _sb.from('sections')
             .select('section_label, section_name')
-            .eq('project_name', project)
-            .eq('is_deleted', false)
+            .eq('project_name', projKey)
+            .neq('is_deleted', true)
             .order('created_at', { ascending: true });
+        if (error) throw error;
         if (data && data.length > 0) {
             const seen = new Set();
             let opts = '<option value="">— Select section —</option>';
