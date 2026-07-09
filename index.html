@@ -3186,6 +3186,46 @@
   </div>
 </div>
 
+<!-- Adjust All Salaries Modal -->
+<div class="modal-overlay" id="rep-adj-all-modal" onclick="closeFinModal('rep-adj-all-modal',event)">
+  <div class="modal-card" style="max-width:460px">
+    <div class="modal-title">Adjust All Salaries</div>
+    <p class="modal-sub" id="rep-adj-all-sub"></p>
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--slate-700);margin-bottom:8px">Quick %</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="document.getElementById('rep-adj-all-pct').value=25;repAdjAllPreview()">25%</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="document.getElementById('rep-adj-all-pct').value=50;repAdjAllPreview()">50%</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="document.getElementById('rep-adj-all-pct').value=75;repAdjAllPreview()">75%</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="document.getElementById('rep-adj-all-pct').value=100;repAdjAllPreview()">100%</button>
+      </div>
+    </div>
+    <div class="modal-field" style="margin-bottom:14px">
+      <label>Adjustment Type</label>
+      <select id="rep-adj-all-type" onchange="repAdjAllPreview()" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg-panel);color:var(--text-primary)">
+        <option value="override">Override — replace calculated salary</option>
+        <option value="bonus">Bonus — add to calculated salary</option>
+        <option value="deduction">Deduction — subtract from calculated salary</option>
+      </select>
+    </div>
+    <div class="modal-field" style="margin-bottom:14px">
+      <label>% of calculated salary</label>
+      <input type="number" id="rep-adj-all-pct" min="0" max="500" value="100" oninput="repAdjAllPreview()" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg-panel);color:var(--text-primary)">
+    </div>
+    <div class="modal-field" style="margin-bottom:14px">
+      <label>Reason (optional)</label>
+      <input type="text" id="rep-adj-all-reason" placeholder="e.g. Ramadan bonus, deduction…" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg-panel);color:var(--text-primary)">
+    </div>
+    <div id="rep-adj-all-preview" style="padding:10px 14px;background:var(--slate-50);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+      Enter a percentage above to preview the result.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeFinModal('rep-adj-all-modal')">Cancel</button>
+      <button class="btn btn-accent" onclick="repApplyAdjAll()">Apply to All</button>
+    </div>
+  </div>
+</div>
+
 <!-- Add Section Modal -->
 <div class="modal-overlay" id="add-section-modal" onclick="closeAddSectionModal(event)">
     <div class="modal-card">
@@ -9502,8 +9542,15 @@ function _renderReport(pc) {
         const daysActive     = Math.round((endD - startD) / 86400000) + 1;
         const proratedSalary = Math.round((+t.monthly_salary || 0) / totalCalDays * daysActive);
         const adj            = _repAdjustments.find(a => a.member_id === t.id);
-        const effectiveSalary = adj ? +adj.adjusted_amount : proratedSalary;
-        return { ...t, daysActive, totalCalDays, proratedSalary, effectiveSalary, isAdjusted: !!adj, adjReason: adj?.reason || '' };
+        const adjType        = adj?.adj_type || 'override';
+        const adjAmount      = adj ? +adj.adjusted_amount : 0;
+        let effectiveSalary  = proratedSalary;
+        if (adj) {
+            if (adjType === 'bonus')     effectiveSalary = proratedSalary + adjAmount;
+            else if (adjType === 'deduction') effectiveSalary = Math.max(0, proratedSalary - adjAmount);
+            else                         effectiveSalary = adjAmount;
+        }
+        return { ...t, daysActive, totalCalDays, proratedSalary, effectiveSalary, isAdjusted: !!adj, adjType, adjAmount, adjReason: adj?.reason || '' };
     });
     _repTeamWithSalary = teamWithSalary;
     const totalSalaryBudget   = teamWithSalary.reduce((s, t) => s + t.effectiveSalary, 0);
@@ -9679,31 +9726,20 @@ function _renderReport(pc) {
         </div>
 
         <!-- ── Team Member Salaries ── -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin:28px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)">
-            <h3 style="font-size:13px;font-weight:700;color:var(--text-primary);letter-spacing:.3px;text-transform:uppercase;margin:0">Team Member Salaries</h3>
-            ${teamWithSalary.length > 0 ? `<button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="repToggleAdjAllPanel()">Adjust All</button>` : ''}
-        </div>
-        <p style="font-size:13px;color:var(--text-secondary);margin:0 0 10px">
-            Pro-rated salaries based on activation date for <strong>${_monthName(m)} ${y}</strong>
-            (${_repWorkDays} working days). Click the pencil icon to override an individual salary.
+        ${(()=>{
+            const adjCount = _repAdjustments.length;
+            const adjBadge = adjCount > 0
+                ? `<span style="display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;margin-left:8px">${adjCount} adjusted</span>`
+                : '';
+            return `<div style="display:flex;align-items:center;justify-content:space-between;margin:28px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)">
+                <h3 style="font-size:13px;font-weight:700;color:var(--text-primary);letter-spacing:.3px;text-transform:uppercase;margin:0;display:flex;align-items:center">Team Member Salaries${adjBadge}</h3>
+                ${teamWithSalary.length > 0 ? '<button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="repOpenAdjAllModal()">Adjust All</button>' : ''}
+            </div>`;
+        })()}
+        <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px">
+            Pro-rated salaries for <strong>${_monthName(m)} ${y}</strong>
+            (${_repWorkDays} calendar days). Click the pencil to adjust an individual salary.
         </p>
-        <div id="rep-adj-all-panel" style="display:none;background:var(--slate-50);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
-            <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px">Adjust All Salaries</div>
-            <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
-                <label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block">
-                    % of calculated salary
-                    <input type="number" id="rep-adj-all-pct" min="0" max="500" value="100" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:100px;background:var(--bg-panel);color:var(--text-primary)">
-                </label>
-                <label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block">
-                    Reason (optional)
-                    <input type="text" id="rep-adj-all-reason" placeholder="e.g. Bonus, deduction…" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:220px;background:var(--bg-panel);color:var(--text-primary)">
-                </label>
-                <div style="display:flex;gap:8px">
-                    <button class="btn btn-accent" style="font-size:12px;padding:6px 14px" onclick="repApplyAdjAll()">Apply to All</button>
-                    <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px" onclick="document.getElementById('rep-adj-all-panel').style.display='none'">Cancel</button>
-                </div>
-            </div>
-        </div>
         ${teamWithSalary.length === 0
             ? `<div class="al-empty">No active team members for this period.</div>`
             : `<div class="fin-table-wrap">
@@ -9716,41 +9752,59 @@ function _renderReport(pc) {
         </tr></thead><tbody>
         ${teamWithSalary.map(t => {
             const actFromFmt = t.activated_at ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(t.activated_at.split('-')) : '—';
-            const pencilColor = t.isAdjusted ? '#d97706' : '#94a3b8';
-            const pencilTitle = t.isAdjusted ? 'Override active — click to edit' : 'Click to override salary';
-            const pencilSVG = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-            return `<tr>
-            <td><strong>${esc(t.full_name)}</strong></td>
-            <td style="color:var(--text-secondary)">${esc(t.role||'—')}</td>
-            <td class="fin-num">${actFromFmt}</td>
-            <td class="fin-num">${t.daysActive}/${t.totalCalDays} days</td>
-            <td class="fin-num" style="color:var(--warning)">
-                ${iqd(t.effectiveSalary)}
-                ${t.isAdjusted ? `<span style="font-size:10px;color:#d97706;margin-left:3px">(adj)</span>` : ''}
-                <button onclick="repToggleAdjPanel('${t.id}')" title="${pencilTitle}" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:${pencilColor};vertical-align:middle;line-height:1;margin-left:2px">${pencilSVG}</button>
-            </td>
-        </tr>
-        <tr id="rep-adj-panel-${t.id}" style="display:none">
-            <td colspan="5" style="padding:0;background:var(--slate-50);border-bottom:2px solid var(--accent)">
-                <div style="padding:14px 16px">
-                    <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
-                        <label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block">
-                            Override Amount (IQD)
-                            <input type="number" id="rep-adj-amt-${t.id}" value="${t.effectiveSalary}" min="0" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:160px;background:var(--bg-panel);color:var(--text-primary)">
-                        </label>
-                        <label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block">
-                            Reason (optional)
-                            <input type="text" id="rep-adj-reason-${t.id}" value="${esc(t.adjReason)}" placeholder="e.g. Bonus, deduction…" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:220px;background:var(--bg-panel);color:var(--text-primary)">
-                        </label>
-                        <div style="display:flex;gap:8px;padding-bottom:1px">
-                            <button class="btn btn-accent" style="font-size:12px;padding:6px 14px" onclick="repSaveAdj('${t.id}')">Save</button>
-                            <button class="btn btn-danger" id="rep-adj-rm-${t.id}" style="font-size:12px;padding:6px 14px${t.isAdjusted ? '' : ';display:none'}" onclick="repRemoveAdj('${t.id}')">Remove Override</button>
-                            <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px" onclick="repToggleAdjPanel('${t.id}')">Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            </td>
-        </tr>`;
+            const pencilColors = { override:'#d97706', bonus:'#16a34a', deduction:'#dc2626' };
+            const pencilColor  = t.isAdjusted ? (pencilColors[t.adjType] || '#d97706') : '#94a3b8';
+            const pencilSVG    = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+            const badgeStyles  = { override:'background:#fff7ed;color:#c2410c;border:1px solid #fed7aa', bonus:'background:#f0fdf4;color:#166534;border:1px solid #bbf7d0', deduction:'background:#fef2f2;color:#991b1b;border:1px solid #fecaca' };
+            const badgeLabels  = { override:'Override', bonus:'Bonus', deduction:'Deduction' };
+            const adjBadgeHTML = t.isAdjusted
+                ? '<span style="display:inline-flex;align-items:center;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:6px;' + (badgeStyles[t.adjType]||badgeStyles.override) + '">' + (badgeLabels[t.adjType]||'Override') + '</span>'
+                : '';
+            const salaryCell = t.isAdjusted
+                ? '<s style="color:var(--slate-400);font-weight:400">' + iqd(t.proratedSalary) + '</s> <strong>' + iqd(t.effectiveSalary) + '</strong>' + adjBadgeHTML
+                : iqd(t.effectiveSalary);
+            const adjDefaultType = t.isAdjusted ? t.adjType : 'override';
+            const adjDefaultAmt  = t.isAdjusted ? t.adjAmount : t.proratedSalary;
+            const initPreviewAmt = t.isAdjusted
+                ? (t.adjType === 'bonus' ? t.proratedSalary + t.adjAmount : t.adjType === 'deduction' ? Math.max(0, t.proratedSalary - t.adjAmount) : t.adjAmount)
+                : t.proratedSalary;
+            return '<tr>'
+                + '<td><strong>' + esc(t.full_name) + '</strong></td>'
+                + '<td style="color:var(--text-secondary)">' + esc(t.role||'—') + '</td>'
+                + '<td class="fin-num">' + actFromFmt + '</td>'
+                + '<td class="fin-num">' + t.daysActive + '/' + t.totalCalDays + ' days</td>'
+                + '<td class="fin-num" style="color:var(--warning)">'
+                +   salaryCell
+                +   ' <button onclick="repToggleAdjPanel(\'' + t.id + '\')" title="Adjust salary" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:' + pencilColor + ';vertical-align:middle;line-height:1;margin-left:2px">' + pencilSVG + '</button>'
+                + '</td></tr>'
+                + '<tr id="rep-adj-panel-' + t.id + '" style="display:none">'
+                + '<td colspan="5" style="padding:0;border-bottom:2px solid var(--accent)">'
+                + '<div style="padding:16px 20px;background:linear-gradient(to bottom,var(--slate-50),var(--bg-panel));border-top:1px solid var(--border)">'
+                + '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;margin-bottom:14px">Adjust Salary — ' + esc(t.full_name) + '</div>'
+                + '<div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px">'
+                + '<label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block">Adjustment Type'
+                +   '<select id="rep-adj-type-' + t.id + '" onchange="repAdjPreview(\'' + t.id + '\',' + t.proratedSalary + ')" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:200px;background:var(--bg-panel);color:var(--text-primary)">'
+                +     '<option value="override"' + (adjDefaultType==='override'?' selected':'') + '>Override</option>'
+                +     '<option value="bonus"' + (adjDefaultType==='bonus'?' selected':'') + '>Bonus</option>'
+                +     '<option value="deduction"' + (adjDefaultType==='deduction'?' selected':'') + '>Deduction</option>'
+                +   '</select>'
+                + '</label>'
+                + '<label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block"><span id="rep-adj-amt-lbl-' + t.id + '">' + (adjDefaultType==='bonus'?'Bonus Amount (IQD)':adjDefaultType==='deduction'?'Deduction Amount (IQD)':'Override Amount (IQD)') + '</span>'
+                +   '<input type="number" id="rep-adj-amt-' + t.id + '" value="' + adjDefaultAmt + '" min="0" oninput="repAdjPreview(\'' + t.id + '\',' + t.proratedSalary + ')" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:160px;background:var(--bg-panel);color:var(--text-primary)">'
+                + '</label>'
+                + '<label style="font-size:12px;font-weight:600;color:var(--slate-700);display:block">Reason (optional)'
+                +   '<input type="text" id="rep-adj-reason-' + t.id + '" value="' + esc(t.adjReason) + '" placeholder="e.g. Ramadan bonus…" style="display:block;margin-top:5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;width:200px;background:var(--bg-panel);color:var(--text-primary)">'
+                + '</label>'
+                + '</div>'
+                + '<div style="padding:10px 14px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text-secondary);margin-bottom:14px">'
+                +   'Result: <strong id="rep-adj-preview-' + t.id + '" style="color:var(--warning)">' + initPreviewAmt.toLocaleString('en-US') + ' IQD</strong>'
+                + '</div>'
+                + '<div style="display:flex;gap:8px">'
+                +   '<button class="btn btn-accent" style="font-size:12px;padding:6px 14px" onclick="repSaveAdj(\'' + t.id + '\',' + t.proratedSalary + ')">Save</button>'
+                +   '<button class="btn btn-danger" id="rep-adj-rm-' + t.id + '" style="font-size:12px;padding:6px 14px' + (t.isAdjusted ? '' : ';display:none') + '" onclick="repRemoveAdj(\'' + t.id + '\')">Remove</button>'
+                +   '<button class="btn btn-ghost" style="font-size:12px;padding:6px 14px" onclick="repToggleAdjPanel(\'' + t.id + '\')">Cancel</button>'
+                + '</div>'
+                + '</div></td></tr>';
         }).join('')}
         </tbody><tfoot><tr>
             <td colspan="4"><strong>TOTAL</strong></td>
@@ -9914,19 +9968,57 @@ function repToggleAdjPanel(memberId) {
     if (!isOpen) panelRow.style.display = '';
 }
 
-function repToggleAdjAllPanel() {
-    const p = document.getElementById('rep-adj-all-panel');
-    if (p) p.style.display = p.style.display === 'none' ? '' : 'none';
+function repAdjPreview(memberId, proratedSalary) {
+    const type   = document.getElementById('rep-adj-type-' + memberId)?.value || 'override';
+    const amt    = +document.getElementById('rep-adj-amt-' + memberId)?.value || 0;
+    const lblEl  = document.getElementById('rep-adj-amt-lbl-' + memberId);
+    const preEl  = document.getElementById('rep-adj-preview-' + memberId);
+    const labels = { override: 'Override Amount (IQD)', bonus: 'Bonus Amount (IQD)', deduction: 'Deduction Amount (IQD)' };
+    let result   = proratedSalary;
+    if (type === 'bonus')     result = proratedSalary + amt;
+    else if (type === 'deduction') result = Math.max(0, proratedSalary - amt);
+    else                      result = amt;
+    if (lblEl) lblEl.textContent = labels[type] || labels.override;
+    if (preEl) preEl.textContent = result.toLocaleString('en-US') + ' IQD';
 }
 
-async function repSaveAdj(memberId) {
-    const amtEl = document.getElementById('rep-adj-amt-' + memberId);
-    const reasonEl = document.getElementById('rep-adj-reason-' + memberId);
-    const amt = +amtEl.value;
+function repOpenAdjAllModal() {
+    const sub = document.getElementById('rep-adj-all-sub');
+    if (sub) sub.textContent = `Applies to ${_repTeamWithSalary.length} team member${_repTeamWithSalary.length !== 1 ? 's' : ''} for ${_repTeamWithSalary[0] ? _monthName(_repMonth) + ' ' + _repYear : 'this period'}.`;
+    const pctEl = document.getElementById('rep-adj-all-pct');
+    if (pctEl) pctEl.value = 100;
+    const reasonEl = document.getElementById('rep-adj-all-reason');
+    if (reasonEl) reasonEl.value = '';
+    const typeEl = document.getElementById('rep-adj-all-type');
+    if (typeEl) typeEl.value = 'override';
+    const preEl = document.getElementById('rep-adj-all-preview');
+    if (preEl) preEl.textContent = 'Enter a percentage above to preview the result.';
+    openFinModal('rep-adj-all-modal');
+}
+
+function repAdjAllPreview() {
+    const pct    = +document.getElementById('rep-adj-all-pct')?.value || 0;
+    const type   = document.getElementById('rep-adj-all-type')?.value || 'override';
+    const preEl  = document.getElementById('rep-adj-all-preview');
+    if (!preEl || !_repTeamWithSalary.length) return;
+    const examples = _repTeamWithSalary.slice(0, 2).map(t => {
+        const adj = Math.round(t.proratedSalary * pct / 100);
+        let result = adj;
+        if (type === 'bonus')     result = t.proratedSalary + adj;
+        else if (type === 'deduction') result = Math.max(0, t.proratedSalary - adj);
+        return t.full_name.split(' ')[0] + ': ' + result.toLocaleString('en-US') + ' IQD';
+    }).join(' · ');
+    const typeLabel = type === 'bonus' ? 'Bonus' : type === 'deduction' ? 'Deduction' : 'Override';
+    preEl.innerHTML = '<strong>' + typeLabel + ' @ ' + pct + '%</strong> — e.g. ' + (examples || '—');
+}
+
+async function repSaveAdj(memberId, proratedSalary) {
+    const adj_type = document.getElementById('rep-adj-type-' + memberId)?.value || 'override';
+    const amt      = +document.getElementById('rep-adj-amt-' + memberId)?.value;
+    const reason   = document.getElementById('rep-adj-reason-' + memberId)?.value.trim() || null;
     if (isNaN(amt) || amt < 0) { toast('Enter a valid amount', 'err'); return; }
-    const reason = reasonEl.value.trim() || null;
     const { error } = await _sb.from('salary_adjustments').upsert(
-        { member_id: memberId, month: _repMonth, year: _repYear, adjusted_amount: amt, reason },
+        { member_id: memberId, month: _repMonth, year: _repYear, adjusted_amount: amt, reason, adj_type },
         { onConflict: 'member_id,month,year' }
     );
     if (error) { toast(error.message, 'err'); return; }
@@ -9941,28 +10033,26 @@ async function repRemoveAdj(memberId) {
     if (error) { toast(error.message, 'err'); return; }
     await _loadRepAdjustments();
     _renderReport();
-    toast('Override removed', 'ok');
+    toast('Adjustment removed', 'ok');
 }
 
 async function repApplyAdjAll() {
-    const pctEl = document.getElementById('rep-adj-all-pct');
-    const reasonEl = document.getElementById('rep-adj-all-reason');
-    const pct = +pctEl.value;
+    const pct      = +document.getElementById('rep-adj-all-pct')?.value;
+    const adj_type = document.getElementById('rep-adj-all-type')?.value || 'override';
+    const reason   = document.getElementById('rep-adj-all-reason')?.value.trim() || null;
     if (isNaN(pct) || pct < 0) { toast('Enter a valid percentage', 'err'); return; }
-    const reason = reasonEl?.value.trim() || null;
     if (!_repTeamWithSalary.length) { toast('No team members for this period', 'err'); return; }
     const upserts = _repTeamWithSalary.map(t => ({
-        member_id: t.id,
-        month: _repMonth,
-        year: _repYear,
+        member_id: t.id, month: _repMonth, year: _repYear,
         adjusted_amount: Math.round(t.proratedSalary * pct / 100),
-        reason
+        reason, adj_type
     }));
     const { error } = await _sb.from('salary_adjustments').upsert(upserts, { onConflict: 'member_id,month,year' });
     if (error) { toast(error.message, 'err'); return; }
+    closeFinModal('rep-adj-all-modal');
     await _loadRepAdjustments();
     _renderReport();
-    toast(`Applied ${pct}% adjustment to ${upserts.length} member${upserts.length !== 1 ? 's' : ''}`, 'ok');
+    toast(`Applied ${pct}% ${adj_type} to ${upserts.length} member${upserts.length !== 1 ? 's' : ''}`, 'ok');
 }
 
 // ── Generic helpers ───────────────────────────
