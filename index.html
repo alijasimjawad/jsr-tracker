@@ -10343,12 +10343,6 @@ function _renderDailyActivities(pc) {
     const inProg    = acts.filter(a => a.status === 'In Progress').length;
     const blocked   = acts.filter(a => a.status === 'Blocked').length;
 
-    // Unique site IDs from revenue + project expenses
-    const siteIds = [...new Set([
-        ..._finRevenue.map(r => r.site_id),
-        ..._finProjExp.map(r => r.site_id)
-    ].filter(Boolean))].sort();
-
     const activityTypes = ['Installation','Maintenance','Survey','Testing','Commissioning','Integration','Clearance'];
     const statusOptions  = ['In Progress','Completed','Blocked'];
 
@@ -10403,14 +10397,14 @@ function _renderDailyActivities(pc) {
                 </div>
                 <div class="da-field">
                     <label>Project</label>
-                    <select id="da-project">
+                    <select id="da-project" onchange="daUpdateSiteList()">
                         ${FIN_PROJECTS.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}
                     </select>
                 </div>
                 <div class="da-field">
                     <label>Site ID</label>
                     <input type="text" id="da-site" placeholder="e.g. ZN-001" list="da-site-list" autocomplete="off">
-                    <datalist id="da-site-list">${siteIds.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+                    <datalist id="da-site-list"></datalist>
                 </div>
                 <div class="da-field">
                     <label>Activity Type</label>
@@ -10456,6 +10450,28 @@ function _renderDailyActivities(pc) {
             <tbody>${historyRows}</tbody>
         </table></div>
     </div>`;
+    setTimeout(daUpdateSiteList, 50);
+}
+
+async function daUpdateSiteList() {
+    const project = document.getElementById('da-project')?.value || '';
+    const dl = document.getElementById('da-site-list');
+    if (!dl) return;
+    dl.innerHTML = '';
+    if (!project) return;
+    try {
+        const { data } = await _sb.from('sections').select('section_label').eq('project_name', project).neq('section_label', null);
+        if (data && data.length > 0) {
+            const labels = [...new Set(data.map(r => r.section_label).filter(Boolean))].sort();
+            labels.forEach(label => {
+                const opt = document.createElement('option');
+                opt.value = label;
+                dl.appendChild(opt);
+            });
+        }
+    } catch(e) {
+        console.warn('daUpdateSiteList error:', e.message);
+    }
 }
 
 function _daFormValues() {
