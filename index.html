@@ -7719,14 +7719,8 @@ async function _renderFinDashboard(pc) {
         const daysActive     = Math.round((new Date(deactStr+'T00:00:00') - new Date(actStr+'T00:00:00')) / 86400000) + 1;
         const proratedSalary = Math.round((+t.monthly_salary || 0) / totalCalDays * daysActive);
         const adj = dashAdjMap[t.id];
-        const adjType = adj?.adj_type || 'override';
-        const adjAmount = adj ? +adj.adjusted_amount : 0;
-        let effectiveSalary = proratedSalary;
-        if (adj) {
-            if (adjType === 'bonus')          effectiveSalary = proratedSalary + adjAmount;
-            else if (adjType === 'deduction') effectiveSalary = Math.max(0, proratedSalary - adjAmount);
-            else                              effectiveSalary = adjAmount;
-        }
+        // adjusted_amount is already the FINAL result saved by Monthly Report — use it directly
+        const effectiveSalary = adj ? +adj.adjusted_amount : proratedSalary;
         return { ...t, effectiveSalary };
     });
     const totalRev    = rev.reduce((s,r)=>s+(+r.amount||0),0);
