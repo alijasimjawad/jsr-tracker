@@ -8033,7 +8033,7 @@ function _teamMemberRow(m) {
         </td>
         <td class="fin-num" style="white-space:nowrap">${iqd(m.monthly_salary)}</td>
         <td style="white-space:nowrap">${roleHTML}</td>
-        <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.phone||'')}</td>
+
         <td style="white-space:nowrap">${statusHTML}</td>
         <td style="white-space:nowrap">
             <div style="font-size:13px">${actFmt}</div>
@@ -8095,7 +8095,7 @@ function applyTmFilters() {
         );
     }
     tbody.innerHTML = rows.length === 0
-        ? `<tr><td colspan="8" class="al-empty">No members match this filter.</td></tr>`
+        ? `<tr><td colspan="7" class="al-empty">No members match this filter.</td></tr>`
         : rows.map(_teamMemberRow).join('');
 }
 
@@ -8157,7 +8157,6 @@ function _renderFinTeam(pc) {
             ${colTh('name',   'Full Name')}
             ${colTh('salary', 'Monthly Salary')}
             ${colTh('role',   'Job Title')}
-            ${colTh('phone',  'Phone')}
             ${colTh('status', 'Status')}
             <th>Active Since</th>
             <th>Left On</th>
