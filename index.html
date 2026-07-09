@@ -10608,13 +10608,15 @@ function daView(id) {
 function daSendWhatsApp() {
     const v = _daFormValues();
     const d = v.date ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(v.date.split('-')) : '—';
-    const teamStr = v.team_member_names.length ? v.team_member_names.join(', ') : '—';
     const sectionSel = document.getElementById('da-section');
     const sectionLabel = sectionSel?.options[sectionSel.selectedIndex]?.text || '';
-    const projectLine = sectionLabel && sectionLabel !== '— Select section —' && sectionLabel !== '— Select project first —'
+    const projectLine = sectionLabel && !sectionLabel.startsWith('—')
         ? `${v.project||'—'} / ${sectionLabel}`
         : (v.project||'—');
-    const msg = `📋 *Daily Activity Report*\n📅 ${d}\n🏗️ Project: ${projectLine}\n📍 Site: ${v.site_id||'—'}\n📌 Governate: ${v.governate||'—'}\n👥 Team: ${teamStr}\n🔧 Activity: ${v.activity_type||'—'}\n✅ Status: ${v.status||'—'}\n📝 Notes: ${v.notes||'—'}`;
+    const teamLines = v.team_member_names.length
+        ? v.team_member_names.map(n => `  › ${n}`).join('\n')
+        : '  › —';
+    const msg = `🌐 *JSR Network Tracker*\n━━━━━━━━━━━━━━━━━━━━\n📋 *DAILY ACTIVITY REPORT*\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Date:* ${d}\n🏢 *Project:* ${projectLine}\n📍 *Site ID:* ${v.site_id||'—'}  |  📌 *Gov:* ${v.governate||'—'}\n\n━━━━━━━━━━━━━━━━━━━━\n👥 *Team*\n${teamLines}\n\n🔧 *Activity:* ${v.activity_type||'—'}\n✅ *Status:* ${v.status||'—'}\n\n📝 *Notes*\n${v.notes||'—'}\n━━━━━━━━━━━━━━━━━━━━\n_Sent via JSR Network Tracker_`;
     window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
