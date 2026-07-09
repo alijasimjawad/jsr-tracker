@@ -8109,7 +8109,7 @@ function _renderFinTeam(pc) {
     const icoRole   = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>`;
 
     const card = (label, value, color, key, ico = '') => {
-        const isActive = f === key;
+        const isActive = key === 'all' ? !f : f === key;
         return `<div class="team-stat-card${isActive?' active':''}" style="${isActive?`border-color:${color};background:${color}18;`:''}" onclick="teamStatFilter('${key}')">
             ${ico ? `<div style="color:${color};opacity:.75;margin-bottom:6px">${ico}</div>` : ''}
             <div class="team-stat-label">${label}</div>
@@ -8124,18 +8124,6 @@ function _renderFinTeam(pc) {
     };
 
     const roles = [..._finTeam.reduce((s,m)=>{ if(m.role) s.add(m.role); return s; }, new Set())].sort();
-    const pillDefs = [
-        { label:'All',      key: null,       dot:'#2563eb' },
-        { label:'Active',   key:'active',    dot:'#16a34a' },
-        { label:'Inactive', key:'inactive',  dot:'#94a3b8' },
-        ...roles.map(r => ({ label: r, key: 'role:' + r, dot: _tmRoleColor(r).avatar }))
-    ];
-    const pillsHTML = pillDefs.map(p => {
-        const isOn = (!f && !p.key) || f === p.key;
-        return `<button class="tm-pill${isOn?' active':''}" onclick="teamStatFilter(${p.key ? `'${p.key}'` : 'null'})">
-            <span class="tm-pill-dot" style="background:${p.dot}"></span>${esc(p.label)}
-        </button>`;
-    }).join('');
 
     pc.innerHTML = `<div class="fin-page">
         <div class="team-stat-row" style="align-items:center">
@@ -8149,7 +8137,6 @@ function _renderFinTeam(pc) {
             <input class="tm-search-inp" id="tm-search-inp" type="text" placeholder="Search by name, role, phone…" value="${esc(_tmSearch)}" oninput="tmSearchInput(this)">
             <button class="tm-search-clear" id="tm-search-clear" onclick="tmSearchClear()" title="Clear search" style="${_tmSearch ? '' : 'display:none'}">×</button>
         </div>
-        <div class="tm-filter-pills">${pillsHTML}</div>
         <div class="fin-toolbar">
             <div class="fin-spacer"></div>
             <button class="btn btn-ghost" onclick="showFinTeam(true)">
