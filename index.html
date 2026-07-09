@@ -9418,9 +9418,10 @@ function _renderReport(pc) {
         const deactStr = (t.deactivated_at && t.deactivated_at < _rLastStr) ? t.deactivated_at : _rLastStr;
         const startD   = new Date(actStr   + 'T00:00:00');
         const endD     = new Date(deactStr + 'T00:00:00');
+        const totalCalDays   = _rLast.getDate();
         const daysActive     = Math.round((endD - startD) / 86400000) + 1;
-        const proratedSalary = Math.round((+t.monthly_salary || 0) / _repWorkDays * daysActive);
-        return { ...t, daysActive, proratedSalary };
+        const proratedSalary = Math.round((+t.monthly_salary || 0) / totalCalDays * daysActive);
+        return { ...t, daysActive, totalCalDays, proratedSalary };
     });
     const totalSalaryBudget   = teamWithSalary.reduce((s, t) => s + t.proratedSalary, 0);
     const activeEmployeeCount = teamWithSalary.length;
@@ -9617,7 +9618,7 @@ function _renderReport(pc) {
             <td><strong>${esc(t.full_name)}</strong></td>
             <td style="color:var(--text-secondary)">${esc(t.role||'—')}</td>
             <td class="fin-num">${actFromFmt}</td>
-            <td class="fin-num">${t.daysActive}/${_repWorkDays} days</td>
+            <td class="fin-num">${t.daysActive}/${t.totalCalDays} days</td>
             <td class="fin-num" style="color:var(--warning)">${iqd(t.proratedSalary)}</td>
         </tr>`;
         }).join('')}
@@ -9699,9 +9700,10 @@ function exportFinReport(m, y) {
     }).map(t => {
         const actStr   = (t.activated_at && t.activated_at > _exFirstStr) ? t.activated_at : _exFirstStr;
         const deactStr = (t.deactivated_at && t.deactivated_at < _exLastStr) ? t.deactivated_at : _exLastStr;
+        const totalCalDays   = _exLast.getDate();
         const daysActive     = Math.round((new Date(deactStr+'T00:00:00') - new Date(actStr+'T00:00:00')) / 86400000) + 1;
-        const proratedSalary = Math.round((+t.monthly_salary || 0) / _repWorkDays * daysActive);
-        return { ...t, daysActive, proratedSalary };
+        const proratedSalary = Math.round((+t.monthly_salary || 0) / totalCalDays * daysActive);
+        return { ...t, daysActive, totalCalDays, proratedSalary };
     });
     const totalSalaryBudget = _exTeam.reduce((s, t) => s + t.proratedSalary, 0);
     const totalGenExp       = _finGenExp.filter(r => r.month === m && r.year === y).reduce((s, r) => s + (+r.amount || 0), 0);
