@@ -504,6 +504,9 @@
         .da-chip-av { width:20px;height:20px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#4338ca;flex-shrink:0; }
         .da-team-chip:has(input:checked) .da-chip-av { background:#bfdbfe;color:#1e40af; }
         .da-chip-name { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+        .da-team-chip.da-chip-busy { background:#fef3c7;border-color:#fbbf24;color:#92400e;cursor:not-allowed; }
+        .da-team-chip.da-chip-busy .da-chip-av { background:#fde68a;color:#92400e; }
+        .da-chip-busy-tag { font-size:9px;font-weight:700;color:#b45309;background:#fde68a;border:1px solid #fbbf24;padding:1px 6px;border-radius:4px;margin-left:auto;white-space:nowrap;flex-shrink:0; }
         .da-form-actions { display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border); }
         .da-history-card { background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;overflow:hidden; }
         .da-history-hdr { display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--slate-50); }
@@ -10382,8 +10385,17 @@ function _renderDailyActivities(pc) {
     const activityTypes = ['Installation','Maintenance','Survey','Testing','Commissioning','Integration','Clearance'];
     const statusOptions  = ['In Progress','Completed','Blocked'];
 
+    const todayStr = today; // already defined above as today's date
+    const busyIds = new Set();
+    _dailyActivities.filter(a => a.date === todayStr).forEach(a => {
+        if (Array.isArray(a.team_member_ids)) a.team_member_ids.forEach(id => busyIds.add(id));
+    });
+
     const teamOptions = _finTeam.filter(m => m.is_active !== false).map(m => {
         const initials = m.full_name.trim().split(/\s+/).map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+        if (busyIds.has(m.id)) {
+            return `<label class="da-team-chip da-chip-busy"><input type="checkbox" class="da-team-cb" value="${esc(m.id)}" data-name="${esc(m.full_name)}" disabled><span class="da-chip-av">${esc(initials)}</span><span class="da-chip-name">${esc(m.full_name)}</span><span class="da-chip-busy-tag">Assigned</span></label>`;
+        }
         return `<label class="da-team-chip"><input type="checkbox" class="da-team-cb" value="${esc(m.id)}" data-name="${esc(m.full_name)}"><span class="da-chip-av">${esc(initials)}</span><span class="da-chip-name">${esc(m.full_name)}</span></label>`;
     }).join('');
 
