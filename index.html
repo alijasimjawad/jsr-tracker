@@ -10385,9 +10385,9 @@ function _renderDailyActivities(pc) {
     const activityTypes = ['Installation','Maintenance','Survey','Testing','Commissioning','Integration','Clearance'];
     const statusOptions  = ['In Progress','Completed','Blocked'];
 
-    const todayStr = today; // already defined above as today's date
+    const selectedDateForBusy = document.getElementById('da-date')?.value || today;
     const busyIds = new Set();
-    _dailyActivities.filter(a => a.date === todayStr).forEach(a => {
+    _dailyActivities.filter(a => a.date === selectedDateForBusy).forEach(a => {
         if (Array.isArray(a.team_member_ids)) a.team_member_ids.forEach(id => busyIds.add(id));
     });
 
@@ -10461,7 +10461,7 @@ function _renderDailyActivities(pc) {
                     <div class="da-form-grid">
                         <div class="da-field"><label>Project</label><select id="da-project" onchange="daUpdateSiteList()">${FIN_PROJECTS.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select></div>
                         <div class="da-field"><label>Section</label><select id="da-section" onchange="daUpdateSiteIds()"><option value="">— Select project first —</option></select></div>
-                        <div class="da-field"><label>Date</label><input type="date" id="da-date" value="${today}"></div>
+                        <div class="da-field"><label>Date</label><input type="date" id="da-date" value="${today}" onchange="daRefreshBusyChips()"></div>
                     </div>
                     <div class="da-form-grid-2">
                         <div class="da-field"><label>Site ID</label><input type="text" id="da-site" placeholder="Select or type new…" list="da-site-list" autocomplete="off" oninput="daAutoFillGovernate()"><datalist id="da-site-list"></datalist></div>
@@ -10582,6 +10582,32 @@ async function daUpdateSiteIds() {
     } catch(e) {
         console.warn('daUpdateSiteIds error:', e.message);
     }
+}
+
+function daRefreshBusyChips() {
+    const selectedDate = document.getElementById('da-date')?.value || '';
+    const busyIds = new Set();
+    _dailyActivities.filter(a => a.date === selectedDate).forEach(a => {
+        if (Array.isArray(a.team_member_ids)) a.team_member_ids.forEach(id => busyIds.add(id));
+    });
+    document.querySelectorAll('.da-team-chip').forEach(chip => {
+        const cb = chip.querySelector('.da-team-cb');
+        if (!cb) return;
+        if (busyIds.has(cb.value)) {
+            chip.classList.add('da-chip-busy');
+            cb.disabled = true;
+            if (!chip.querySelector('.da-chip-busy-tag')) {
+                const tag = document.createElement('span');
+                tag.className = 'da-chip-busy-tag';
+                tag.textContent = 'Assigned';
+                chip.appendChild(tag);
+            }
+        } else {
+            chip.classList.remove('da-chip-busy');
+            cb.disabled = false;
+            chip.querySelector('.da-chip-busy-tag')?.remove();
+        }
+    });
 }
 
 function daAutoFillGovernate() {
