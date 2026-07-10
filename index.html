@@ -10422,6 +10422,9 @@ function _renderDailyActivities(pc) {
                         <button class="da-act-btn" title="View" onclick="daView('${a.id}')">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>
+                        <button class="da-act-btn" title="Share via WhatsApp" onclick="daShareWhatsApp('${a.id}')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                        </button>
                         <button class="da-act-btn" title="Delete" onclick="daDelete('${a.id}')">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                         </button>
@@ -10664,6 +10667,18 @@ function daView(id) {
     const teamNames = Array.isArray(a.team_member_names) ? a.team_member_names.join(', ') : (a.team_member_names || '—');
     const d = a.date ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(a.date.split('-')) : '—';
     alert(`📋 Daily Activity\n\n📅 Date: ${d}\n🏗️ Project: ${a.project||'—'}\n📍 Site: ${a.site_id||'—'}\n📌 Governate: ${a.governate||'—'}\n👥 Team: ${teamNames}\n🔧 Activity: ${a.activity_type||'—'}\n✅ Status: ${a.status||'—'}\n📝 Notes: ${a.notes||'—'}`);
+}
+
+function daShareWhatsApp(id) {
+    const a = _dailyActivities.find(x => x.id === id);
+    if (!a) return;
+    const d = a.date ? (([yr,mo,dy]) => `${dy}/${mo}/${yr}`)(a.date.split('-')) : '—';
+    const teamLines = Array.isArray(a.team_member_names) && a.team_member_names.length
+        ? a.team_member_names.map(n => `  › ${n}`).join('\n')
+        : '  › —';
+    const projectLine = a.project || '—';
+    const msg = `◆ *JSR Network Tracker*\n━━━━━━━━━━━━\n◆ *DAILY ACTIVITY REPORT*\n━━━━━━━━━━━━\n\n◆ *Date:* ${d}\n◆ *Project:* ${projectLine}\n◆ *Site ID:* ${a.site_id||'—'}  |  ◆ *Gov:* ${a.governate||'—'}\n\n━━━━━━━━━━━━\n◆ *Team*\n${teamLines}\n\n◆ *Activity:* ${a.activity_type||'—'}\n◆ *Status:* ${a.status||'—'}\n\n◆ *Notes*\n${a.notes||'—'}\n━━━━━━━━━━━━\n_◆ JSR Network Operations Center_`;
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
 function daSendWhatsApp() {
