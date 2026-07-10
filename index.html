@@ -11562,6 +11562,10 @@ async function showFinExpClaims(force = false) {
     try {
         if (_finTeam.length === 0 || force) await _loadFinAll();
         await _loadAdminExpClaims();
+        if (_dailyActivities.length === 0 || force) {
+            const { data: daData } = await _sb.from('daily_activities').select('*').order('date', { ascending: false });
+            _dailyActivities = daData || [];
+        }
     } catch(_) {}
     const _now = new Date();
     _ecFilters.month = _now.getMonth() + 1;
@@ -11661,11 +11665,22 @@ function _renderFinExpClaims(pc) {
         const rejHtml = r.status === 'rejected' && r.rejection_reason
             ? `<div style="font-size:11px;color:var(--red);margin-top:3px">${esc(r.rejection_reason)}</div>` : '';
         const reviewedAt = r.reviewed_at ? r.reviewed_at.slice(0,10) : '';
+        const matchingActivity = _dailyActivities.find(a =>
+            a.date === r.activity_date &&
+            a.site_id === r.site_id &&
+            Array.isArray(a.team_member_ids) && a.team_member_ids.includes(r.member_id)
+        );
+        const actVerifyCell = matchingActivity
+            ? `<td><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#16a34a;background:#dcfce7;border:1px solid #86efac;padding:2px 8px;border-radius:5px;white-space:nowrap">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Confirmed</span></td>`
+            : `<td><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#b45309;background:#fef3c7;border:1px solid #fbbf24;padding:2px 8px;border-radius:5px;white-space:nowrap">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>No Activity</span></td>`;
         return `<tr id="adm-exp-row-${r.id}">
             <td>${memberName(r.member_id)}</td>
             <td>${esc(r.project_name||'—')}</td>
             <td>${esc(r.site_id||'—')}</td>
             <td style="white-space:nowrap">${esc(r.activity_date||'—')}</td>
+            ${actVerifyCell}
             <td>${esc(r.description||'—')}</td>
             <td style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600">${iqd(r.total_amount)}</td>
             <td><span class="exp-badge ${badgeCls}">${statusLabel}</span>${rejHtml}</td>
@@ -11744,11 +11759,11 @@ function _renderFinExpClaims(pc) {
 
         <div class="fin-table-wrap">
             <table class="fin-table"><thead><tr>
-                <th>Member</th><th>Project</th><th>Site ID</th><th>Date</th><th>Description</th>
+                <th>Member</th><th>Project</th><th>Site ID</th><th>Date</th><th>Activity</th><th>Description</th>
                 <th style="text-align:right">Total (IQD)</th><th>Status</th><th>Approved By</th><th>Action Date</th><th>Actions</th>
             </tr></thead><tbody>
             ${filtered.length === 0
-                ? `<tr><td colspan="10" class="al-empty">No claims match the current filters.</td></tr>`
+                ? `<tr><td colspan="11" class="al-empty">No claims match the current filters.</td></tr>`
                 : filtered.map(r => claimRow(r)).join('')}
             </tbody></table>
         </div>
