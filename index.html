@@ -2610,6 +2610,20 @@
                         </span>
                         <span class="tree-child-arr">›</span>
                     </div>
+                    <div class="tree-child" id="nav-fin-clients" onclick="showFinClients()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <span class="tree-child-label">Clients</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
+                    <div class="tree-child" id="nav-fin-invoices" onclick="showFinInvoices()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            <span class="tree-child-label">Invoices</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
                     </div><!-- /sb-fin-body -->
                 </div>
 
@@ -2954,6 +2968,26 @@
     <div class="modal-actions" style="margin-top:18px">
       <button class="btn btn-ghost" onclick="closeFinModal('fin-genexp-modal')">Cancel</button>
       <button class="btn btn-accent" onclick="saveFinGenExp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Finance: Client Modal -->
+<div class="modal-overlay" id="fin-client-modal" onclick="closeFinModal('fin-client-modal',event)">
+  <div class="modal-card" style="max-width:520px">
+    <div class="modal-title" id="fin-client-modal-title">Add Client</div>
+    <div class="fin-form-grid" style="margin-top:16px">
+      <div class="fin-field span2"><label>Company Name *</label><input type="text" id="fc-name" placeholder="e.g. TAC, Nokia Iraq…" maxlength="100"></div>
+      <div class="fin-field"><label>Contact Person</label><input type="text" id="fc-contact" placeholder="Full name…" maxlength="100"></div>
+      <div class="fin-field"><label>Phone</label><input type="text" id="fc-phone" placeholder="+964…" maxlength="30"></div>
+      <div class="fin-field span2"><label>Email</label><input type="email" id="fc-email" placeholder="billing@company.com" maxlength="100"></div>
+      <div class="fin-field span2"><label>Address</label><input type="text" id="fc-address" placeholder="City, Country…" maxlength="200"></div>
+      <div class="fin-field span2"><label>Notes</label><textarea id="fc-notes" placeholder="Optional…" rows="2"></textarea></div>
+    </div>
+    <div id="fin-client-err" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeFinModal('fin-client-modal')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveClient()">Save</button>
     </div>
   </div>
 </div>
@@ -4594,7 +4628,7 @@ function applyPermissions() {
     // Finance items — show wrapper section if any fin perm is granted
     const anyFin = p.view_fin_dashboard || p.view_fin_team ||
                    p.view_fin_revenue   || p.view_fin_genexp || p.view_fin_projexp ||
-                   p.view_fin_report;
+                   p.view_fin_report    || p.view_fin_clients || p.view_fin_invoices;
     sv('sidebar-fin-section', anyFin,                false);
     sv('nav-fin-dashboard',   p.view_fin_dashboard,  true);
     sv('nav-fin-team',        p.view_fin_team,        true);
@@ -4602,6 +4636,8 @@ function applyPermissions() {
     sv('nav-fin-genexp',      p.view_fin_genexp,      true);
     sv('nav-fin-projexp',     p.view_fin_projexp,     true);
     sv('nav-fin-report',      p.view_fin_report,      true);
+    sv('nav-fin-clients',     p.view_fin_clients,     true);
+    sv('nav-fin-invoices',    p.view_fin_invoices,    true);
 
     // My Expenses (member-facing sidebar section)
     const isEngineer = currentUser?.role?.toLowerCase() === 'engineer';
@@ -7453,6 +7489,8 @@ const _UM_FIXED_VIEW_BOTTOM = [
     { key: 'view_fin_projexp',   label: 'Project Expenses' },
     { key: 'view_fin_report',    label: 'Monthly Report' },
     { key: 'view_exp_claims',    label: 'Expense Claims (Admin)' },
+    { key: 'view_fin_clients',   label: 'Clients' },
+    { key: 'view_fin_invoices',  label: 'Invoices' },
     // HR & People
     { key: 'view_hr_profiles',   label: 'Employee Profiles' },
     // Member
@@ -11202,6 +11240,8 @@ document.addEventListener('click', function(e) {
 // EXPENSE CLAIMS — MEMBER-FACING
 // ══════════════════════════════════════════════
 
+let _clients       = [];
+let _clientsLoaded = false;
 let _expClaims       = [];
 let _expClaimsLoaded = false;
 let _expClaimsEditId    = null;  // id of claim being resubmitted (null = new)
@@ -11607,6 +11647,121 @@ async function saveExpClaim() {
 
 let _adminExpClaims = [];
 let _ecFilters = { member: '', project: '', status: '', month: 0, year: 0, search: '' };
+
+let _clientEditId = null;
+
+async function showFinClients(force = false) {
+    if (!_guardPerm('view_fin_clients')) return;
+    _finNavActive('nav-fin-clients');
+    setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Clients</span>');
+    const pc = _finSpinner();
+    try {
+        if (_clients.length === 0 || force) {
+            const { data } = await _sb.from('clients').select('*').order('company_name');
+            _clients = data || [];
+            _clientsLoaded = true;
+        }
+    } catch(_) {}
+    _renderFinClients(pc);
+}
+
+function _renderFinClients(pc) {
+    pc = pc || document.getElementById('panel-content');
+    const rows = _clients;
+    pc.innerHTML = `<div class="fin-page">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+            <div style="font-size:22px;font-weight:800;color:var(--text-primary)">Clients</div>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-ghost" onclick="showFinClients(true)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
+                </button>
+                <button class="btn btn-accent" onclick="openClientForm(null)">+ Add Client</button>
+            </div>
+        </div>
+        <div class="fin-table-wrap">
+        <table class="fin-table"><thead><tr>
+            <th>Company</th><th>Contact Person</th><th>Email</th><th>Phone</th><th>Address</th><th>Notes</th><th>Actions</th>
+        </tr></thead><tbody>
+        ${rows.length === 0
+            ? `<tr><td colspan="7" class="al-empty">No clients yet. Click "+ Add Client" to add your first client.</td></tr>`
+            : rows.map(c => `<tr>
+                <td style="font-weight:600">${esc(c.company_name||'')}</td>
+                <td>${esc(c.contact_person||'—')}</td>
+                <td style="font-size:12px">${esc(c.email||'—')}</td>
+                <td style="font-size:12px">${esc(c.phone||'—')}</td>
+                <td style="font-size:12px;color:var(--slate-500)">${esc(c.address||'—')}</td>
+                <td style="font-size:12px;color:var(--slate-500);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.notes||'—')}</td>
+                <td style="display:flex;gap:5px">
+                    <button class="fin-act-btn" onclick="openClientForm('${c.id}')" title="Edit">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="fin-act-btn del" onclick="deleteClient('${c.id}')" title="Delete">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                    </button>
+                </td>
+            </tr>`).join('')}
+        </tbody></table></div></div>`;
+}
+
+function openClientForm(id) {
+    _clientEditId = id;
+    document.getElementById('fin-client-err').style.display = 'none';
+    document.getElementById('fin-client-modal-title').textContent = id ? 'Edit Client' : 'Add Client';
+    if (id) {
+        const c = _clients.find(x => x.id === id);
+        document.getElementById('fc-name').value    = c?.company_name    || '';
+        document.getElementById('fc-contact').value = c?.contact_person  || '';
+        document.getElementById('fc-phone').value   = c?.phone           || '';
+        document.getElementById('fc-email').value   = c?.email           || '';
+        document.getElementById('fc-address').value = c?.address         || '';
+        document.getElementById('fc-notes').value   = c?.notes           || '';
+    } else {
+        ['fc-name','fc-contact','fc-phone','fc-email','fc-address','fc-notes'].forEach(i => document.getElementById(i).value = '');
+    }
+    document.getElementById('fin-client-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('fc-name').focus(), 60);
+}
+
+async function saveClient() {
+    const errEl = document.getElementById('fin-client-err');
+    errEl.style.display = 'none';
+    const name = document.getElementById('fc-name').value.trim();
+    if (!name) { errEl.textContent = 'Company name is required.'; errEl.style.display = ''; return; }
+    const payload = {
+        company_name:   name,
+        contact_person: document.getElementById('fc-contact').value.trim() || null,
+        phone:          document.getElementById('fc-phone').value.trim()   || null,
+        email:          document.getElementById('fc-email').value.trim()   || null,
+        address:        document.getElementById('fc-address').value.trim() || null,
+        notes:          document.getElementById('fc-notes').value.trim()   || null,
+    };
+    if (_clientEditId) {
+        const { error } = await _sb.from('clients').update(payload).eq('id', _clientEditId);
+        if (error) { errEl.textContent = error.message; errEl.style.display = ''; return; }
+        const idx = _clients.findIndex(x => x.id === _clientEditId);
+        if (idx >= 0) _clients[idx] = { ..._clients[idx], ...payload };
+    } else {
+        const { data, error } = await _sb.from('clients').insert(payload).select('*').single();
+        if (error) { errEl.textContent = error.message; errEl.style.display = ''; return; }
+        _clients.unshift(data);
+    }
+    closeFinModal('fin-client-modal');
+    _renderFinClients();
+    toast(_clientEditId ? 'Client updated.' : 'Client added!', 'ok');
+}
+
+async function deleteClient(id) {
+    if (!confirm('Delete this client? This will not delete their invoices.')) return;
+    const { error } = await _sb.from('clients').delete().eq('id', id);
+    if (error) { toast(error.message, 'err'); return; }
+    _clients = _clients.filter(x => x.id !== id);
+    _renderFinClients();
+    toast('Client deleted.', 'ok');
+}
+
+function showFinInvoices() {
+    toast('Invoices coming soon!', 'ok');
+}
 
 async function showFinExpClaims(force = false) {
     if (!_guardPerm('view_exp_claims')) return;
