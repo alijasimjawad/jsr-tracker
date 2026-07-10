@@ -2912,12 +2912,13 @@
     <div class="modal-title" id="fin-rev-modal-title">Add Revenue</div>
     <div class="fin-form-grid" style="margin-top:16px">
       <div class="fin-field"><label>Project *</label>
-        <select id="fr-proj"><option value="">— Select —</option>
+        <select id="fr-proj" onchange="frUpdateSections()"><option value="">— Select —</option>
           <option>Zain Project</option><option>Nokia Project</option><option>Huawei Project</option>
           <option>MRC Project</option><option>Metco Project</option><option>MFC Project</option>
           <option>TAC Project</option><option>IPT Project</option><option>TASC Project</option><option>General</option>
         </select></div>
-      <div class="fin-field"><label>Site ID</label><input type="text" id="fr-site" placeholder="Site ID…" maxlength="40"></div>
+      <div class="fin-field"><label>Section</label><select id="fr-section" onchange="frUpdateSites()"><option value="">— Select project first —</option></select></div>
+      <div class="fin-field"><label>Site ID</label><input type="text" id="fr-site" placeholder="Select or type…" list="fr-site-list" maxlength="40"><datalist id="fr-site-list"></datalist></div>
       <div class="fin-field"><label>Amount (IQD)</label><input type="number" id="fr-amount" min="0" placeholder="0"></div>
       <div class="fin-field"><label>Invoice Date</label><input type="date" id="fr-date"></div>
       <div class="fin-field"><label>Status</label>
@@ -9122,9 +9123,9 @@ function _renderRevenue(pc) {
             <button class="btn btn-accent" onclick="openFinRevForm(null)">+ Add Revenue</button>
         </div>
         <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
-            <th>Date</th><th>Project</th><th>Site ID</th><th class="fin-num">Amount (IQD)</th><th>Status</th><th>Notes</th><th>Added By</th><th>Actions</th>
+            <th>Date</th><th>Project</th><th>Section</th><th>Site ID</th><th class="fin-num">Amount (IQD)</th><th>Status</th><th>Notes</th><th>Added By</th><th>Actions</th>
         </tr></thead><tbody>
-        ${rows.length === 0 ? `<tr><td colspan="8" class="al-empty">No revenue records.</td></tr>`
+        ${rows.length === 0 ? `<tr><td colspan="9" class="al-empty">No revenue records.</td></tr>`
             : rows.map(r => {
                 const isAccepted = r.status === 'Accepted';
                 const isPending  = r.status === 'Implemented - Pending ATP';
@@ -9137,6 +9138,7 @@ function _renderRevenue(pc) {
                 return `<tr style="${rowBg}">
                     <td style="white-space:nowrap">${esc(r.invoice_date||'')}</td>
                     <td>${esc(r.project_name||'')}</td>
+                    <td style="color:var(--slate-500);font-size:12px">${esc(r.section_name||'—')}</td>
                     <td>${esc(r.site_id||'')}</td>
                     <td class="fin-num"><input type="number" min="0" value="${+r.amount||0}"
                         style="width:90px;text-align:right;border:1px solid var(--slate-200);border-radius:4px;padding:2px 5px;font-size:13px;color:#16a34a;font-weight:600;background:transparent"
@@ -9150,19 +9152,22 @@ function _renderRevenue(pc) {
                     </td></tr>`;
             }).join('')}
         </tbody><tfoot><tr>
-            <td colspan="3"><strong>Total (filtered)</strong></td>
+            <td colspan="4"><strong>Total (filtered)</strong></td>
             <td class="fin-num" style="color:#16a34a"><strong>${iqd(total)}</strong></td>
             <td colspan="4"></td>
         </tr></tfoot></table></div></div>`;
 }
 
-function openFinRevForm(id) {
+async function openFinRevForm(id) {
     _finRevEditId = id;
     document.getElementById('fin-rev-modal-title').textContent = id ? 'Edit Revenue' : 'Add Revenue';
     document.getElementById('fin-rev-err').style.display = 'none';
     if (id) {
         const r = _finRevenue.find(x => x.id === id);
         document.getElementById('fr-proj').value   = r?.project_name || '';
+        await frUpdateSections();
+        document.getElementById('fr-section').value = r?.section_name || '';
+        await frUpdateSites();
         document.getElementById('fr-site').value   = r?.site_id      || '';
         document.getElementById('fr-amount').value = r?.amount       || '';
         document.getElementById('fr-date').value   = r?.invoice_date || '';
@@ -9170,6 +9175,8 @@ function openFinRevForm(id) {
         document.getElementById('fr-notes').value  = r?.notes        || '';
     } else {
         ['fr-proj','fr-site','fr-amount','fr-notes'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('fr-section').innerHTML = '<option value="">— Select project first —</option>';
+        document.getElementById('fr-site-list').innerHTML = '';
         document.getElementById('fr-date').value   = new Date().toISOString().slice(0,10);
         document.getElementById('fr-status').value = 'Implemented - Pending ATP';
     }
@@ -9185,7 +9192,7 @@ async function saveFinRevenue() {
     if (isNaN(amt) || amt < 0) { errEl.textContent = 'Valid amount required.'; errEl.style.display = ''; return; }
     const dateVal = document.getElementById('fr-date').value;
     const dateObj = dateVal ? new Date(dateVal) : new Date();
-    const payload = { project_name: proj, site_id: document.getElementById('fr-site').value.trim()||null,
+    const payload = { project_name: proj, section_name: document.getElementById('fr-section')?.value||null, site_id: document.getElementById('fr-site').value.trim()||null,
         amount: amt, invoice_date: dateVal||null, month: dateObj.getMonth()+1, year: dateObj.getFullYear(),
         status: document.getElementById('fr-status').value || 'Implemented - Pending ATP',
         notes: document.getElementById('fr-notes').value.trim()||null, added_by: currentUser?.full_name||'' };
@@ -10679,6 +10686,53 @@ function daShareWhatsApp(id) {
     const projectLine = a.project || '—';
     const msg = `◆ *JSR Network Tracker*\n━━━━━━━━━━━━\n◆ *DAILY ACTIVITY REPORT*\n━━━━━━━━━━━━\n\n◆ *Date:* ${d}\n◆ *Project:* ${projectLine}\n◆ *Site ID:* ${a.site_id||'—'}  |  ◆ *Gov:* ${a.governate||'—'}\n\n━━━━━━━━━━━━\n◆ *Team*\n${teamLines}\n\n◆ *Activity:* ${a.activity_type||'—'}\n◆ *Status:* ${a.status||'—'}\n\n◆ *Notes*\n${a.notes||'—'}\n━━━━━━━━━━━━\n_◆ JSR Network Operations Center_`;
     window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+}
+
+async function frUpdateSections() {
+    const nameToKey = {
+        'Zain Project':'zain','Nokia Project':'nokia','Huawei Project':'huawei',
+        'MRC Project':'mrc','Metco Project':'metco','MFC Project':'mfc',
+        'TAC Project':'tac','IPT Project':'ipt','TASC Project':'tasc'
+    };
+    const project = document.getElementById('fr-proj')?.value || '';
+    const projKey = nameToKey[project] || project;
+    const secEl = document.getElementById('fr-section');
+    if (!secEl) return;
+    secEl.innerHTML = '<option value="">— Select section —</option>';
+    if (document.getElementById('fr-site-list')) document.getElementById('fr-site-list').innerHTML = '';
+    if (!projKey) return;
+    const { data } = await _sb.from('sections').select('id,section_name')
+        .eq('project_name', projKey).neq('is_deleted', true).order('section_name');
+    (data || []).forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.section_name;
+        o.dataset.id = s.id;
+        o.textContent = s.section_name;
+        secEl.appendChild(o);
+    });
+}
+
+async function frUpdateSites() {
+    const secEl = document.getElementById('fr-section');
+    const secName = secEl?.value || '';
+    const dl = document.getElementById('fr-site-list');
+    if (dl) dl.innerHTML = '';
+    if (!secName) return;
+    const selOpt = secEl.options[secEl.selectedIndex];
+    const sectionId = selOpt?.dataset?.id || '';
+    if (!sectionId) return;
+    const { data: secData } = await _sb.from('sections').select('columns').eq('id', sectionId).single();
+    const columns = secData?.columns || [];
+    const siteIdCol = columns[0] || 'Site ID';
+    const { data: rowsData } = await _sb.from('rows').select('data').eq('section_id', sectionId).neq('is_deleted', true);
+    (rowsData || []).forEach(r => {
+        const val = r.data?.[siteIdCol];
+        if (val && dl) {
+            const opt = document.createElement('option');
+            opt.value = String(val);
+            dl.appendChild(opt);
+        }
+    });
 }
 
 function daSendWhatsApp() {
