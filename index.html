@@ -10701,13 +10701,13 @@ async function frUpdateSections() {
     secEl.innerHTML = '<option value="">— Select section —</option>';
     if (document.getElementById('fr-site-list')) document.getElementById('fr-site-list').innerHTML = '';
     if (!projKey) return;
-    const { data } = await _sb.from('sections').select('id,section_name')
-        .eq('project_name', projKey).neq('is_deleted', true).order('section_name');
+    const { data } = await _sb.from('sections').select('id,section_name,section_label')
+        .eq('project_name', projKey).neq('is_deleted', true).order('section_label');
     (data || []).forEach(s => {
         const o = document.createElement('option');
-        o.value = s.section_name;
+        o.value = s.section_label || s.section_name;
         o.dataset.id = s.id;
-        o.textContent = s.section_name;
+        o.textContent = s.section_label || s.section_name;
         secEl.appendChild(o);
     });
 }
