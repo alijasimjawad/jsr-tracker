@@ -2972,6 +2972,89 @@
   </div>
 </div>
 
+<!-- Finance: Invoice Modal -->
+<div class="modal-overlay" id="fin-invoice-modal" onclick="closeFinModal('fin-invoice-modal',event)">
+  <div class="modal-card" style="max-width:680px;max-height:90vh;overflow-y:auto">
+    <div class="modal-title" id="fin-invoice-modal-title">New Invoice</div>
+    <div class="fin-form-grid" style="margin-top:16px">
+      <div class="fin-field"><label>Client *</label>
+        <select id="fi-client"><option value="">— Select Client —</option></select>
+      </div>
+      <div class="fin-field"><label>Invoice # *</label>
+        <input type="text" id="fi-number" placeholder="JSR-2026-001" maxlength="30">
+      </div>
+      <div class="fin-field"><label>Project *</label>
+        <select id="fi-project"><option value="">— Select —</option>
+          <option>Zain Project</option><option>Nokia Project</option><option>Huawei Project</option>
+          <option>MRC Project</option><option>Metco Project</option><option>MFC Project</option>
+          <option>TAC Project</option><option>IPT Project</option><option>TASC Project</option>
+        </select>
+      </div>
+      <div class="fin-field"><label>Status</label>
+        <select id="fi-status">
+          <option value="Draft">Draft</option>
+          <option value="Sent">Sent</option>
+          <option value="Partial">Partial</option>
+          <option value="Paid">Paid</option>
+          <option value="Overdue">Overdue</option>
+        </select>
+      </div>
+      <div class="fin-field"><label>Issue Date *</label>
+        <input type="date" id="fi-issue-date">
+      </div>
+      <div class="fin-field"><label>Due Date</label>
+        <input type="date" id="fi-due-date">
+      </div>
+      <div class="fin-field span2"><label>Notes</label>
+        <textarea id="fi-notes" placeholder="Optional…" rows="2"></textarea>
+      </div>
+    </div>
+
+    <div style="margin-top:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--text-primary)">LINE ITEMS</div>
+        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="invAddLineItem()">+ Add Site</button>
+      </div>
+      <table class="fin-table" style="font-size:12px">
+        <thead><tr>
+          <th>Section</th><th>Site ID</th><th>Description</th><th style="text-align:right">Amount (IQD)</th><th style="width:30px"></th>
+        </tr></thead>
+        <tbody id="inv-items-body">
+          <tr><td colspan="5" style="text-align:center;color:var(--slate-400);padding:16px">No items yet. Click "+ Add Site".</td></tr>
+        </tbody>
+      </table>
+      <div style="text-align:right;margin-top:10px;font-size:14px;font-weight:700;color:var(--text-primary)">
+        Total: <span id="inv-total-display" style="color:#16a34a">0 IQD</span>
+      </div>
+    </div>
+
+    <div id="fin-invoice-err" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeFinModal('fin-invoice-modal')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveInvoice()">Save Invoice</button>
+    </div>
+  </div>
+</div>
+
+<!-- Finance: Payment Modal -->
+<div class="modal-overlay" id="fin-payment-modal" onclick="closeFinModal('fin-payment-modal',event)">
+  <div class="modal-card" style="max-width:440px">
+    <div class="modal-title">Record Payment</div>
+    <input type="hidden" id="fp-invoice-id">
+    <div class="fin-form-grid" style="margin-top:16px">
+      <div class="fin-field"><label>Payment Date *</label><input type="date" id="fp-date"></div>
+      <div class="fin-field"><label>Amount (IQD) *</label><input type="number" id="fp-amount" min="0" placeholder="0"></div>
+      <div class="fin-field span2"><label>Reference / Cheque #</label><input type="text" id="fp-ref" placeholder="Optional…" maxlength="100"></div>
+      <div class="fin-field span2"><label>Notes</label><textarea id="fp-notes" placeholder="Optional…" rows="2"></textarea></div>
+    </div>
+    <div id="fin-payment-err" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeFinModal('fin-payment-modal')">Cancel</button>
+      <button class="btn btn-accent" onclick="savePayment()">Record Payment</button>
+    </div>
+  </div>
+</div>
+
 <!-- Finance: Client Modal -->
 <div class="modal-overlay" id="fin-client-modal" onclick="closeFinModal('fin-client-modal',event)">
   <div class="modal-card" style="max-width:520px">
@@ -11242,6 +11325,11 @@ document.addEventListener('click', function(e) {
 
 let _clients       = [];
 let _clientsLoaded = false;
+let _invoices        = [];
+let _invoiceItems    = [];
+let _invoicePayments = [];
+let _invoiceEditId   = null;
+let _invLineItems    = [];
 let _expClaims       = [];
 let _expClaimsLoaded = false;
 let _expClaimsEditId    = null;  // id of claim being resubmitted (null = new)
@@ -11759,8 +11847,286 @@ async function deleteClient(id) {
     toast('Client deleted.', 'ok');
 }
 
-function showFinInvoices() {
-    toast('Invoices coming soon!', 'ok');
+async function showFinInvoices(force = false) {
+    if (!_guardPerm('view_fin_invoices')) return;
+    _finNavActive('nav-fin-invoices');
+    setTopbar('<span class="bc">Finance</span><span class="bc-sep">›</span><span class="bc-cur">Invoices</span>');
+    const pc = _finSpinner();
+    try {
+        if (_clients.length === 0) {
+            const { data } = await _sb.from('clients').select('*').order('company_name');
+            _clients = data || [];
+        }
+        if (_invoices.length === 0 || force) {
+            const { data: invData } = await _sb.from('invoices').select('*').order('created_at', { ascending: false });
+            _invoices = invData || [];
+            const { data: pymData } = await _sb.from('invoice_payments').select('*');
+            _invoicePayments = pymData || [];
+        }
+    } catch(_) {}
+    _renderFinInvoices(pc);
+}
+
+function _renderFinInvoices(pc) {
+    pc = pc || document.getElementById('panel-content');
+    const rows = _invoices;
+    const totalInvoiced  = rows.reduce((s,r) => s + (+r.total_amount||0), 0);
+    const totalReceived  = rows.reduce((s,r) => s + (+r.amount_received||0), 0);
+    const totalOutstanding = totalInvoiced - totalReceived;
+    const overdueCount   = rows.filter(r => r.status === 'Overdue').length;
+
+    pc.innerHTML = `<div class="fin-page">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+            <div style="font-size:22px;font-weight:800;color:var(--text-primary)">Invoices</div>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-ghost" onclick="showFinInvoices(true)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
+                </button>
+                <button class="btn btn-accent" onclick="openInvoiceForm(null)">+ New Invoice</button>
+            </div>
+        </div>
+
+        <div class="da-kpi-row" style="margin-bottom:20px">
+            <div class="da-kpi-card da-kpi-blue">
+                <div class="da-kpi-label">Total Invoiced</div>
+                <div class="da-kpi-value" style="font-size:15px">${iqd(totalInvoiced)}</div>
+            </div>
+            <div class="da-kpi-card da-kpi-green">
+                <div class="da-kpi-label">Received</div>
+                <div class="da-kpi-value" style="font-size:15px">${iqd(totalReceived)}</div>
+            </div>
+            <div class="da-kpi-card da-kpi-amber">
+                <div class="da-kpi-label">Outstanding</div>
+                <div class="da-kpi-value" style="font-size:15px">${iqd(totalOutstanding)}</div>
+            </div>
+            <div class="da-kpi-card da-kpi-red">
+                <div class="da-kpi-label">Overdue</div>
+                <div class="da-kpi-value">${overdueCount}</div>
+            </div>
+        </div>
+
+        <div class="fin-table-wrap">
+        <table class="fin-table"><thead><tr>
+            <th>Invoice #</th><th>Client</th><th>Project</th><th>Issue Date</th><th>Due Date</th>
+            <th style="text-align:right">Total</th><th style="text-align:right">Received</th><th style="text-align:right">Outstanding</th>
+            <th>Status</th><th>Actions</th>
+        </tr></thead><tbody>
+        ${rows.length === 0
+            ? `<tr><td colspan="10" class="al-empty">No invoices yet. Click "+ New Invoice" to create your first invoice.</td></tr>`
+            : rows.map(inv => {
+                const client = _clients.find(c => c.id === inv.client_id);
+                const outstanding = (+inv.total_amount||0) - (+inv.amount_received||0);
+                const statusColors = {
+                    'Draft':'background:#f1f5f9;color:#475569',
+                    'Sent':'background:#dbeafe;color:#1d4ed8',
+                    'Partial':'background:#fef3c7;color:#b45309',
+                    'Paid':'background:#dcfce7;color:#16a34a',
+                    'Overdue':'background:#fee2e2;color:#dc2626'
+                };
+                const sStyle = statusColors[inv.status] || statusColors['Draft'];
+                return `<tr>
+                    <td style="font-weight:600;white-space:nowrap">${esc(inv.invoice_number||'—')}</td>
+                    <td>${esc(client?.company_name||'—')}</td>
+                    <td style="font-size:12px;color:var(--slate-500)">${esc(inv.project_name||'—')}</td>
+                    <td style="white-space:nowrap;font-size:12px">${esc(inv.issue_date||'—')}</td>
+                    <td style="white-space:nowrap;font-size:12px">${esc(inv.due_date||'—')}</td>
+                    <td style="text-align:right;font-weight:600">${iqd(inv.total_amount||0)}</td>
+                    <td style="text-align:right;color:#16a34a;font-weight:600">${iqd(inv.amount_received||0)}</td>
+                    <td style="text-align:right;color:${outstanding>0?'#dc2626':'#16a34a'};font-weight:600">${iqd(outstanding)}</td>
+                    <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;${sStyle}">${esc(inv.status||'Draft')}</span></td>
+                    <td style="display:flex;gap:4px">
+                        <button class="fin-act-btn" onclick="openInvoiceForm('${inv.id}')" title="Edit">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button class="fin-act-btn" onclick="openPaymentForm('${inv.id}')" title="Record Payment" style="color:#16a34a">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                        </button>
+                        <button class="fin-act-btn del" onclick="deleteInvoice('${inv.id}')" title="Delete">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('')}
+        </tbody></table></div></div>`;
+}
+
+async function openInvoiceForm(id) {
+    _invoiceEditId = id;
+    _invLineItems = [];
+    document.getElementById('fin-invoice-err').style.display = 'none';
+    document.getElementById('fin-invoice-modal-title').textContent = id ? 'Edit Invoice' : 'New Invoice';
+
+    // Populate clients dropdown
+    const clientSel = document.getElementById('fi-client');
+    clientSel.innerHTML = '<option value="">— Select Client —</option>';
+    _clients.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id; o.textContent = c.company_name;
+        clientSel.appendChild(o);
+    });
+
+    if (id) {
+        const inv = _invoices.find(x => x.id === id);
+        document.getElementById('fi-client').value     = inv?.client_id    || '';
+        document.getElementById('fi-number').value     = inv?.invoice_number|| '';
+        document.getElementById('fi-project').value    = inv?.project_name  || '';
+        document.getElementById('fi-status').value     = inv?.status        || 'Draft';
+        document.getElementById('fi-issue-date').value = inv?.issue_date    || '';
+        document.getElementById('fi-due-date').value   = inv?.due_date      || '';
+        document.getElementById('fi-notes').value      = inv?.notes         || '';
+        // Load existing line items
+        const { data: items } = await _sb.from('invoice_items').select('*').eq('invoice_id', id);
+        _invLineItems = items || [];
+    } else {
+        // Auto-generate invoice number
+        const year = new Date().getFullYear();
+        const count = _invoices.filter(i => i.invoice_number?.startsWith(`JSR-${year}-`)).length + 1;
+        document.getElementById('fi-number').value = `JSR-${year}-${String(count).padStart(3,'0')}`;
+        document.getElementById('fi-client').value     = '';
+        document.getElementById('fi-project').value    = '';
+        document.getElementById('fi-status').value     = 'Draft';
+        document.getElementById('fi-issue-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('fi-due-date').value   = '';
+        document.getElementById('fi-notes').value      = '';
+        _invLineItems = [];
+    }
+    _invRenderItems();
+    document.getElementById('fin-invoice-modal').classList.add('open');
+}
+
+function _invRenderItems() {
+    const tbody = document.getElementById('inv-items-body');
+    if (!tbody) return;
+    if (_invLineItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--slate-400);padding:16px">No items yet. Click "+ Add Site".</td></tr>`;
+        document.getElementById('inv-total-display').textContent = '0 IQD';
+        return;
+    }
+    tbody.innerHTML = _invLineItems.map((item, i) => `<tr>
+        <td><input type="text" value="${esc(item.section_name||'')}" placeholder="Section…" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px" onchange="_invLineItems[${i}].section_name=this.value"></td>
+        <td><input type="text" value="${esc(item.site_id||'')}" placeholder="Site ID…" style="width:90px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px" onchange="_invLineItems[${i}].site_id=this.value"></td>
+        <td><input type="text" value="${esc(item.description||'')}" placeholder="Description…" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px" onchange="_invLineItems[${i}].description=this.value"></td>
+        <td><input type="number" value="${+item.amount||0}" min="0" style="width:110px;text-align:right;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px;font-weight:600;color:#16a34a" onchange="_invLineItems[${i}].amount=+this.value;_invUpdateTotal()"></td>
+        <td><button onclick="_invLineItems.splice(${i},1);_invRenderItems()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;line-height:1">x</button></td>
+    </tr>`).join('');
+    _invUpdateTotal();
+}
+
+function _invUpdateTotal() {
+    const total = _invLineItems.reduce((s,i) => s + (+i.amount||0), 0);
+    const el = document.getElementById('inv-total-display');
+    if (el) el.textContent = total.toLocaleString() + ' IQD';
+}
+
+function invAddLineItem() {
+    const proj = document.getElementById('fi-project')?.value || '';
+    _invLineItems.push({ section_name: '', site_id: '', description: proj ? `Work at site — ${proj}` : '', amount: 0 });
+    _invRenderItems();
+}
+
+async function saveInvoice() {
+    const errEl = document.getElementById('fin-invoice-err');
+    errEl.style.display = 'none';
+    const clientId  = document.getElementById('fi-client').value;
+    const invNumber = document.getElementById('fi-number').value.trim();
+    const project   = document.getElementById('fi-project').value;
+    const issueDate = document.getElementById('fi-issue-date').value;
+    if (!clientId)  { errEl.textContent = 'Please select a client.'; errEl.style.display = ''; return; }
+    if (!invNumber) { errEl.textContent = 'Invoice number is required.'; errEl.style.display = ''; return; }
+    if (!issueDate) { errEl.textContent = 'Issue date is required.'; errEl.style.display = ''; return; }
+    const total = _invLineItems.reduce((s,i) => s + (+i.amount||0), 0);
+    const payload = {
+        client_id:      clientId,
+        invoice_number: invNumber,
+        project_name:   project || null,
+        issue_date:     issueDate,
+        due_date:       document.getElementById('fi-due-date').value || null,
+        status:         document.getElementById('fi-status').value || 'Draft',
+        total_amount:   total,
+        notes:          document.getElementById('fi-notes').value.trim() || null,
+        created_by:     currentUser?.full_name || '',
+    };
+    try {
+        let invoiceId = _invoiceEditId;
+        if (_invoiceEditId) {
+            const { error } = await _sb.from('invoices').update(payload).eq('id', _invoiceEditId);
+            if (error) throw error;
+            const idx = _invoices.findIndex(x => x.id === _invoiceEditId);
+            if (idx >= 0) _invoices[idx] = { ..._invoices[idx], ...payload };
+            await _sb.from('invoice_items').delete().eq('invoice_id', _invoiceEditId);
+        } else {
+            const { data, error } = await _sb.from('invoices').insert(payload).select('*').single();
+            if (error) throw error;
+            _invoices.unshift(data);
+            invoiceId = data.id;
+        }
+        if (_invLineItems.length > 0) {
+            const items = _invLineItems.map(item => ({
+                invoice_id:   invoiceId,
+                site_id:      item.site_id || null,
+                section_name: item.section_name || null,
+                description:  item.description || null,
+                amount:       +item.amount || 0,
+            }));
+            await _sb.from('invoice_items').insert(items);
+        }
+        closeFinModal('fin-invoice-modal');
+        _renderFinInvoices();
+        toast(_invoiceEditId ? 'Invoice updated.' : 'Invoice created!', 'ok');
+    } catch(e) {
+        errEl.textContent = e.message;
+        errEl.style.display = '';
+    }
+}
+
+async function deleteInvoice(id) {
+    if (!confirm('Delete this invoice? This cannot be undone.')) return;
+    const { error } = await _sb.from('invoices').delete().eq('id', id);
+    if (error) { toast(error.message, 'err'); return; }
+    _invoices = _invoices.filter(x => x.id !== id);
+    _renderFinInvoices();
+    toast('Invoice deleted.', 'ok');
+}
+
+function openPaymentForm(invoiceId) {
+    document.getElementById('fp-invoice-id').value  = invoiceId;
+    document.getElementById('fp-date').value         = new Date().toISOString().split('T')[0];
+    document.getElementById('fp-amount').value       = '';
+    document.getElementById('fp-ref').value          = '';
+    document.getElementById('fp-notes').value        = '';
+    document.getElementById('fin-payment-err').style.display = 'none';
+    document.getElementById('fin-payment-modal').classList.add('open');
+}
+
+async function savePayment() {
+    const errEl = document.getElementById('fin-payment-err');
+    errEl.style.display = 'none';
+    const invoiceId = document.getElementById('fp-invoice-id').value;
+    const date      = document.getElementById('fp-date').value;
+    const amount    = +document.getElementById('fp-amount').value;
+    if (!date)          { errEl.textContent = 'Payment date is required.'; errEl.style.display = ''; return; }
+    if (!amount || amount <= 0) { errEl.textContent = 'Valid amount is required.'; errEl.style.display = ''; return; }
+    const payload = {
+        invoice_id:   invoiceId,
+        payment_date: date,
+        amount:       amount,
+        reference:    document.getElementById('fp-ref').value.trim()   || null,
+        notes:        document.getElementById('fp-notes').value.trim() || null,
+        recorded_by:  currentUser?.full_name || '',
+    };
+    const { error } = await _sb.from('invoice_payments').insert(payload);
+    if (error) { errEl.textContent = error.message; errEl.style.display = ''; return; }
+    const inv = _invoices.find(x => x.id === invoiceId);
+    if (inv) {
+        const newReceived = (+inv.amount_received||0) + amount;
+        const newStatus   = newReceived >= (+inv.total_amount||0) ? 'Paid' : 'Partial';
+        await _sb.from('invoices').update({ amount_received: newReceived, status: newStatus }).eq('id', invoiceId);
+        inv.amount_received = newReceived;
+        inv.status = newStatus;
+    }
+    closeFinModal('fin-payment-modal');
+    _renderFinInvoices();
+    toast('Payment recorded!', 'ok');
 }
 
 async function showFinExpClaims(force = false) {
