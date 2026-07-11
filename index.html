@@ -11859,6 +11859,8 @@ async function showFinInvoices(force = false) {
             _invoices = invData || [];
             const { data: pymData } = await _sb.from('invoice_payments').select('*');
             _invoicePayments = pymData || [];
+            const { data: itemsData } = await _sb.from('invoice_items').select('*');
+            _invoiceItems = itemsData || [];
         }
         if (_finRevenue.length === 0 || force) {
             const { data: revData } = await _sb.from('revenue').select('*').order('project_name').order('section_name').order('site_id');
@@ -11910,12 +11912,12 @@ function _renderFinInvoices(pc) {
 
         <div class="fin-table-wrap">
         <table class="fin-table"><thead><tr>
-            <th>Invoice #</th><th>Client</th><th>Project</th><th>Issue Date</th><th>Due Date</th>
+            <th>Invoice #</th><th>Client</th><th>Project</th><th>Sites</th><th>Issue Date</th><th>Due Date</th>
             <th style="text-align:right">Total</th><th style="text-align:right">Received</th><th style="text-align:right">Outstanding</th>
             <th>Status</th><th>Actions</th>
         </tr></thead><tbody>
         ${rows.length === 0
-            ? `<tr><td colspan="10" class="al-empty">No invoices yet. Click "+ New Invoice" to create your first invoice.</td></tr>`
+            ? `<tr><td colspan="11" class="al-empty">No invoices yet. Click "+ New Invoice" to create your first invoice.</td></tr>`
             : rows.map(inv => {
                 const client = _clients.find(c => c.id === inv.client_id);
                 const outstanding = (+inv.total_amount||0) - (+inv.amount_received||0);
@@ -11927,10 +11929,15 @@ function _renderFinInvoices(pc) {
                     'Overdue':'background:#fee2e2;color:#dc2626'
                 };
                 const sStyle = statusColors[inv.status] || statusColors['Draft'];
+                const invSites = _invoiceItems.filter(x => x.invoice_id === inv.id);
+                const siteBadges = invSites.length === 0
+                    ? '<span style="color:var(--slate-400);font-size:12px">—</span>'
+                    : invSites.map(s => `<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:600;margin:1px">${esc(String(s.site_id||''))}</span>`).join('');
                 return `<tr>
                     <td style="font-weight:600;white-space:nowrap">${esc(inv.invoice_number||'—')}</td>
                     <td>${esc(client?.company_name||'—')}</td>
                     <td style="font-size:12px;color:var(--slate-500)">${esc(inv.project_name||'—')}</td>
+                    <td style="max-width:200px">${siteBadges}</td>
                     <td style="white-space:nowrap;font-size:12px">${esc(inv.issue_date||'—')}</td>
                     <td style="white-space:nowrap;font-size:12px">${esc(inv.due_date||'—')}</td>
                     <td style="text-align:right;font-weight:600">${iqd(inv.total_amount||0)}</td>
