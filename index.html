@@ -3024,6 +3024,25 @@
       </div>
     </div>
 
+    <div style="margin-top:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text-primary)">EXTRA / CUSTOM ITEMS</div>
+        <button onclick="invShowCustomForm()" id="inv-custom-add-btn" style="padding:4px 12px;background:transparent;border:1.5px solid var(--accent);color:var(--accent);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">+ Add Item</button>
+      </div>
+      <div id="inv-custom-items-list" style="margin-bottom:8px"></div>
+      <div id="inv-custom-form" style="display:none;border:1px dashed var(--border);border-radius:8px;padding:12px;background:var(--slate-50)">
+        <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px;margin-bottom:8px">
+          <input id="inv-ci-site" placeholder="Site ID (optional)" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg-panel);color:var(--text-primary)">
+          <input id="inv-ci-desc" placeholder="Description *" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg-panel);color:var(--text-primary)">
+          <input id="inv-ci-amt" type="number" placeholder="Amount (IQD) *" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg-panel);color:var(--text-primary)">
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="document.getElementById('inv-custom-form').style.display='none'" style="padding:5px 14px;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;background:transparent;color:var(--text-secondary)">Cancel</button>
+          <button onclick="invAddCustomItem()" style="padding:5px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">Add</button>
+        </div>
+      </div>
+    </div>
+
     <div id="fin-invoice-err" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
     <div class="modal-actions" style="margin-top:18px">
       <button class="btn btn-ghost" onclick="closeFinModal('fin-invoice-modal')">Cancel</button>
@@ -12109,7 +12128,7 @@ async function openInvoiceForm(id) {
         document.getElementById('fi-notes').value      = inv?.notes         || '';
         // Load existing line items
         const { data: items } = await _sb.from('invoice_items').select('*').eq('invoice_id', id);
-        _invLineItems = items || [];
+        _invLineItems = (items || []).map(x => ({ ...x, _customId: !x.revenue_id ? (Date.now() + Math.random()) : null }));
     } else {
         // Auto-generate invoice number
         const year = new Date().getFullYear();
@@ -12130,6 +12149,7 @@ async function openInvoiceForm(id) {
     if (statusEl) statusEl.textContent = 'Select a project first';
     const countEl = document.getElementById('inv-selected-count');
     if (countEl) countEl.textContent = '0 sites selected';
+    invRenderCustomItems();
     _invUpdateTotal();
     document.getElementById('fin-invoice-modal').classList.add('open');
 }
@@ -12207,14 +12227,57 @@ function invToggleSection(secName, checked) {
 
 function invUpdateSelected() {
     const checked = [...document.querySelectorAll('.inv-site-cb:checked')];
-    _invLineItems = checked.map(cb => {
+    const revenueItems = checked.map(cb => {
         const r = _invRevenueSites[+cb.dataset.idx];
         return { site_id: r.site_id, section_name: r.section_name||'', description: `Site implementation — ${r.site_id}`, amount: +r.amount||0, revenue_id: r.id };
     });
-    const count = _invLineItems.length;
+    const customItems = _invLineItems.filter(x => !x.revenue_id);
+    _invLineItems = [...revenueItems, ...customItems];
+    const count = revenueItems.length;
     const countEl = document.getElementById('inv-selected-count');
     if (countEl) countEl.textContent = `${count} site${count!==1?'s':''} selected`;
     _invUpdateTotal();
+}
+
+function invShowCustomForm() {
+    document.getElementById('inv-custom-form').style.display = '';
+    document.getElementById('inv-ci-site').value = '';
+    document.getElementById('inv-ci-desc').value = '';
+    document.getElementById('inv-ci-amt').value  = '';
+    document.getElementById('inv-ci-desc').focus();
+}
+
+function invAddCustomItem() {
+    const site = document.getElementById('inv-ci-site').value.trim();
+    const desc = document.getElementById('inv-ci-desc').value.trim();
+    const amt  = +document.getElementById('inv-ci-amt').value;
+    if (!desc) { toast('Description is required', 'err'); return; }
+    if (!amt || amt <= 0) { toast('Amount must be greater than 0', 'err'); return; }
+    _invLineItems.push({ site_id: site || null, section_name: '', description: desc, amount: amt, revenue_id: null, _customId: Date.now() + Math.random() });
+    invRenderCustomItems();
+    document.getElementById('inv-custom-form').style.display = 'none';
+    _invUpdateTotal();
+}
+
+function invRemoveCustomItem(customId) {
+    _invLineItems = _invLineItems.filter(x => !(x._customId == customId));
+    invRenderCustomItems();
+    _invUpdateTotal();
+}
+
+function invRenderCustomItems() {
+    const el = document.getElementById('inv-custom-items-list');
+    if (!el) return;
+    const customs = _invLineItems.filter(x => !x.revenue_id);
+    if (customs.length === 0) { el.innerHTML = ''; return; }
+    el.innerHTML = customs.map(item => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;background:var(--bg-panel)">
+            <span style="font-size:12px;font-weight:700;color:var(--accent);min-width:80px">${esc(String(item.site_id||'Custom'))}</span>
+            <span style="flex:1;font-size:12px;color:var(--text-primary)">${esc(item.description)}</span>
+            <span style="font-size:13px;font-weight:700;color:#16a34a;white-space:nowrap">${(+item.amount||0).toLocaleString()} IQD</span>
+            <button onclick="invRemoveCustomItem(${item._customId})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;line-height:1;padding:0 4px" title="Remove">✕</button>
+        </div>
+    `).join('');
 }
 
 function _invUpdateTotal() {
