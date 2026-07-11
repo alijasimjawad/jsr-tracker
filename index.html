@@ -11928,9 +11928,9 @@ function _renderFinInvoices(pc) {
             <th style="text-align:right">Total</th><th style="text-align:right">Received</th><th style="text-align:right">Outstanding</th>
             <th>Status</th><th>Actions</th>
         </tr></thead><tbody>
-        ${(() => { const filteredRows = _invStatusFilter ? rows.filter(r=>r.status===_invStatusFilter) : rows; return filteredRows.length === 0
-            ? `<tr><td colspan="11" class="al-empty">${_invStatusFilter ? `No ${_invStatusFilter} invoices.` : 'No invoices yet. Click "+ New Invoice" to create your first invoice.'}</td></tr>`
-            : filteredRows.map(inv => {
+        ${((_invStatusFilter ? rows.filter(r=>r.status===_invStatusFilter) : rows).length === 0
+            ? `<tr><td colspan="11" class="al-empty">${_invStatusFilter ? `No ${_invStatusFilter} invoices.` : 'No invoices yet. Click &quot;+ New Invoice&quot; to create your first invoice.'}</td></tr>`
+            : (_invStatusFilter ? rows.filter(r=>r.status===_invStatusFilter) : rows).map(inv => {
                 const client = _clients.find(c => c.id === inv.client_id);
                 const outstanding = (+inv.total_amount||0) - (+inv.amount_received||0);
                 const statusColors = {
@@ -11969,7 +11969,7 @@ function _renderFinInvoices(pc) {
                     </td>
                 </tr>`;
             }).join('')}
-        </tbody></table></div>; })()}
+        </tbody></table></div>
 
         ${(() => {
             const pending = _finRevenue.filter(r => !_invInvoicedIds.has(r.id));
