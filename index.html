@@ -11963,13 +11963,13 @@ function _renderFinInvoices(pc) {
             }).join('')}
         </div>
         <div class="fin-table-wrap">
-        <table class="fin-table"><thead><tr>
-            <th>Invoice #</th><th>Client</th><th>Project</th><th>Sites</th><th>Issue Date</th><th>Due Date</th>
+        <table class="fin-table" style="font-size:12px"><thead><tr>
+            <th style="white-space:nowrap">Invoice #</th><th>Client / Project</th><th>Sites</th><th>Dates</th>
             <th style="text-align:right">Total</th><th style="text-align:right">Received</th><th style="text-align:right">Outstanding</th>
             <th>Status</th><th>Actions</th>
         </tr></thead><tbody>
         ${((_invStatusFilter ? rows.filter(r=>r.status===_invStatusFilter) : rows).length === 0
-            ? `<tr><td colspan="11" class="al-empty">${_invStatusFilter ? `No ${_invStatusFilter} invoices.` : 'No invoices yet. Click &quot;+ New Invoice&quot; to create your first invoice.'}</td></tr>`
+            ? `<tr><td colspan="9" class="al-empty">${_invStatusFilter ? `No ${_invStatusFilter} invoices.` : 'No invoices yet. Click &quot;+ New Invoice&quot; to create your first invoice.'}</td></tr>`
             : (_invStatusFilter ? rows.filter(r=>r.status===_invStatusFilter) : rows).map(inv => {
                 const client = _clients.find(c => c.id === inv.client_id);
                 const outstanding = (+inv.total_amount||0) - (+inv.amount_received||0);
@@ -11989,15 +11989,13 @@ function _renderFinInvoices(pc) {
                         ${s.section_name ? `<span style="font-size:9px;font-weight:500;color:#3b82f6;opacity:.8">${esc(s.section_name)}</span>` : ''}
                       </span>`).join('');
                 return `<tr>
-                    <td style="font-weight:600;white-space:nowrap">${esc(inv.invoice_number||'—')}</td>
-                    <td>${esc(client?.company_name||'—')}</td>
-                    <td style="font-size:12px;color:var(--slate-500)">${esc(inv.project_name||'—')}</td>
-                    <td style="max-width:200px">${siteBadges}</td>
-                    <td style="white-space:nowrap;font-size:12px">${esc(inv.issue_date||'—')}</td>
-                    <td style="white-space:nowrap;font-size:12px">${esc(inv.due_date||'—')}</td>
-                    <td style="text-align:right;font-weight:600">${iqd(inv.total_amount||0)}</td>
-                    <td style="text-align:right;color:#16a34a;font-weight:600">${iqd(inv.amount_received||0)}</td>
-                    <td style="text-align:right;color:${outstanding>0?'#dc2626':'#16a34a'};font-weight:600">${iqd(outstanding)}</td>
+                    <td style="font-weight:700;white-space:nowrap;font-size:12px">${esc(inv.invoice_number||'—')}</td>
+                    <td style="max-width:140px"><div style="font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(client?.company_name||'—')}</div><div style="font-size:11px;color:var(--slate-400);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(inv.project_name||'—')}</div></td>
+                    <td style="max-width:160px">${siteBadges}</td>
+                    <td style="white-space:nowrap"><div style="font-size:11px;color:var(--slate-500)">📤 ${esc(inv.issue_date||'—')}</div><div style="font-size:11px;color:${inv.due_date && inv.due_date < new Date().toISOString().split('T')[0] && inv.status!=='Paid' ? '#dc2626' : 'var(--slate-500)'};margin-top:2px">⏱ ${esc(inv.due_date||'—')}</div></td>
+                    <td style="text-align:right;font-weight:700;font-size:12px;white-space:nowrap">${iqd(inv.total_amount||0)}</td>
+                    <td style="text-align:right;color:#16a34a;font-weight:700;font-size:12px;white-space:nowrap">${iqd(inv.amount_received||0)}</td>
+                    <td style="text-align:right;color:${outstanding>0?'#dc2626':'#16a34a'};font-weight:700;font-size:12px;white-space:nowrap">${iqd(outstanding)}</td>
                     <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;${sStyle}">${esc(inv.status||'Draft')}</span></td>
                     <td style="display:flex;gap:4px">
                         <button class="fin-act-btn" onclick="openInvoiceDetail('${inv.id}')" title="View Detail">
