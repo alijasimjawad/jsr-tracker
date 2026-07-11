@@ -12264,7 +12264,17 @@ async function saveInvoice() {
                 amount:       +item.amount || 0,
                 revenue_id:   item.revenue_id || null,
             }));
-            await _sb.from('invoice_items').insert(items);
+            const { data: savedItems } = await _sb.from('invoice_items').insert(items).select('*');
+            if (savedItems) {
+                // Remove old items for this invoice from local cache then add new ones
+                _invoiceItems = _invoiceItems.filter(x => x.invoice_id !== invoiceId);
+                _invoiceItems.push(...savedItems);
+                // Refresh the invoiced IDs set
+                savedItems.forEach(x => { if (x.revenue_id) _invInvoicedIds.add(x.revenue_id); });
+            }
+        } else if (_invoiceEditId) {
+            // Edit with no line items — clear old items from local cache
+            _invoiceItems = _invoiceItems.filter(x => x.invoice_id !== invoiceId);
         }
         closeFinModal('fin-invoice-modal');
         _renderFinInvoices();
