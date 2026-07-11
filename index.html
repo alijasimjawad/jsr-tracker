@@ -11986,7 +11986,14 @@ async function openInvoiceForm(id) {
         document.getElementById('fi-notes').value      = '';
         _invLineItems = [];
     }
-    _invRenderItems();
+    // Reset the revenue picker
+    const picker = document.getElementById('inv-revenue-picker');
+    if (picker) picker.innerHTML = '<div style="text-align:center;color:var(--slate-400);padding:24px;font-size:13px">← Select a project above to load sites</div>';
+    const statusEl = document.getElementById('inv-picker-status');
+    if (statusEl) statusEl.textContent = 'Select a project first';
+    const countEl = document.getElementById('inv-selected-count');
+    if (countEl) countEl.textContent = '0 sites selected';
+    _invUpdateTotal();
     document.getElementById('fin-invoice-modal').classList.add('open');
 }
 
