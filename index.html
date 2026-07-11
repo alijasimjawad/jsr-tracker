@@ -2984,7 +2984,7 @@
         <input type="text" id="fi-number" placeholder="JSR-2026-001" maxlength="30">
       </div>
       <div class="fin-field"><label>Project *</label>
-        <select id="fi-project"><option value="">— Select —</option>
+        <select id="fi-project" onchange="invLoadRevenueItems()"><option value="">— Select —</option>
           <option>Zain Project</option><option>Nokia Project</option><option>Huawei Project</option>
           <option>MRC Project</option><option>Metco Project</option><option>MFC Project</option>
           <option>TAC Project</option><option>IPT Project</option><option>TASC Project</option>
@@ -3012,19 +3012,15 @@
 
     <div style="margin-top:20px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:700;color:var(--text-primary)">LINE ITEMS</div>
-        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="invAddLineItem()">+ Add Site</button>
+        <div style="font-size:13px;font-weight:700;color:var(--text-primary)">SELECT SITES FROM REVENUE</div>
+        <div id="inv-picker-status" style="font-size:12px;color:var(--slate-400)">Select a project first</div>
       </div>
-      <table class="fin-table" style="font-size:12px">
-        <thead><tr>
-          <th>Section</th><th>Site ID</th><th>Description</th><th style="text-align:right">Amount (IQD)</th><th style="width:30px"></th>
-        </tr></thead>
-        <tbody id="inv-items-body">
-          <tr><td colspan="5" style="text-align:center;color:var(--slate-400);padding:16px">No items yet. Click "+ Add Site".</td></tr>
-        </tbody>
-      </table>
-      <div style="text-align:right;margin-top:10px;font-size:14px;font-weight:700;color:var(--text-primary)">
-        Total: <span id="inv-total-display" style="color:#16a34a">0 IQD</span>
+      <div id="inv-revenue-picker" style="border:1px solid var(--border);border-radius:8px;max-height:260px;overflow-y:auto;background:var(--bg-panel)">
+        <div style="text-align:center;color:var(--slate-400);padding:24px;font-size:13px">← Select a project above to load sites</div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+        <div style="font-size:12px;color:var(--slate-400)" id="inv-selected-count">0 sites selected</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text-primary)">Total: <span id="inv-total-display" style="color:#16a34a">0 IQD</span></div>
       </div>
     </div>
 
@@ -11994,21 +11990,73 @@ async function openInvoiceForm(id) {
     document.getElementById('fin-invoice-modal').classList.add('open');
 }
 
-function _invRenderItems() {
-    const tbody = document.getElementById('inv-items-body');
-    if (!tbody) return;
-    if (_invLineItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--slate-400);padding:16px">No items yet. Click "+ Add Site".</td></tr>`;
-        document.getElementById('inv-total-display').textContent = '0 IQD';
+let _invRevenueSites = [];
+
+async function invLoadRevenueItems() {
+    const proj = document.getElementById('fi-project')?.value || '';
+    const picker = document.getElementById('inv-revenue-picker');
+    const statusEl = document.getElementById('inv-picker-status');
+    if (!picker) return;
+    if (!proj) {
+        picker.innerHTML = '<div style="text-align:center;color:var(--slate-400);padding:24px;font-size:13px">← Select a project above to load sites</div>';
+        if (statusEl) statusEl.textContent = 'Select a project first';
+        _invRevenueSites = [];
+        _invUpdateTotal();
         return;
     }
-    tbody.innerHTML = _invLineItems.map((item, i) => `<tr>
-        <td><input type="text" value="${esc(item.section_name||'')}" placeholder="Section…" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px" onchange="_invLineItems[${i}].section_name=this.value"></td>
-        <td><input type="text" value="${esc(item.site_id||'')}" placeholder="Site ID…" style="width:90px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px" onchange="_invLineItems[${i}].site_id=this.value"></td>
-        <td><input type="text" value="${esc(item.description||'')}" placeholder="Description…" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px" onchange="_invLineItems[${i}].description=this.value"></td>
-        <td><input type="number" value="${+item.amount||0}" min="0" style="width:110px;text-align:right;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px;font-weight:600;color:#16a34a" onchange="_invLineItems[${i}].amount=+this.value;_invUpdateTotal()"></td>
-        <td><button onclick="_invLineItems.splice(${i},1);_invRenderItems()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;line-height:1">x</button></td>
-    </tr>`).join('');
+    picker.innerHTML = '<div style="text-align:center;color:var(--slate-400);padding:24px;font-size:13px">Loading sites…</div>';
+    const { data, error } = await _sb.from('revenue').select('*').eq('project_name', proj).order('section_name').order('site_id');
+    _invRevenueSites = data || [];
+    if (error || _invRevenueSites.length === 0) {
+        picker.innerHTML = '<div style="text-align:center;color:var(--slate-400);padding:24px;font-size:13px">No revenue entries found for this project.</div>';
+        if (statusEl) statusEl.textContent = '0 sites available';
+        return;
+    }
+    if (statusEl) statusEl.textContent = `${_invRevenueSites.length} sites available`;
+    // Group by section
+    const sections = {};
+    _invRevenueSites.forEach((r, i) => {
+        const sec = r.section_name || 'No Section';
+        if (!sections[sec]) sections[sec] = [];
+        sections[sec].push({ ...r, _idx: i });
+    });
+    picker.innerHTML = Object.entries(sections).map(([sec, sites]) => `
+        <div style="border-bottom:1px solid var(--border)">
+            <div style="padding:6px 12px;background:var(--slate-50);font-size:11px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:8px">
+                <input type="checkbox" onchange="invToggleSection('${esc(sec)}',this.checked)" title="Select all in ${esc(sec)}">
+                ${esc(sec)}
+            </div>
+            ${sites.map(r => `
+            <label style="display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;border-bottom:1px solid var(--slate-100);transition:background .1s" onmouseover="this.style.background='var(--slate-50)'" onmouseout="this.style.background=''">
+                <input type="checkbox" class="inv-site-cb" data-idx="${r._idx}" onchange="invUpdateSelected()">
+                <span style="flex:1;font-size:13px;font-weight:600">${esc(String(r.site_id||'—'))}</span>
+                <span style="font-size:12px;color:var(--slate-500);min-width:80px">${esc(r.section_name||'')}</span>
+                <span style="font-size:12px;color:var(--slate-400)">${esc(r.status||'')}</span>
+                <span style="font-size:13px;font-weight:700;color:#16a34a;min-width:100px;text-align:right">${iqd(r.amount||0)}</span>
+            </label>`).join('')}
+        </div>
+    `).join('');
+    invUpdateSelected();
+}
+
+function invToggleSection(secName, checked) {
+    document.querySelectorAll('.inv-site-cb').forEach(cb => {
+        const idx = +cb.dataset.idx;
+        const site = _invRevenueSites[idx];
+        if ((site?.section_name||'No Section') === secName) cb.checked = checked;
+    });
+    invUpdateSelected();
+}
+
+function invUpdateSelected() {
+    const checked = [...document.querySelectorAll('.inv-site-cb:checked')];
+    _invLineItems = checked.map(cb => {
+        const r = _invRevenueSites[+cb.dataset.idx];
+        return { site_id: r.site_id, section_name: r.section_name||'', description: `Site implementation — ${r.site_id}`, amount: +r.amount||0, revenue_id: r.id };
+    });
+    const count = _invLineItems.length;
+    const countEl = document.getElementById('inv-selected-count');
+    if (countEl) countEl.textContent = `${count} site${count!==1?'s':''} selected`;
     _invUpdateTotal();
 }
 
@@ -12016,12 +12064,6 @@ function _invUpdateTotal() {
     const total = _invLineItems.reduce((s,i) => s + (+i.amount||0), 0);
     const el = document.getElementById('inv-total-display');
     if (el) el.textContent = total.toLocaleString() + ' IQD';
-}
-
-function invAddLineItem() {
-    const proj = document.getElementById('fi-project')?.value || '';
-    _invLineItems.push({ section_name: '', site_id: '', description: proj ? `Work at site — ${proj}` : '', amount: 0 });
-    _invRenderItems();
 }
 
 async function saveInvoice() {
