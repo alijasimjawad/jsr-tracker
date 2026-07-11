@@ -3051,6 +3051,34 @@
   </div>
 </div>
 
+<!-- Finance: Invoice Detail Modal -->
+<div class="modal-overlay" id="fin-inv-detail-modal" onclick="closeFinModal('fin-inv-detail-modal',event)">
+  <div class="modal-card" style="max-width:680px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="fin-inv-detail-number" style="margin-bottom:0">Invoice</div>
+      <span id="fin-inv-detail-status" style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px"></span>
+    </div>
+    <div id="fin-inv-detail-meta" style="font-size:13px;color:var(--slate-500);margin-bottom:16px"></div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--slate-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Line Items</div>
+    <div id="fin-inv-detail-items" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px"></div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--slate-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Payment History</div>
+    <div id="fin-inv-detail-payments" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--slate-50);border-radius:8px;border:1px solid var(--border)">
+      <div style="font-size:13px;color:var(--slate-500)">Total <strong id="fin-inv-detail-total" style="color:var(--text-primary)"></strong></div>
+      <div style="font-size:13px;color:#16a34a">Received <strong id="fin-inv-detail-received"></strong></div>
+      <div style="font-size:13px;color:#dc2626">Outstanding <strong id="fin-inv-detail-outstanding"></strong></div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeFinModal('fin-inv-detail-modal')">Close</button>
+      <button class="btn btn-accent" onclick="closeFinModal('fin-inv-detail-modal');openPaymentForm(document.getElementById('fin-inv-detail-modal').dataset.invoiceId)">Record Payment</button>
+    </div>
+  </div>
+</div>
+
 <!-- Finance: Client Modal -->
 <div class="modal-overlay" id="fin-client-modal" onclick="closeFinModal('fin-client-modal',event)">
   <div class="modal-card" style="max-width:520px">
@@ -11869,6 +11897,18 @@ async function showFinInvoices(force = false) {
         }
         const { data: invItemsData } = await _sb.from('invoice_items').select('revenue_id').not('revenue_id', 'is', null);
         _invInvoicedIds = new Set((invItemsData||[]).map(x => x.revenue_id).filter(Boolean));
+        // Auto-detect overdue invoices
+        const today = new Date().toISOString().split('T')[0];
+        const overdueToUpdate = _invoices.filter(inv =>
+            inv.due_date && inv.due_date < today &&
+            inv.status !== 'Paid' && inv.status !== 'Overdue' &&
+            (+inv.amount_received||0) < (+inv.total_amount||0)
+        );
+        if (overdueToUpdate.length > 0) {
+            const overdueIds = overdueToUpdate.map(i => i.id);
+            await _sb.from('invoices').update({ status: 'Overdue' }).in('id', overdueIds);
+            overdueToUpdate.forEach(inv => { inv.status = 'Overdue'; });
+        }
     } catch(_) {}
     _renderFinInvoices(pc);
 }
@@ -11960,6 +12000,9 @@ function _renderFinInvoices(pc) {
                     <td style="text-align:right;color:${outstanding>0?'#dc2626':'#16a34a'};font-weight:600">${iqd(outstanding)}</td>
                     <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;${sStyle}">${esc(inv.status||'Draft')}</span></td>
                     <td style="display:flex;gap:4px">
+                        <button class="fin-act-btn" onclick="openInvoiceDetail('${inv.id}')" title="View Detail">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
                         <button class="fin-act-btn" onclick="openInvoiceForm('${inv.id}')" title="Edit">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         </button>
@@ -12241,6 +12284,67 @@ async function deleteInvoice(id) {
     _invoices = _invoices.filter(x => x.id !== id);
     _renderFinInvoices();
     toast('Invoice deleted.', 'ok');
+}
+
+async function openInvoiceDetail(id) {
+    const inv = _invoices.find(x => x.id === id);
+    if (!inv) return;
+    const client = _clients.find(c => c.id === inv.client_id);
+    const modal = document.getElementById('fin-inv-detail-modal');
+    modal.dataset.invoiceId = id;
+
+    // Header
+    document.getElementById('fin-inv-detail-number').textContent = inv.invoice_number || 'Invoice';
+    const statusColors = {Draft:'background:#f1f5f9;color:#475569',Sent:'background:#dbeafe;color:#1d4ed8',Partial:'background:#fef3c7;color:#b45309',Paid:'background:#dcfce7;color:#16a34a',Overdue:'background:#fee2e2;color:#dc2626'};
+    const sBadge = document.getElementById('fin-inv-detail-status');
+    sBadge.textContent = inv.status || 'Draft';
+    sBadge.style.cssText += ';' + (statusColors[inv.status] || statusColors['Draft']);
+
+    // Meta
+    document.getElementById('fin-inv-detail-meta').innerHTML =
+        `<strong>${esc(client?.company_name||'—')}</strong> &nbsp;·&nbsp; ${esc(inv.project_name||'—')} &nbsp;·&nbsp; Issued: ${esc(inv.issue_date||'—')} &nbsp;·&nbsp; Due: ${esc(inv.due_date||'—')}${inv.notes ? `<div style="margin-top:4px;font-style:italic">${esc(inv.notes)}</div>` : ''}`;
+
+    // Line items
+    const { data: items } = await _sb.from('invoice_items').select('*').eq('invoice_id', id);
+    const itemsEl = document.getElementById('fin-inv-detail-items');
+    if (!items || items.length === 0) {
+        itemsEl.innerHTML = '<div style="padding:14px 16px;color:var(--slate-400);font-size:13px">No line items.</div>';
+    } else {
+        itemsEl.innerHTML = `<table class="fin-table" style="font-size:12px">
+            <thead><tr><th>Section</th><th>Site ID</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+            <tbody>${items.map(item => `<tr>
+                <td style="color:var(--slate-500)">${esc(item.section_name||'—')}</td>
+                <td style="font-weight:600">${esc(String(item.site_id||'—'))}</td>
+                <td style="color:var(--slate-500)">${esc(item.description||'—')}</td>
+                <td style="text-align:right;font-weight:700;color:#16a34a">${iqd(item.amount||0)}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    }
+
+    // Payment history
+    const { data: payments } = await _sb.from('invoice_payments').select('*').eq('invoice_id', id).order('payment_date');
+    const paymentsEl = document.getElementById('fin-inv-detail-payments');
+    if (!payments || payments.length === 0) {
+        paymentsEl.innerHTML = '<div style="padding:14px 16px;color:var(--slate-400);font-size:13px">No payments recorded yet.</div>';
+    } else {
+        paymentsEl.innerHTML = `<table class="fin-table" style="font-size:12px">
+            <thead><tr><th>Date</th><th>Amount</th><th>Reference</th><th>Recorded By</th><th>Notes</th></tr></thead>
+            <tbody>${payments.map(p => `<tr>
+                <td style="white-space:nowrap">${esc(p.payment_date||'—')}</td>
+                <td style="font-weight:700;color:#16a34a">${iqd(p.amount||0)}</td>
+                <td style="color:var(--slate-500)">${esc(p.reference||'—')}</td>
+                <td style="color:var(--slate-500)">${esc(p.recorded_by||'—')}</td>
+                <td style="color:var(--slate-500)">${esc(p.notes||'—')}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    }
+
+    // Totals
+    document.getElementById('fin-inv-detail-total').textContent = iqd(inv.total_amount||0);
+    document.getElementById('fin-inv-detail-received').textContent = iqd(inv.amount_received||0);
+    document.getElementById('fin-inv-detail-outstanding').textContent = iqd((+inv.total_amount||0)-(+inv.amount_received||0));
+
+    modal.classList.add('open');
 }
 
 function openPaymentForm(invoiceId) {
