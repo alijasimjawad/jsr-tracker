@@ -11327,6 +11327,7 @@ let _invoicePayments = [];
 let _invoiceEditId   = null;
 let _invLineItems    = [];
 let _invInvoicedIds  = new Set();
+let _invStatusFilter = '';
 let _expClaims       = [];
 let _expClaimsLoaded = false;
 let _expClaimsEditId    = null;  // id of claim being resubmitted (null = new)
@@ -11910,15 +11911,26 @@ function _renderFinInvoices(pc) {
             </div>
         </div>
 
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+            ${['','Draft','Sent','Partial','Paid','Overdue'].map(s => {
+                const count = s ? _invoices.filter(r=>r.status===s).length : _invoices.length;
+                const isActive = _invStatusFilter === s;
+                const colors = {Draft:'#475569',Sent:'#1d4ed8',Partial:'#b45309',Paid:'#16a34a',Overdue:'#dc2626'};
+                const activeColor = s ? colors[s] : '#1d4ed8';
+                return `<button onclick="_invStatusFilter='${s}';_renderFinInvoices()" style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid ${isActive?activeColor:'var(--border)'};background:${isActive?activeColor:'transparent'};color:${isActive?'#fff':'var(--slate-500)'};cursor:pointer;transition:all .15s">
+                    ${s||'All'} <span style="opacity:.75">(${count})</span>
+                </button>`;
+            }).join('')}
+        </div>
         <div class="fin-table-wrap">
         <table class="fin-table"><thead><tr>
             <th>Invoice #</th><th>Client</th><th>Project</th><th>Sites</th><th>Issue Date</th><th>Due Date</th>
             <th style="text-align:right">Total</th><th style="text-align:right">Received</th><th style="text-align:right">Outstanding</th>
             <th>Status</th><th>Actions</th>
         </tr></thead><tbody>
-        ${rows.length === 0
-            ? `<tr><td colspan="11" class="al-empty">No invoices yet. Click "+ New Invoice" to create your first invoice.</td></tr>`
-            : rows.map(inv => {
+        ${(() => { const filteredRows = _invStatusFilter ? rows.filter(r=>r.status===_invStatusFilter) : rows; return filteredRows.length === 0
+            ? `<tr><td colspan="11" class="al-empty">${_invStatusFilter ? `No ${_invStatusFilter} invoices.` : 'No invoices yet. Click "+ New Invoice" to create your first invoice.'}</td></tr>`
+            : filteredRows.map(inv => {
                 const client = _clients.find(c => c.id === inv.client_id);
                 const outstanding = (+inv.total_amount||0) - (+inv.amount_received||0);
                 const statusColors = {
@@ -11957,7 +11969,7 @@ function _renderFinInvoices(pc) {
                     </td>
                 </tr>`;
             }).join('')}
-        </tbody></table></div>
+        </tbody></table></div>; })()}
 
         ${(() => {
             const pending = _finRevenue.filter(r => !_invInvoicedIds.has(r.id));
@@ -11983,9 +11995,14 @@ function _renderFinInvoices(pc) {
                 </div>
                 ${Object.entries(byProject).map(([proj, sites]) => `
                 <div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
-                    <div style="padding:8px 16px;background:var(--slate-50);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                    <div style="padding:8px 16px;background:var(--slate-50);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px">
                         <div style="font-size:13px;font-weight:700;color:var(--text-primary)">${esc(proj)}</div>
-                        <div style="font-size:12px;color:var(--slate-500)">${sites.length} sites · ${iqd(sites.reduce((s,r)=>s+(+r.amount||0),0))}</div>
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <div style="font-size:12px;color:var(--slate-500)">${sites.length} sites · ${iqd(sites.reduce((s,r)=>s+(+r.amount||0),0))}</div>
+                            <button onclick="invQuickCreate('${esc(proj)}')" style="padding:4px 12px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+                                ⚡ Invoice Now
+                            </button>
+                        </div>
                     </div>
                     <table class="fin-table" style="font-size:12px">
                         <thead><tr><th>Section</th><th>Site ID</th><th>Status</th><th style="text-align:right">Amount (IQD)</th></tr></thead>
@@ -12002,6 +12019,20 @@ function _renderFinInvoices(pc) {
             </div>`;
         })()}
         </div>`;
+}
+
+async function invQuickCreate(projectName) {
+    await openInvoiceForm(null);
+    const projSel = document.getElementById('fi-project');
+    if (projSel) {
+        projSel.value = projectName;
+        await invLoadRevenueItems();
+        // Auto-select all available sites
+        document.querySelectorAll('.inv-site-cb:not([disabled])').forEach(cb => {
+            cb.checked = true;
+        });
+        invUpdateSelected();
+    }
 }
 
 async function openInvoiceForm(id) {
