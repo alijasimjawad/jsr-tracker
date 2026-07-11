@@ -11718,7 +11718,7 @@ function openClientForm(id) {
     } else {
         ['fc-name','fc-contact','fc-phone','fc-email','fc-address','fc-notes'].forEach(i => document.getElementById(i).value = '');
     }
-    document.getElementById('fin-client-modal').style.display = 'flex';
+    document.getElementById('fin-client-modal').classList.add('open');
     setTimeout(() => document.getElementById('fc-name').focus(), 60);
 }
 
