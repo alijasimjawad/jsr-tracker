@@ -11326,6 +11326,7 @@ let _invoiceItems    = [];
 let _invoicePayments = [];
 let _invoiceEditId   = null;
 let _invLineItems    = [];
+let _invInvoicedIds  = new Set();
 let _expClaims       = [];
 let _expClaimsLoaded = false;
 let _expClaimsEditId    = null;  // id of claim being resubmitted (null = new)
@@ -11859,6 +11860,12 @@ async function showFinInvoices(force = false) {
             const { data: pymData } = await _sb.from('invoice_payments').select('*');
             _invoicePayments = pymData || [];
         }
+        if (_finRevenue.length === 0 || force) {
+            const { data: revData } = await _sb.from('revenue').select('*').order('project_name').order('section_name').order('site_id');
+            if (revData) _finRevenue = revData;
+        }
+        const { data: invItemsData } = await _sb.from('invoice_items').select('revenue_id').not('revenue_id', 'is', null);
+        _invInvoicedIds = new Set((invItemsData||[]).map(x => x.revenue_id).filter(Boolean));
     } catch(_) {}
     _renderFinInvoices(pc);
 }
@@ -11943,7 +11950,51 @@ function _renderFinInvoices(pc) {
                     </td>
                 </tr>`;
             }).join('')}
-        </tbody></table></div></div>`;
+        </tbody></table></div>
+
+        ${(() => {
+            const pending = _finRevenue.filter(r => !_invInvoicedIds.has(r.id));
+            if (pending.length === 0) return `<div style="margin-top:28px;padding:16px;background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;text-align:center;color:var(--slate-400);font-size:13px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><polyline points="20 6 9 17 4 12"/></svg>
+                All revenue entries have been invoiced.
+            </div>`;
+            // Group by project
+            const byProject = {};
+            pending.forEach(r => {
+                const p = r.project_name || 'Unknown';
+                if (!byProject[p]) byProject[p] = [];
+                byProject[p].push(r);
+            });
+            const pendingTotal = pending.reduce((s,r) => s + (+r.amount||0), 0);
+            return `<div style="margin-top:28px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+                    <div style="font-size:16px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+                        <span style="display:inline-flex;align-items:center;justify-content:center;background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;padding:3px 8px;font-size:12px;color:#b45309;font-weight:700">${pending.length} sites</span>
+                        Pending Invoice
+                    </div>
+                    <div style="font-size:14px;font-weight:700;color:#b45309">${iqd(pendingTotal)} not yet invoiced</div>
+                </div>
+                ${Object.entries(byProject).map(([proj, sites]) => `
+                <div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+                    <div style="padding:8px 16px;background:var(--slate-50);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                        <div style="font-size:13px;font-weight:700;color:var(--text-primary)">${esc(proj)}</div>
+                        <div style="font-size:12px;color:var(--slate-500)">${sites.length} sites · ${iqd(sites.reduce((s,r)=>s+(+r.amount||0),0))}</div>
+                    </div>
+                    <table class="fin-table" style="font-size:12px">
+                        <thead><tr><th>Section</th><th>Site ID</th><th>Status</th><th style="text-align:right">Amount (IQD)</th></tr></thead>
+                        <tbody>
+                        ${sites.map(r => `<tr>
+                            <td style="color:var(--slate-500)">${esc(r.section_name||'—')}</td>
+                            <td style="font-weight:600">${esc(String(r.site_id||'—'))}</td>
+                            <td><span style="font-size:11px;padding:1px 7px;border-radius:4px;font-weight:600;${r.status==='Accepted'?'background:#dcfce7;color:#16a34a':'background:#fef3c7;color:#b45309'}">${esc(r.status||'—')}</span></td>
+                            <td style="text-align:right;font-weight:700;color:#16a34a">${iqd(r.amount||0)}</td>
+                        </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`).join('')}
+            </div>`;
+        })()}
+        </div>`;
 }
 
 async function openInvoiceForm(id) {
