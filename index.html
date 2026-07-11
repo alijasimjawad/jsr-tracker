@@ -11944,7 +11944,10 @@ function _renderFinInvoices(pc) {
                 const invSites = _invoiceItems.filter(x => x.invoice_id === inv.id);
                 const siteBadges = invSites.length === 0
                     ? '<span style="color:var(--slate-400);font-size:12px">—</span>'
-                    : invSites.map(s => `<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:600;margin:1px">${esc(String(s.site_id||''))}</span>`).join('');
+                    : invSites.map(s => `<span style="display:inline-flex;flex-direction:column;align-items:center;background:#dbeafe;color:#1d4ed8;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;margin:1px;line-height:1.3">
+                        <span>${esc(String(s.site_id||''))}</span>
+                        ${s.section_name ? `<span style="font-size:9px;font-weight:500;color:#3b82f6;opacity:.8">${esc(s.section_name)}</span>` : ''}
+                      </span>`).join('');
                 return `<tr>
                     <td style="font-weight:600;white-space:nowrap">${esc(inv.invoice_number||'—')}</td>
                     <td>${esc(client?.company_name||'—')}</td>
