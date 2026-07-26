@@ -10565,10 +10565,18 @@ function _renderDailyActivities(pc) {
 
     const teamOptions = _finTeam.filter(m => m.is_active !== false).map(m => {
         const initials = m.full_name.trim().split(/\s+/).map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+        const roleRaw = (m.role||'').toLowerCase();
+        const roleBadge = roleRaw.includes('engineer')
+            ? '<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:#dbeafe;color:#1d4ed8;line-height:1.4;white-space:nowrap">ENG</span>'
+            : roleRaw.includes('tech')
+            ? '<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:#fef3c7;color:#b45309;line-height:1.4;white-space:nowrap">TECH</span>'
+            : m.role
+            ? `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:var(--slate-100);color:var(--slate-500);line-height:1.4;white-space:nowrap">${esc(m.role.slice(0,4).toUpperCase())}</span>`
+            : '';
         if (busyIds.has(m.id)) {
-            return `<label class="da-team-chip da-chip-busy"><input type="checkbox" class="da-team-cb" value="${esc(m.id)}" data-name="${esc(m.full_name)}" disabled><span class="da-chip-av">${esc(initials)}</span><span class="da-chip-name">${esc(m.full_name)}</span><span class="da-chip-busy-tag">Assigned</span></label>`;
+            return `<label class="da-team-chip da-chip-busy"><input type="checkbox" class="da-team-cb" value="${esc(m.id)}" data-name="${esc(m.full_name)}" disabled><span class="da-chip-av">${esc(initials)}</span><span class="da-chip-name">${esc(m.full_name)}</span>${roleBadge}<span class="da-chip-busy-tag">Assigned</span></label>`;
         }
-        return `<label class="da-team-chip"><input type="checkbox" class="da-team-cb" value="${esc(m.id)}" data-name="${esc(m.full_name)}"><span class="da-chip-av">${esc(initials)}</span><span class="da-chip-name">${esc(m.full_name)}</span></label>`;
+        return `<label class="da-team-chip"><input type="checkbox" class="da-team-cb" value="${esc(m.id)}" data-name="${esc(m.full_name)}"><span class="da-chip-av">${esc(initials)}</span><span class="da-chip-name">${esc(m.full_name)}</span>${roleBadge}</label>`;
     }).join('');
 
     const statusBadge = s => {
