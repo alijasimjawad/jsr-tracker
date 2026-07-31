@@ -11808,9 +11808,8 @@ async function showFinPayslips(force = false) {
     let members = [];
     try {
         const { data, error } = await _sb.from('team_members')
-            .select('id,name,role,monthly_salary,join_date')
-            .neq('is_deleted', true)
-            .order('name');
+            .select('*')
+            .order('full_name');
         if (error) throw error;
         members = data || [];
     } catch(e) {
