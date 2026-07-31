@@ -1,0 +1,89 @@
+Move the "Site Lookup" sidebar item in /Users/alijasim/Desktop/TAC-app/index.html from its
+current top-level spot (under Dashboard) to be nested inside the "Daily Work" section,
+right below "Daily Activities". This assumes the earlier Site Lookup feature prompt has
+already been applied.
+
+Make each edit below as an exact find/replace. After all edits, verify by extracting the
+<script>...</script> contents to /tmp/tac_check.js with a Python regex and running
+`node --check /tmp/tac_check.js` — it must print nothing (success). Then run:
+git add -A && git commit -m "Move Site Lookup under Daily Work in sidebar" && git push
+
+─────────────────────────────────────────────
+EDIT 1 — HTML: remove the top-level Site Lookup nav item
+─────────────────────────────────────────────
+Find:
+                <div class="dash-nav" id="dash-nav" onclick="showDashboard()">
+                    <div class="dash-nav-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    </div>
+                    <span class="dash-nav-label" data-i18n="sidebar.dashboard">Dashboard</span>
+                </div>
+
+                <div class="dash-nav" id="site-lookup-nav" onclick="showSiteLookup()">
+                    <div class="dash-nav-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </div>
+                    <span class="dash-nav-label">Site Lookup</span>
+                </div>
+
+                <div class="tree-section-label sb-sec-hdr" onclick="toggleSbSection('sb-ns-body')">Network Scopes<svg class="sb-sec-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+
+Replace with:
+                <div class="dash-nav" id="dash-nav" onclick="showDashboard()">
+                    <div class="dash-nav-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    </div>
+                    <span class="dash-nav-label" data-i18n="sidebar.dashboard">Dashboard</span>
+                </div>
+
+                <div class="tree-section-label sb-sec-hdr" onclick="toggleSbSection('sb-ns-body')">Network Scopes<svg class="sb-sec-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+
+─────────────────────────────────────────────
+EDIT 2 — HTML: add Site Lookup under Daily Work, below Daily Activities
+─────────────────────────────────────────────
+Find:
+                    <div class="tree-child" id="nav-daily-activities" onclick="showDailyActivities()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                            <span class="tree-child-label">Daily Activities</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
+                    </div><!-- /sb-daily-body -->
+
+Replace with:
+                    <div class="tree-child" id="nav-daily-activities" onclick="showDailyActivities()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                            <span class="tree-child-label">Daily Activities</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
+                    <div class="tree-child" id="nav-site-lookup" onclick="showSiteLookup()">
+                        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <span class="tree-child-label">Site Lookup</span>
+                        </span>
+                        <span class="tree-child-arr">›</span>
+                    </div>
+                    </div><!-- /sb-daily-body -->
+
+─────────────────────────────────────────────
+EDIT 3 — JS: point showSiteLookup() at the new nav id + fix breadcrumb
+─────────────────────────────────────────────
+Find:
+function showSiteLookup() {
+    _finNavActive('site-lookup-nav');
+    setTopbar('<span class="bc-cur">Site Lookup</span>');
+    _renderSiteLookup();
+}
+
+Replace with:
+function showSiteLookup() {
+    _finNavActive('nav-site-lookup');
+    setTopbar('<span class="bc">Daily Work</span><span class="bc-sep">›</span><span class="bc-cur">Site Lookup</span>');
+    _renderSiteLookup();
+}
+
+─────────────────────────────────────────────
+After all 3 edits: run the node --check verification, then commit and push as instructed above.
