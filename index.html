@@ -11816,7 +11816,8 @@ async function showFinPayslips(force = false) {
         pc.innerHTML = `<div class="al-empty">Error: ${esc(e.message)}</div>`;
         return;
     }
-    _renderFinPayslips(pc, members);
+    try { _renderFinPayslips(pc, members); }
+    catch(e) { pc.innerHTML = `<div class="al-empty">Render error: ${esc(e.message)}</div>`; }
 }
 
 function _renderFinPayslips(pc, members) {
@@ -11829,7 +11830,7 @@ function _renderFinPayslips(pc, members) {
 
     const rows = members.map(m => `
         <tr>
-            <td>${esc(m.name)}</td>
+            <td>${esc(m.full_name||m.username||'—')}</td>
             <td>${esc(m.role||'—')}</td>
             <td class="al-num">${iqd(m.monthly_salary||0)}</td>
             <td>
@@ -11891,7 +11892,7 @@ async function printPayslip(memberId, month, year) {
     }
 
     // Calculate pro-rated base salary
-    const joinDate = member.join_date ? new Date(member.join_date) : null;
+    const joinDate = member.start_date ? new Date(member.start_date) : null;
     let activeDays = daysInMonth;
     if (joinDate && joinDate.getFullYear() === year && joinDate.getMonth() + 1 === month) {
         activeDays = daysInMonth - joinDate.getDate() + 1;
@@ -11937,7 +11938,7 @@ async function printPayslip(memberId, month, year) {
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Payslip — ${esc(member.name)} — ${monthName} ${year}</title>
+<title>Payslip — ${esc(member.full_name||member.username||'')} — ${monthName} ${year}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Segoe UI', sans-serif; font-size: 13px; color: #1e293b; padding: 32px; }
@@ -11977,9 +11978,9 @@ async function printPayslip(memberId, month, year) {
 <div class="meta">
   <div class="meta-block">
     <h4>Employee Details</h4>
-    <div class="meta-row"><span class="label">Name</span><span class="value">${esc(member.name)}</span></div>
+    <div class="meta-row"><span class="label">Name</span><span class="value">${esc(member.full_name||member.username||'—')}</span></div>
     <div class="meta-row"><span class="label">Role</span><span class="value">${esc(member.role||'—')}</span></div>
-    <div class="meta-row"><span class="label">Join Date</span><span class="value">${esc(member.join_date||'—')}</span></div>
+    <div class="meta-row"><span class="label">Join Date</span><span class="value">${esc(member.start_date||'—')}</span></div>
   </div>
   <div class="meta-block">
     <h4>Salary Summary</h4>
