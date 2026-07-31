@@ -11967,15 +11967,6 @@ async function previewPayslip(memberId, month, year) {
         ${claims.map(c => `<tr><td>${esc(c.activity_date||'—')}</td><td>${esc(c.project_name||'—')}</td><td style="font-weight:600">${esc(String(c.site_id||'—'))}</td><td style="color:var(--slate-500)">${esc(c.description||'—')}</td><td style="text-align:right;font-weight:700;color:#16a34a">${iqd(c.total_amount)}</td></tr>`).join('')}
         </tbody><tfoot><tr><td colspan="4" style="text-align:right;padding:8px 14px;font-weight:700">Total</td><td style="text-align:right;font-weight:800;color:#16a34a;padding:8px 14px">${iqd(claimsTotal)}</td></tr></tfoot></table>`}
     </div>
-    <!-- Activities -->
-    <div style="font-size:11px;font-weight:700;color:var(--slate-400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Sites Worked (${activities.length})</div>
-    <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px">
-    ${activities.length === 0
-        ? '<div style="padding:14px 16px;color:var(--slate-400);font-size:13px;text-align:center">No activities this month.</div>'
-        : `<table class="fin-table" style="font-size:12px"><thead><tr><th>Date</th><th>Project</th><th>Site ID</th><th>Activity</th></tr></thead><tbody>
-        ${activities.map(a => `<tr><td>${esc(a.date||'—')}</td><td>${esc(a.project||'—')}</td><td style="font-weight:600">${esc(String(a.site_id||'—'))}</td><td>${esc(a.activity_type||'—')} <span style="font-size:11px;color:var(--slate-400)">· ${esc(a.status||'')}</span></td></tr>`).join('')}
-        </tbody></table>`}
-    </div>
     <!-- Net total bar -->
     <div style="background:linear-gradient(135deg,#1e40af,#4f46e5);border-radius:10px;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;color:#fff">
         <div>
@@ -12130,9 +12121,6 @@ async function printPayslip(memberId, month, year) {
     <tbody>${claimRows}</tbody>
     ${claims.length ? `<tfoot><tr><td colspan="4" style="text-align:right;padding:8px 12px">Total Claims</td><td style="text-align:right;color:#16a34a;padding:8px 12px">${fmt(claimsTotal)}</td></tr></tfoot>` : ''}
     </table>
-    <h3>Sites Worked This Month (${activities.length} activities)</h3>
-    <table><thead><tr><th>Date</th><th>Project</th><th>Site ID</th><th>Activity</th></tr></thead>
-    <tbody>${actRows}</tbody></table>
     <div class="net">
       <div><div class="net-lbl">Total Net Pay</div><div class="net-sub">${fmt(effectiveSalary)} salary + ${fmt(claimsTotal)} claims</div></div>
       <div class="net-val">${fmt(netTotal)}</div>
