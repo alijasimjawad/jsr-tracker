@@ -6006,6 +6006,222 @@ async function exportExcel() {
     toast(`Exported ${filteredRows.length} row${filteredRows.length !== 1 ? 's' : ''} → ${fname}${filtersOn ? ' (filtered)' : ''}`, 'ok');
 }
 
+// ── Team Activity Report Export (Daily Activities → Export Team Report) ──
+async function exportTeamReport() {
+    const now = new Date();
+    const mo = now.getMonth() + 1;
+    const yr = now.getFullYear();
+    const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthName = MONTH_NAMES[mo - 1];
+    const monthStr  = `${yr}-${String(mo).padStart(2,'0')}`;
+
+    // Filter _dailyActivities for the current month
+    const monthActs = (_dailyActivities || []).filter(a => a.date && a.date.startsWith(monthStr));
+    if (monthActs.length === 0) {
+        toast(`No activities found for ${monthName} ${yr}`, 'err');
+        return;
+    }
+
+    const ACT_TYPES = ['Installation','Maintenance','Survey','Testing','Commissioning','Integration','Clearance'];
+
+    // Build per-member maps
+    const memberMap = {};
+    (_finTeam || []).forEach(m => {
+        memberMap[m.id] = {
+            name: m.full_name || '',
+            role: m.role || '',
+            days: new Set(),
+            typeCounts: Object.fromEntries(ACT_TYPES.map(t => [t, 0])),
+            sites: new Set(),
+            activities: []
+        };
+    });
+
+    monthActs.forEach(act => {
+        if (!Array.isArray(act.team_member_ids)) return;
+        act.team_member_ids.forEach(mid => {
+            if (!memberMap[mid]) return;
+            const mm = memberMap[mid];
+            if (act.date) mm.days.add(act.date);
+            if (act.activity_type) mm.typeCounts[act.activity_type] = (mm.typeCounts[act.activity_type] || 0) + 1;
+            if (act.site_id) mm.sites.add(act.site_id);
+            mm.activities.push(act);
+        });
+    });
+
+    const activeMembers = Object.values(memberMap)
+        .filter(mm => mm.days.size > 0)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (activeMembers.length === 0) {
+        toast(`No team member activities for ${monthName} ${yr}`, 'err');
+        return;
+    }
+
+    // ── Colours ────────────────────────────────────────────────
+    const C = {
+        DARK:    'FF0F2038',
+        ACCENT:  'FF1E3A5F',
+        WHITE:   'FFFFFFFF',
+        LIGHT:   'FFE8EDF5',
+        ALT:     'FFF4F6F8',
+        TEXT:    'FF111827',
+        BORDER:  'FFE5E7EB',
+        TOTAL_BG:'FFD1E9FF',
+    };
+
+    const hdrStyle = (ws, rowNum, colCount, bgColor) => {
+        const row = ws.getRow(rowNum);
+        row.height = 26;
+        for (let c = 1; c <= colCount; c++) {
+            const cell = row.getCell(c);
+            cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+            cell.font   = { bold: true, color: { argb: C.WHITE }, size: 10.5 };
+            cell.border = { bottom: { style: 'medium', color: { argb: C.DARK } } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        }
+    };
+
+    const titleStyle = (ws, colCount, text) => {
+        ws.addRow([text]);
+        ws.mergeCells(1, 1, 1, colCount);
+        const row  = ws.getRow(1);
+        const cell = ws.getCell('A1');
+        row.height    = 30;
+        cell.value    = text;
+        cell.font     = { bold: true, size: 12, color: { argb: C.WHITE } };
+        cell.fill     = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.DARK } };
+        cell.alignment= { vertical: 'middle', horizontal: 'left' };
+    };
+
+    // ── Workbook ────────────────────────────────────────────────
+    const wb  = new ExcelJS.Workbook();
+    wb.creator = 'JSR Network Tracker';
+    wb.created  = new Date();
+
+    // ══ SHEET 1 — SUMMARY ══════════════════════════════════════
+    const ws1 = wb.addWorksheet('Summary');
+    const S1_COLS = ['Employee', 'Role', 'Activity Days', ...ACT_TYPES, 'Unique Sites'];
+    const S1_N    = S1_COLS.length;
+
+    titleStyle(ws1, S1_N, `JSR Network Tracker  ·  Team Activity Summary  ·  ${monthName} ${yr}     (Exported: ${new Date().toLocaleDateString()})`);
+    ws1.addRow(S1_COLS);
+    hdrStyle(ws1, 2, S1_N, C.ACCENT);
+    // Override alignment for first two cols
+    ws1.getRow(2).getCell(1).alignment = { vertical: 'middle', horizontal: 'left' };
+    ws1.getRow(2).getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
+    ws1.views = [{ state: 'frozen', ySplit: 2 }];
+
+    let totalDaysAll = 0;
+    const typeCountsAll = Object.fromEntries(ACT_TYPES.map(t => [t, 0]));
+    const sitesAll = new Set();
+
+    activeMembers.forEach((mm, idx) => {
+        const bg = idx % 2 === 0 ? C.WHITE : C.ALT;
+        const totalDays = mm.days.size;
+        totalDaysAll += totalDays;
+        ACT_TYPES.forEach(t => { typeCountsAll[t] += mm.typeCounts[t] || 0; });
+        mm.sites.forEach(s => sitesAll.add(s));
+
+        const row = ws1.addRow([
+            mm.name, mm.role, totalDays,
+            ...ACT_TYPES.map(t => mm.typeCounts[t] || 0),
+            mm.sites.size
+        ]);
+        row.height = 20;
+        row.eachCell({ includeEmpty: true }, (cell, c) => {
+            if (c > S1_N) return;
+            cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+            cell.font      = { color: { argb: C.TEXT }, size: 10.5 };
+            cell.border    = { bottom: { style: 'thin', color: { argb: C.BORDER } } };
+            cell.alignment = { vertical: 'middle', horizontal: c <= 2 ? 'left' : 'center' };
+        });
+        // Bold total days cell
+        const dayCell = row.getCell(3);
+        dayCell.font = { bold: true, color: { argb: C.ACCENT }, size: 10.5 };
+    });
+
+    // Totals row
+    const totRow = ws1.addRow([
+        `TOTAL  (${activeMembers.length} members)`, '',
+        totalDaysAll,
+        ...ACT_TYPES.map(t => typeCountsAll[t]),
+        sitesAll.size
+    ]);
+    totRow.height = 24;
+    totRow.eachCell({ includeEmpty: true }, (cell, c) => {
+        if (c > S1_N) return;
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.TOTAL_BG } };
+        cell.font      = { bold: true, color: { argb: C.DARK }, size: 11 };
+        cell.border    = { top: { style: 'medium', color: { argb: C.DARK } } };
+        cell.alignment = { vertical: 'middle', horizontal: c <= 2 ? 'left' : 'center' };
+    });
+
+    // Column widths for Summary
+    ws1.getColumn(1).width = 28;
+    ws1.getColumn(2).width = 16;
+    ws1.getColumn(3).width = 14;
+    ACT_TYPES.forEach((_, i) => { ws1.getColumn(4 + i).width = 14; });
+    ws1.getColumn(4 + ACT_TYPES.length).width = 14;
+
+    // ══ SHEET 2 — DETAIL ═══════════════════════════════════════
+    const ws2 = wb.addWorksheet('Activity Detail');
+    const S2_COLS = ['Employee', 'Role', 'Date', 'Project', 'Site ID', 'Governorate', 'Activity Type', 'Status', 'Notes'];
+    const S2_N    = S2_COLS.length;
+
+    titleStyle(ws2, S2_N, `JSR Network Tracker  ·  Activity Detail  ·  ${monthName} ${yr}  ·  All Team Members`);
+    ws2.addRow(S2_COLS);
+    hdrStyle(ws2, 2, S2_N, C.ACCENT);
+    ws2.getRow(2).getCell(1).alignment = { vertical: 'middle', horizontal: 'left' };
+    ws2.views = [{ state: 'frozen', ySplit: 2 }];
+
+    let lastMemberName = '';
+    let memberColorIdx  = -1;
+    activeMembers.forEach(mm => {
+        const sortedActs = [...mm.activities].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        memberColorIdx++;
+        const bg = memberColorIdx % 2 === 0 ? C.WHITE : C.ALT;
+
+        sortedActs.forEach(act => {
+            const row = ws2.addRow([
+                mm.name,
+                mm.role,
+                act.date        || '',
+                act.project     || '',
+                act.site_id     || '',
+                act.governate   || '',
+                act.activity_type || '',
+                act.status      || '',
+                act.notes       || ''
+            ]);
+            row.height = 20;
+            row.eachCell({ includeEmpty: true }, (cell, c) => {
+                if (c > S2_N) return;
+                cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+                cell.font      = { color: { argb: C.TEXT }, size: 10.5 };
+                cell.border    = { bottom: { style: 'thin', color: { argb: C.BORDER } } };
+                cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: c === 9 };
+            });
+            // Bold employee name
+            row.getCell(1).font = { bold: true, color: { argb: C.ACCENT }, size: 10.5 };
+        });
+    });
+
+    // Column widths for Detail
+    [28, 16, 13, 22, 14, 16, 16, 14, 42].forEach((w, i) => { ws2.getColumn(i + 1).width = w; });
+
+    // ── Download ────────────────────────────────────────────────
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url    = URL.createObjectURL(blob);
+    const a      = document.createElement('a');
+    a.href     = url;
+    a.download = `JSR_Team_Report_${monthName}_${yr}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast(`Team report exported — ${activeMembers.length} members · ${monthActs.length} activities · ${monthName} ${yr}`, 'ok');
+}
+
 // ── Import Excel ─────────────────────────────────
 let _importPending = null; // { headers, rows } waiting for user decision
 let _reimport      = false; // true when triggered via Options → Re-import
@@ -10696,8 +10912,12 @@ function _renderDailyActivities(pc) {
         </div>
 
         <div class="da-history-card">
-            <div class="da-history-hdr">
+            <div class="da-history-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
                 <div class="da-history-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Activity History <span class="da-count-badge">${total} records</span></div>
+                <button class="btn btn-ghost" style="font-size:12px;gap:5px" onclick="exportTeamReport()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export Team Report
+                </button>
             </div>
             <div class="fin-table-wrap"><table class="fin-table" style="min-width:820px">
                 <thead><tr><th>Date</th><th>Project</th><th>Site ID</th><th>Governate</th><th>Team</th><th>Activity</th><th>Status</th><th>Actions</th></tr></thead>
