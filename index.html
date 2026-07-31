@@ -2617,6 +2617,7 @@
                         </span>
                         <span class="tree-child-arr">›</span>
                     </div>
+                    <div class="tree-child" id="nav-fin-payslips" onclick="showFinPayslips()"><span class="tree-icon">🧾</span>Payslips</div>
                     <div class="tree-child" id="nav-fin-invoices" onclick="showFinInvoices()">
                         <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -4763,6 +4764,7 @@ function applyPermissions() {
     sv('nav-fin-genexp',      p.view_fin_genexp,      true);
     sv('nav-fin-projexp',     p.view_fin_projexp,     true);
     sv('nav-fin-report',      p.view_fin_report,      true);
+    sv('nav-fin-payslips',    p.view_fin_payslips,    true);
     sv('nav-fin-clients',     p.view_fin_clients,     true);
     sv('nav-fin-invoices',    p.view_fin_invoices,    true);
 
@@ -7615,6 +7617,7 @@ const _UM_FIXED_VIEW_BOTTOM = [
     { key: 'view_fin_genexp',    label: 'General Expenses' },
     { key: 'view_fin_projexp',   label: 'Project Expenses' },
     { key: 'view_fin_report',    label: 'Monthly Report' },
+    { key: 'view_fin_payslips',  label: 'Payslips' },
     { key: 'view_exp_claims',    label: 'Expense Claims (Admin)' },
     { key: 'view_fin_clients',   label: 'Clients' },
     { key: 'view_fin_invoices',  label: 'Invoices' },
@@ -11375,6 +11378,8 @@ document.addEventListener('click', function(e) {
 // EXPENSE CLAIMS — MEMBER-FACING
 // ══════════════════════════════════════════════
 
+let _psMonth = new Date().getMonth() + 1;
+let _psYear  = new Date().getFullYear();
 let _clients       = [];
 let _clientsLoaded = false;
 let _invoices        = [];
@@ -11791,6 +11796,239 @@ let _adminExpClaims = [];
 let _ecFilters = { member: '', project: '', status: '', month: 0, year: 0, search: '' };
 
 let _clientEditId = null;
+
+// ══════════════════════════════════════════════
+// PAYSLIPS
+// ══════════════════════════════════════════════
+
+async function showFinPayslips(force = false) {
+    if (!_guardPerm('view_fin_payslips')) return;
+    _finNavActive('nav-fin-payslips');
+    const pc = _finSpinner();
+    let members = [];
+    try {
+        const { data, error } = await _sb.from('team_members')
+            .select('id,name,role,monthly_salary,join_date')
+            .neq('is_deleted', true)
+            .order('name');
+        if (error) throw error;
+        members = data || [];
+    } catch(e) {
+        pc.innerHTML = `<div class="al-empty">Error: ${esc(e.message)}</div>`;
+        return;
+    }
+    _renderFinPayslips(pc, members);
+}
+
+function _renderFinPayslips(pc, members) {
+    const months = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+    const yearOpts = [2023,2024,2025,2026,2027].map(y =>
+        `<option value="${y}" ${y===_psYear?'selected':''}>${y}</option>`).join('');
+    const monthOpts = months.map((m,i) =>
+        `<option value="${i+1}" ${i+1===_psMonth?'selected':''}>${m}</option>`).join('');
+
+    const rows = members.map(m => `
+        <tr>
+            <td>${esc(m.name)}</td>
+            <td>${esc(m.role||'—')}</td>
+            <td class="al-num">${iqd(m.monthly_salary||0)}</td>
+            <td>
+                <button class="btn-sm btn-primary" onclick="printPayslip('${m.id}',_psMonth,_psYear)">
+                    Print Payslip
+                </button>
+            </td>
+        </tr>`).join('');
+
+    pc.innerHTML = `
+    <div class="fin-section-header">
+        <h2 class="fin-section-title">Payslips</h2>
+        <div style="display:flex;gap:10px;align-items:center">
+            <select class="input-field" style="width:130px" onchange="_psMonth=+this.value">${monthOpts}</select>
+            <select class="input-field" style="width:90px"  onchange="_psYear=+this.value">${yearOpts}</select>
+        </div>
+    </div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead><tr>
+                <th>Name</th><th>Role</th><th>Base Salary</th><th style="width:130px"></th>
+            </tr></thead>
+            <tbody>${rows || '<tr><td colspan="4" class="al-empty">No team members found.</td></tr>'}</tbody>
+        </table>
+    </div>`;
+}
+
+async function printPayslip(memberId, month, year) {
+    const months = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+    const monthName = months[month - 1];
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const periodStart = `${year}-${String(month).padStart(2,'0')}-01`;
+    const periodEnd   = `${year}-${String(month).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`;
+
+    let member, adjustments = [], claims = [], activities = [];
+    try {
+        const [mRes, adjRes, clRes, actRes] = await Promise.all([
+            _sb.from('team_members').select('*').eq('id', memberId).single(),
+            _sb.from('salary_adjustments').select('*')
+                .eq('member_id', memberId)
+                .gte('effective_date', periodStart).lte('effective_date', periodEnd),
+            _sb.from('expense_claims').select('*')
+                .eq('member_id', memberId).eq('status', 'approved')
+                .gte('date', periodStart).lte('date', periodEnd),
+            _sb.from('daily_activities').select('date,notes')
+                .eq('member_id', memberId)
+                .gte('date', periodStart).lte('date', periodEnd)
+                .order('date')
+        ]);
+        if (mRes.error) throw mRes.error;
+        member      = mRes.data;
+        adjustments = adjRes.data || [];
+        claims      = clRes.data  || [];
+        activities  = actRes.data || [];
+    } catch(e) {
+        toast('Failed to load payslip data: ' + e.message, 'error');
+        return;
+    }
+
+    // Calculate pro-rated base salary
+    const joinDate = member.join_date ? new Date(member.join_date) : null;
+    let activeDays = daysInMonth;
+    if (joinDate && joinDate.getFullYear() === year && joinDate.getMonth() + 1 === month) {
+        activeDays = daysInMonth - joinDate.getDate() + 1;
+    }
+    const baseSalary = Math.round(((member.monthly_salary || 0) / daysInMonth) * activeDays);
+
+    // Apply adjustments
+    let adjustedSalary = baseSalary;
+    let overrideSalary = null;
+    const overrideAdj = adjustments.find(a => a.type === 'override');
+    if (overrideAdj) overrideSalary = overrideAdj.amount;
+    const bonusTotal     = adjustments.filter(a => a.type === 'bonus').reduce((s,a) => s + (a.amount||0), 0);
+    const deductionTotal = adjustments.filter(a => a.type === 'deduction').reduce((s,a) => s + (a.amount||0), 0);
+    if (overrideSalary !== null) adjustedSalary = overrideSalary;
+    adjustedSalary = Math.max(0, adjustedSalary + bonusTotal - deductionTotal);
+
+    const claimsTotal = claims.reduce((s,c) => s + (c.amount||0), 0);
+    const netTotal    = adjustedSalary + claimsTotal;
+
+    const adjustmentRows = adjustments.length ? adjustments.map(a => `
+        <tr>
+            <td>${esc(a.effective_date)}</td>
+            <td style="text-transform:capitalize">${esc(a.type)}</td>
+            <td>${esc(a.note||'—')}</td>
+            <td style="text-align:right">${a.type==='deduction'?'- ':'+ '}${iqd(a.amount||0)}</td>
+        </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:#888">No adjustments</td></tr>';
+
+    const claimRows = claims.length ? claims.map(c => `
+        <tr>
+            <td>${esc(c.date)}</td>
+            <td>${esc(c.description||'—')}</td>
+            <td>${esc(c.project||'—')}</td>
+            <td style="text-align:right">${iqd(c.amount||0)}</td>
+        </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:#888">No approved claims</td></tr>';
+
+    const activityRows = activities.length ? activities.map(a => `
+        <tr>
+            <td>${esc(a.date)}</td>
+            <td>${esc(a.notes||'—')}</td>
+        </tr>`).join('') : '<tr><td colspan="2" style="text-align:center;color:#888">No activities logged</td></tr>';
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Payslip — ${esc(member.name)} — ${monthName} ${year}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', sans-serif; font-size: 13px; color: #1e293b; padding: 32px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #0f172a; padding-bottom:16px; margin-bottom:24px; }
+  .company { font-size:22px; font-weight:800; color:#0f172a; }
+  .payslip-label { font-size:13px; color:#64748b; margin-top:4px; }
+  .meta { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+  .meta-block { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; }
+  .meta-block h4 { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; margin-bottom:8px; }
+  .meta-row { display:flex; justify-content:space-between; margin-bottom:4px; }
+  .meta-row .label { color:#64748b; }
+  .meta-row .value { font-weight:600; }
+  h3 { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#475569; margin:20px 0 8px; }
+  table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+  th { background:#f1f5f9; text-align:left; padding:7px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#64748b; border-bottom:1px solid #e2e8f0; }
+  td { padding:7px 10px; border-bottom:1px solid #f1f5f9; }
+  .total-box { background:#0f172a; color:#fff; border-radius:10px; padding:18px 24px; display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+  .total-box .label { font-size:14px; opacity:.8; }
+  .total-box .amount { font-size:22px; font-weight:800; }
+  .signatures { display:grid; grid-template-columns:1fr 1fr 1fr; gap:40px; margin-top:48px; }
+  .sig-line { border-top:1px solid #94a3b8; padding-top:8px; text-align:center; font-size:11px; color:#64748b; }
+  @media print { body { padding: 16px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="company">JSR Engineering</div>
+    <div class="payslip-label">Employee Payslip</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:18px;font-weight:700">${monthName} ${year}</div>
+    <div style="color:#64748b;margin-top:4px">${periodStart} to ${periodEnd}</div>
+  </div>
+</div>
+
+<div class="meta">
+  <div class="meta-block">
+    <h4>Employee Details</h4>
+    <div class="meta-row"><span class="label">Name</span><span class="value">${esc(member.name)}</span></div>
+    <div class="meta-row"><span class="label">Role</span><span class="value">${esc(member.role||'—')}</span></div>
+    <div class="meta-row"><span class="label">Join Date</span><span class="value">${esc(member.join_date||'—')}</span></div>
+  </div>
+  <div class="meta-block">
+    <h4>Salary Summary</h4>
+    <div class="meta-row"><span class="label">Base (${activeDays}/${daysInMonth} days)</span><span class="value">${iqd(baseSalary)}</span></div>
+    ${overrideSalary !== null ? `<div class="meta-row"><span class="label">Override</span><span class="value">${iqd(overrideSalary)}</span></div>` : ''}
+    ${bonusTotal     ? `<div class="meta-row"><span class="label">Bonuses</span><span class="value" style="color:#16a34a">+ ${iqd(bonusTotal)}</span></div>` : ''}
+    ${deductionTotal ? `<div class="meta-row"><span class="label">Deductions</span><span class="value" style="color:#dc2626">− ${iqd(deductionTotal)}</span></div>` : ''}
+    <div class="meta-row" style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0"><span class="label">Adjusted Salary</span><span class="value">${iqd(adjustedSalary)}</span></div>
+    <div class="meta-row"><span class="label">Approved Claims</span><span class="value">${iqd(claimsTotal)}</span></div>
+  </div>
+</div>
+
+<h3>Salary Adjustments</h3>
+<table>
+  <thead><tr><th>Date</th><th>Type</th><th>Note</th><th style="text-align:right">Amount</th></tr></thead>
+  <tbody>${adjustmentRows}</tbody>
+</table>
+
+<h3>Approved Expense Claims</h3>
+<table>
+  <thead><tr><th>Date</th><th>Description</th><th>Project</th><th style="text-align:right">Amount</th></tr></thead>
+  <tbody>${claimRows}</tbody>
+</table>
+
+<h3>Daily Activities (${activities.length} days)</h3>
+<table>
+  <thead><tr><th>Date</th><th>Notes</th></tr></thead>
+  <tbody>${activityRows}</tbody>
+</table>
+
+<div class="total-box">
+  <div class="label">Net Total (Salary + Claims)</div>
+  <div class="amount">${iqd(netTotal)}</div>
+</div>
+
+<div class="signatures">
+  <div class="sig-line">Employee Signature</div>
+  <div class="sig-line">HR / Finance</div>
+  <div class="sig-line">Director</div>
+</div>
+</body>
+</html>`;
+
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 400);
+}
 
 async function showFinClients(force = false) {
     if (!_guardPerm('view_fin_clients')) return;
