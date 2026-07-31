@@ -13417,12 +13417,54 @@ async function _edmSaveEdit() {
     const saveBtn = document.getElementById('edm-save-btn');
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
+
+    // Capture old values BEFORE update so we can match the project_expenses record
+    const oldClaim = _adminExpClaims.find(x => x.id === id);
+    const wasApproved = oldClaim?.status === 'approved';
+    const oldProjName = oldClaim?.project_name;
+    const oldSiteId = oldClaim?.site_id;
+    const oldActivityDate = oldClaim?.activity_date;
+    const oldTotalAmount = oldClaim?.total_amount;
+
     try {
         const { error } = await _sb.from('expense_claims').update({
             project_name, site_id, governorate, description, activity_date,
             transport_amount, accommodation, food_amount, total_amount
         }).eq('id', id);
         if (error) throw error;
+
+        // If the claim was approved, sync the linked project_expenses record so monthly totals stay accurate
+        if (wasApproved) {
+            const dateObj = activity_date ? new Date(activity_date) : new Date();
+            const pePayload = {
+                project_name,
+                description,
+                amount:        total_amount,
+                expense_date:  activity_date || null,
+                activity_date: activity_date || null,
+                month:         dateObj.getMonth() + 1,
+                year:          dateObj.getFullYear(),
+                site_id:       site_id || null,
+                accommodation: accommodation || null,
+            };
+            // Match the original project_expenses row by original field values
+            let peQuery = _sb.from('project_expenses').update(pePayload)
+                .eq('project_name', oldProjName || project_name)
+                .eq('amount', oldTotalAmount ?? total_amount);
+            if (oldActivityDate) peQuery = peQuery.eq('activity_date', oldActivityDate);
+            if (oldSiteId)       peQuery = peQuery.eq('site_id', oldSiteId);
+            const { error: peErr } = await peQuery;
+            if (peErr) console.warn('project_expenses sync failed:', peErr.message);
+
+            // Update _finProjExp in-memory so dashboard/report totals reflect immediately
+            const peIdx = _finProjExp.findIndex(x =>
+                x.project_name === (oldProjName || project_name) &&
+                x.activity_date === oldActivityDate &&
+                (x.site_id || null) === (oldSiteId || null) &&
+                +x.amount === +(oldTotalAmount ?? 0)
+            );
+            if (peIdx >= 0) Object.assign(_finProjExp[peIdx], pePayload);
+        }
     } catch(e) {
         toast(e.message, 'err');
         saveBtn.disabled = false;
