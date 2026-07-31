@@ -13024,7 +13024,9 @@ function _renderFinExpClaims(pc) {
                    <input class="adm-exp-rej-inp" type="text" placeholder="Rejection reason…" id="rej-inp-${r.id}">
                    <button class="adm-exp-rej-confirm" onclick="submitExpReject('${r.id}')">Confirm Reject</button>
                </div>`
-            : `<button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>${delBtn}`;
+            : `<button class="adm-exp-view-btn" onclick="openExpClaimDetail('${r.id}')">View</button>
+               <button class="adm-exp-edit-btn" onclick="openExpClaimDetail('${r.id}');setTimeout(_edmStartEdit,100)" style="margin-left:4px" title="Edit claim">Edit</button>
+               ${delBtn}`;
         const rejHtml = r.status === 'rejected' && r.rejection_reason
             ? `<div style="font-size:11px;color:var(--red);margin-top:3px">${esc(r.rejection_reason)}</div>` : '';
         const reviewedAt = r.reviewed_at ? r.reviewed_at.slice(0,10) : '';
@@ -13324,7 +13326,7 @@ function openExpClaimDetail(id) {
     rejWrap.style.display = 'none';
     if (rejInp) rejInp.value = '';
     const _editBtnEl = document.getElementById('edm-edit-btn');
-    if (_editBtnEl) _editBtnEl.style.display = (currentUser?.role === 'admin' && r.status === 'pending') ? '' : 'none';
+    if (_editBtnEl) _editBtnEl.style.display = (currentUser?.role === 'admin') ? '' : 'none';
 
     document.getElementById('exp-detail-modal').classList.add('open');
 }
