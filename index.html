@@ -12136,7 +12136,7 @@ async function showFinPayslips(force = false) {
 }
 
 function _renderFinPayslips(pc) {
-    if (!pc) pc = document.querySelector('.fin-panel-content');
+    if (!pc) pc = document.getElementById('panel-content');
     if (!pc) return;
     const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const activeTeam = _finTeam.filter(m => m.is_active !== false);
