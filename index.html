@@ -12139,7 +12139,25 @@ function _renderFinPayslips(pc) {
     if (!pc) pc = document.getElementById('panel-content');
     if (!pc) return;
     const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const activeTeam = _finTeam.filter(m => m.is_active !== false);
+
+    // Include anyone who was active at ANY point during the selected month
+    // (covers employees who joined mid-month or left mid-month)
+    const _dFirst = new Date(_psYear, _psMonth - 1, 1);
+    const _dLast  = new Date(_psYear, _psMonth, 0);       // last day of month
+    const activeTeam = _finTeam.filter(m => {
+        // If no activated_at, fall back to is_active flag
+        if (!m.activated_at) return m.is_active !== false;
+        const actDate   = new Date(m.activated_at + 'T00:00:00');
+        // Joined after the month ended → not included
+        if (actDate > _dLast) return false;
+        // Left before the month started → not included
+        if (m.deactivated_at) {
+            const deactDate = new Date(m.deactivated_at + 'T00:00:00');
+            if (deactDate < _dFirst) return false;
+        }
+        return true;
+    }).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+
     const yearOpts = [2024,2025,2026,2027].map(y => `<option value="${y}" ${y===_psYear?'selected':''}>${y}</option>`).join('');
     const monthOpts = monthNames.map((n,i) => `<option value="${i+1}" ${i+1===_psMonth?'selected':''}>${n}</option>`).join('');
     pc.innerHTML = `
