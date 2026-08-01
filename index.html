@@ -3397,6 +3397,11 @@
           <input class="edm-edit-inp" type="number" id="edm-e-food" min="0" oninput="_edmRecalcTotal()">
         </div>
         <div class="edm-edit-field edm-edit-full">
+          <label class="edm-edit-label">Additional Categories</label>
+          <div id="edm-extra-rows" style="margin-bottom:8px"></div>
+          <button type="button" onclick="_edmAddExtraRow()" style="font-size:12px;padding:5px 12px;border:1.5px dashed var(--border);border-radius:6px;background:transparent;cursor:pointer;color:var(--slate-500);font-weight:600">+ Add Category</button>
+        </div>
+        <div class="edm-edit-field edm-edit-full">
           <div class="edm-edit-total-bar">
             <span class="edm-edit-total-label">Total Amount</span>
             <span class="edm-edit-total-val" id="edm-e-total">0 IQD</span>
@@ -13687,6 +13692,42 @@ async function _edmConfirmReject() {
     _renderFinExpClaims();
 }
 
+let _edmExtraRows = [];
+
+function _edmRenderExtraRows() {
+    const container = document.getElementById('edm-extra-rows');
+    if (!container) return;
+    const _EDM_CATS = ['Fuel','Materials','Taxi','Tools','Parking','Hotel','Car Maintenance','Other'];
+    if (_edmExtraRows.length === 0) {
+        container.innerHTML = '<div style="font-size:12px;color:var(--slate-400);margin-bottom:4px">No additional categories</div>';
+        return;
+    }
+    container.innerHTML = _edmExtraRows.map((row, i) => `
+        <div style="display:grid;grid-template-columns:1fr 140px 32px;gap:8px;margin-bottom:6px;align-items:center">
+            <select onchange="_edmExtraRows[${i}].category=this.value"
+                style="padding:6px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg-input,#fff);color:var(--text-primary)">
+                <option value="">— Category —</option>
+                ${_EDM_CATS.map(c => `<option value="${c}"${row.category===c?' selected':''}>${c}</option>`).join('')}
+            </select>
+            <input type="number" value="${row.amount}" min="0"
+                oninput="_edmExtraRows[${i}].amount=+this.value;_edmRecalcTotal()"
+                style="padding:6px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;text-align:right;background:var(--bg-input,#fff);color:var(--text-primary)">
+            <button type="button" onclick="_edmRemoveExtraRow(${i})"
+                style="width:28px;height:28px;border:none;border-radius:6px;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-weight:700">✕</button>
+        </div>`).join('');
+}
+
+function _edmAddExtraRow() {
+    _edmExtraRows.push({ category: '', amount: 0 });
+    _edmRenderExtraRows();
+}
+
+function _edmRemoveExtraRow(i) {
+    _edmExtraRows.splice(i, 1);
+    _edmRenderExtraRows();
+    _edmRecalcTotal();
+}
+
 function _edmStartEdit() {
     const r = _adminExpClaims.find(x => x.id === _edmCurrentId);
     if (!r) return;
@@ -13698,6 +13739,9 @@ function _edmStartEdit() {
     document.getElementById('edm-e-transport').value = r.transport_amount || 0;
     document.getElementById('edm-e-accommodation').value = r.accommodation || '';
     document.getElementById('edm-e-food').value = r.food_amount || 0;
+    // Load extra categories so they're editable and included in total
+    try { _edmExtraRows = JSON.parse(r.extra_categories || '[]'); } catch(_) { _edmExtraRows = []; }
+    _edmRenderExtraRows();
     _edmRecalcTotal();
     document.getElementById('edm-edit-section').style.display = '';
     document.getElementById('edm-edit-btn').style.display = 'none';
@@ -13725,7 +13769,9 @@ async function _edmSaveEdit() {
     const transport_amount = parseFloat(document.getElementById('edm-e-transport').value) || 0;
     const accommodation = document.getElementById('edm-e-accommodation').value;
     const food_amount = parseFloat(document.getElementById('edm-e-food').value) || 0;
-    const total_amount = transport_amount + food_amount;
+    const extraSum = (_edmExtraRows || []).reduce((s, r) => s + (+r.amount || 0), 0);
+    const total_amount = transport_amount + food_amount + extraSum;
+    const extra_categories = JSON.stringify((_edmExtraRows || []).filter(r => r.category));
     const saveBtn = document.getElementById('edm-save-btn');
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
@@ -13741,7 +13787,7 @@ async function _edmSaveEdit() {
     try {
         const { error } = await _sb.from('expense_claims').update({
             project_name, site_id, governorate, description, activity_date,
-            transport_amount, accommodation, food_amount, total_amount
+            transport_amount, accommodation, food_amount, total_amount, extra_categories
         }).eq('id', id);
         if (error) throw error;
 
@@ -13784,7 +13830,7 @@ async function _edmSaveEdit() {
         return;
     }
     const idx = _adminExpClaims.findIndex(x => x.id === id);
-    if (idx >= 0) Object.assign(_adminExpClaims[idx], { project_name, site_id, governorate, description, activity_date, transport_amount, accommodation, food_amount, total_amount });
+    if (idx >= 0) Object.assign(_adminExpClaims[idx], { project_name, site_id, governorate, description, activity_date, transport_amount, accommodation, food_amount, total_amount, extra_categories });
     const claim = _adminExpClaims.find(x => x.id === id);
     const memberName = _finTeam.find(t => t.id === claim?.member_id)?.full_name || 'team member';
     const projLabel = (typeof PROJ_NAMES !== 'undefined' && PROJ_NAMES[project_name]) ? PROJ_NAMES[project_name] : project_name;
@@ -13799,9 +13845,10 @@ async function _edmSaveEdit() {
 
 function _edmRecalcTotal() {
     const transport = parseFloat(document.getElementById('edm-e-transport')?.value) || 0;
-    const food = parseFloat(document.getElementById('edm-e-food')?.value) || 0;
-    const totalEl = document.getElementById('edm-e-total');
-    if (totalEl) totalEl.textContent = iqd(transport + food);
+    const food      = parseFloat(document.getElementById('edm-e-food')?.value) || 0;
+    const extraSum  = (_edmExtraRows || []).reduce((s, r) => s + (+r.amount || 0), 0);
+    const totalEl   = document.getElementById('edm-e-total');
+    if (totalEl) totalEl.textContent = iqd(transport + food + extraSum);
 }
 
 function _edmAccomChange() {
